@@ -32,24 +32,29 @@ func main2() {
 	m_recv_data = make([]byte, 1600)
 	m_send_data = []byte(randomString(9))
 
-	if m_cli_tun_remote != "" {
-		if m_cli_admin_remote_addr != "" && m_cli_admin_local_addr != "" {
-			if process_server_child() != nil {
-				go process_proxy_remote(m_cli_tun_remote)
-			}
-		} else {
-			process_server_parent()
-		}
-	} else if m_cli_tun_local != "" {
-		if process_client() != nil {
-			go process_proxy_local(m_cli_tun_local)
-		}
-	}
+	if m_cli_tun_remote != "" && m_cli_admin_remote_addr == "" && m_cli_admin_local_addr == "" {
+		go process_server_parent()
 
-	time.Sleep(m_process_time_out)
-	if m_stun_quic_conn == nil {
-		log.Printf("main exit: %v\n", os.Args)
-		os.Exit(0)
+	} else {
+		go func() {
+			if m_cli_admin_remote_addr != "" && m_cli_admin_local_addr != "" && m_cli_tun_remote != "" {
+				if process_server_child() != nil {
+					process_proxy_remote(m_cli_tun_remote)
+				}
+			} else if m_cli_tun_local != "" {
+				if process_client() != nil {
+					process_proxy_local(m_cli_tun_local)
+				}
+			}
+		}()
+
+		go func() {
+			time.Sleep(m_process_time_out)
+			if m_stun_quic_conn == nil {
+				log.Printf("main exit: %v\n", os.Args)
+				os.Exit(0)
+			}
+		}()
 	}
 
 	ch := make(chan os.Signal, 1)
