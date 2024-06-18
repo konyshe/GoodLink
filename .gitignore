@@ -1,0 +1,7 @@
+# Created by .ignore support plugin (hsz.mobi)
+.vscode
+.idea
+__debug_bin*
+*.pdf
+bin
+slave_test.sh
