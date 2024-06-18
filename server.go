@@ -95,7 +95,7 @@ func (c *TunnelServer) start_server_child(local_addr, remote_addr string) {
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stdout = os.Stdout //指向标准输出
 	cmd.Stderr = os.Stderr //指向标准错误输出
-	assertErrorToNilf("cmd.Start(): %v", cmd.Run())
+	assertErrorToNilf("cmd.Run(): %v", cmd.Run())
 }
 
 func (c *TunnelServer) process_server_parent() {
