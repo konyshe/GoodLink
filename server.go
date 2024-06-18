@@ -50,8 +50,7 @@ func process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []b
 	}
 	m_process_stop = true
 
-	time := time.Time{}
-	conn.SetDeadline(time)
+	conn.SetDeadline(time.Time{})
 
 	log.Printf("quic.Listen: %v\n", conn.LocalAddr())
 	listener, err := quic.Listen(conn, getServerTLSConfig(), nil)
@@ -68,7 +67,7 @@ func process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []b
 	log.Printf("process_client3 new_quic_stream.Read: %v==>%v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
 	for {
 		if n, err := new_quic_stream.Read(m_recv_data); err == nil && n > 0 {
-			fmt.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
+			log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 			process_health(new_quic_stream)
 			m_stun_quic_conn = new_quic_conn
 			break
@@ -79,7 +78,7 @@ func process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []b
 func start_server_child(local_addr, remote_addr string) {
 	var args []string
 
-	fmt.Printf("start_server_child: %s==>%s\n", local_addr, remote_addr)
+	log.Printf("start_server_child: %s==>%s\n", local_addr, remote_addr)
 
 	args = append(args, fmt.Sprintf("--admin_remote_addr=%s", remote_addr))
 	args = append(args, fmt.Sprintf("--admin_local_addr=%s", local_addr))
@@ -112,7 +111,7 @@ func process_server_parent() {
 		if res, err := gogo.Redis().GetDB(m_cli_redis_id).Get(m_cli_tun_key).Bytes(); err == nil && res != nil && len(res) > 0 {
 			if err = json.Unmarshal(res, &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //收到客户端通知,发送IPPORT
-					fmt.Println("收到客户端通知,发送IPPORT")
+					log.Println("收到客户端通知,发送IPPORT")
 					if conn != nil {
 						conn.Close()
 						conn = nil
@@ -126,11 +125,11 @@ func process_server_parent() {
 					goto NEXT_CHECK
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort == 0 { //等待客户端响应
-					fmt.Println("等待客户端响应")
+					log.Println("等待客户端响应")
 					goto NEXT_CHECK
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort > 0 { //客户端返回IPORT
-					fmt.Println("收到客户端返回的IPORT")
+					log.Println("收到客户端返回的IPORT")
 					gogo.Redis().Del(m_cli_redis_id, m_cli_tun_key)
 					localAddr := conn.LocalAddr().String()
 					conn.Close()
@@ -139,7 +138,7 @@ func process_server_parent() {
 					goto NEXT_CHECK
 				}
 
-				fmt.Println("gogo.Redis().GetDB other")
+				log.Println("gogo.Redis().GetDB other")
 				goto NEXT_CHECK
 			}
 		}
@@ -164,7 +163,7 @@ func process_server_child() quic.Connection {
 		for !m_process_stop {
 			n, remoteAddr, err := conn.ReadFromUDP(m_recv_data) // 接收数据
 			if err == nil && n > 0 {
-				fmt.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
+				log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 				process_server5(conn, remoteAddr, m_send_data)
 				break
 			}

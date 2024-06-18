@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"gogo"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -48,7 +48,7 @@ func main2() {
 
 	time.Sleep(m_process_time_out)
 	if m_stun_quic_conn == nil {
-		fmt.Printf("main exit: %v\n", os.Args)
+		log.Printf("main exit: %v\n", os.Args)
 		os.Exit(0)
 	}
 

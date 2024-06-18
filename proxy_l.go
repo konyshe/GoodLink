@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"gogo"
 	"io"
 	"log"
@@ -41,7 +40,7 @@ func stunQ2TProcess1(qc quic.Stream, tc net.Conn) {
 }
 
 func process_proxy_local(addr string) {
-	fmt.Println("process_proxy_local start...")
+	log.Println("process_proxy_local start...")
 
 	var err error
 	var listener net.Listener

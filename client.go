@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"gogo"
 	"log"
 	"net"
@@ -22,8 +21,7 @@ func process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []b
 	}
 	m_process_stop = true
 
-	time := time.Time{}
-	conn.SetDeadline(time)
+	conn.SetDeadline(time.Time{})
 
 	log.Printf("process_client3 conn.WriteToUDP: %v==>%v\n", conn.LocalAddr(), remoteAddr)
 	_, err := conn.WriteToUDP(m_send_data, remoteAddr)
@@ -58,7 +56,7 @@ func process_client2(ip string, port int, m_send_data []byte) {
 	go func() {
 		for !m_process_stop {
 			if n, remoteAddr, err := conn.ReadFromUDP(m_recv_data); err == nil && n > 0 {
-				fmt.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
+				log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 				process_client3(conn, remoteAddr, m_send_data)
 				break
 			}
@@ -89,11 +87,11 @@ func process_client() quic.Connection {
 		if res, err := gogo.Redis().GetDB(m_cli_redis_id).Get(m_cli_tun_key).Bytes(); err == nil && res != nil && len(res) > 0 {
 			if err = json.Unmarshal(res, &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //等待服务器响应
-					fmt.Println("等待服务器响应")
+					log.Println("等待服务器响应")
 					goto NEXT_CHECK
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort == 0 { //服务器已返回IPPORT
-					fmt.Println("收到服务器返回的IPPORT")
+					log.Println("收到服务器返回的IPPORT")
 					conn, err = net.ListenUDP("udp4", nil)
 					assertErrorToNilf("main net.ListenUDP: %v", err)
 					redisJson.ClientIP, redisJson.ClientPort = getWanIpPort(conn)
@@ -103,13 +101,13 @@ func process_client() quic.Connection {
 					}
 				}
 
-				fmt.Println("gogo.Redis().GetDB other")
+				log.Println("gogo.Redis().GetDB other")
 				goto NEXT_CHECK
 			}
 		}
 
 		//走到这里，表示当前没有其他正在建立隧道的会话，下面开始告知服务端准备建立隧道
-		fmt.Println("告知服务端准备建立隧道")
+		log.Println("告知服务端准备建立隧道")
 		if jsonByte, err := json.Marshal(RedisJsonType{}); err == nil {
 			gogo.Redis().SetNx(m_cli_redis_id, m_cli_tun_key, string(jsonByte), m_process_time_out)
 		}

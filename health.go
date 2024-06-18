@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"gogo"
+	"log"
 	"os"
 	"time"
 
@@ -30,7 +30,7 @@ func process_health(health_stream quic.Stream) {
 	go func() {
 		for {
 			if time.Since(last_health_time) >= 6*time.Second {
-				fmt.Printf("process_health exit: %v\n", os.Args)
+				log.Printf("process_health exit: %v\n", os.Args)
 				os.Exit(0)
 			}
 			gogo.Utils().TimeSleepSecond(1)

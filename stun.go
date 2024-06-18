@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"time"
@@ -163,9 +164,8 @@ func getWanIpPort(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	stun_svr_list := getStunServerList()
 	for _, stun_svr := range stun_svr_list {
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
-			fmt.Printf("local: %s:%d\n", wan_ip, wan_port)
-			var time time.Time
-			conn.SetDeadline(time)
+			log.Printf("local: %s:%d\n", wan_ip, wan_port)
+			conn.SetDeadline(time.Time{})
 			break
 		}
 	}
