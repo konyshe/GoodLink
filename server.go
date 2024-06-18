@@ -41,7 +41,7 @@ func process_server4(conn *net.UDPConn, ip string, m_send_data []byte) {
 	}
 }
 
-func process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []byte) {
+func process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	m_process_lock.Lock()
 	defer m_process_lock.Unlock()
 
@@ -163,7 +163,7 @@ func process_server_child() quic.Connection {
 			n, remoteAddr, err := conn.ReadFromUDP(m_recv_data) // 接收数据
 			if err == nil && n > 0 {
 				log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
-				process_server5(conn, remoteAddr, m_send_data)
+				process_server5(conn, remoteAddr)
 				break
 			}
 		}
