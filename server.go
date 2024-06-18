@@ -23,6 +23,7 @@ type TunnelServer struct {
 	m_stun_quic_conn quic.Connection
 	m_process_stop   bool
 	m_process_lock   sync.Mutex
+	m_process_chain  chan quic.Connection
 }
 
 func (c *TunnelServer) process_server2(conn *net.UDPConn, ip string, port int, m_send_data []byte) {
@@ -77,6 +78,7 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAdd
 			log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 			process_health(new_quic_stream)
 			c.m_stun_quic_conn = new_quic_conn
+			c.m_process_chain <- new_quic_conn
 			break
 		}
 	}
@@ -157,6 +159,8 @@ func (c *TunnelServer) process_server_parent() {
 func (c *TunnelServer) process_server_child() quic.Connection {
 	var conn *net.UDPConn
 
+	c.m_process_chain = make(chan quic.Connection, 1)
+
 	localAddr, err := net.ResolveUDPAddr("udp4", m_cli_admin_local_addr)
 	assertErrorToNilf("process_server net.ResolveUDPAddr: %v", err)
 
@@ -187,11 +191,12 @@ func (c *TunnelServer) process_server_child() quic.Connection {
 		c.process_server4(conn, clientIP, m_send_data)
 	}
 
-	for c.m_stun_quic_conn == nil {
-		gogo.Utils().TimeSleepMilliSecond(100)
+	select {
+	case <-c.m_process_chain:
+		return c.m_stun_quic_conn
+	case <-time.After(m_process_time_out):
+		return nil
 	}
-
-	return c.m_stun_quic_conn
 }
 
 func (c *TunnelServer) GetQuicConn() quic.Connection {

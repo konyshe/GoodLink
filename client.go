@@ -17,6 +17,7 @@ type TunnelClient struct {
 	m_stun_quic_conn quic.Connection
 	m_process_stop   bool
 	m_process_lock   sync.Mutex
+	m_process_chain  chan quic.Connection
 }
 
 func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []byte) {
@@ -49,6 +50,7 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 		if n, err := new_quic_stream.Write([]byte(m_send_data)); n > 0 && err == nil {
 			process_health(new_quic_stream)
 			c.m_stun_quic_conn = new_quic_conn
+			c.m_process_chain <- new_quic_conn
 			break
 		}
 	}
@@ -83,6 +85,8 @@ type RedisJsonType struct {
 func (c *TunnelClient) process_client() quic.Connection {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
+
+	c.m_process_chain = make(chan quic.Connection, 1)
 
 	gogo.Redis().Init(&redis.Options{
 		Addr:     m_cli_redis_addr,
@@ -128,11 +132,12 @@ func (c *TunnelClient) process_client() quic.Connection {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, m_send_data)
 	}
 
-	for c.m_stun_quic_conn == nil {
-		gogo.Utils().TimeSleepMilliSecond(100)
+	select {
+	case <-c.m_process_chain:
+		return c.m_stun_quic_conn
+	case <-time.After(m_process_time_out):
+		return nil
 	}
-
-	return c.m_stun_quic_conn
 }
 
 func (c *TunnelClient) GetQuicConn() quic.Connection {
