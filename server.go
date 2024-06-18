@@ -91,8 +91,7 @@ func start_server_child(local_addr, remote_addr string) {
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stdout = os.Stdout //指向标准输出
 	cmd.Stderr = os.Stderr //指向标准错误输出
-	cmd.Env = os.Environ()
-	assertErrorToNilf("cmd.Start(): %v", cmd.Start())
+	assertErrorToNilf("cmd.Start(): %v", cmd.Run())
 }
 
 func process_server_parent() {
@@ -134,7 +133,7 @@ func process_server_parent() {
 					localAddr := conn.LocalAddr().String()
 					conn.Close()
 					conn = nil
-					start_server_child(localAddr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
+					go start_server_child(localAddr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
 					goto NEXT_CHECK
 				}
 
