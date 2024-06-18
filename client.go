@@ -6,6 +6,7 @@ import (
 	"gogo"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -14,16 +15,18 @@ import (
 
 type TunnelClient struct {
 	m_stun_quic_conn quic.Connection
+	m_process_stop   bool
+	m_process_lock   sync.Mutex
 }
 
 func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []byte) {
-	m_process_lock.Lock()
-	defer m_process_lock.Unlock()
+	c.m_process_lock.Lock()
+	defer c.m_process_lock.Unlock()
 
-	if m_process_stop {
+	if c.m_process_stop {
 		return
 	}
-	m_process_stop = true
+	c.m_process_stop = true
 
 	conn.SetDeadline(time.Time{})
 
@@ -58,7 +61,7 @@ func (c *TunnelClient) process_client2(ip string, port int, m_send_data []byte) 
 	conn.SetDeadline(time.Now().Add(m_process_time_out))
 
 	go func() {
-		for !m_process_stop {
+		for !c.m_process_stop {
 			if n, remoteAddr, err := conn.ReadFromUDP(m_recv_data); err == nil && n > 0 {
 				log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 				c.process_client3(conn, remoteAddr, m_send_data)
@@ -67,7 +70,7 @@ func (c *TunnelClient) process_client2(ip string, port int, m_send_data []byte) 
 		}
 	}()
 
-	process_send(conn, ip, port, m_send_data)
+	process_send(conn, ip, port, m_send_data, &c.m_process_lock, &c.m_process_stop)
 }
 
 type RedisJsonType struct {
@@ -121,7 +124,7 @@ func (c *TunnelClient) process_client() quic.Connection {
 
 	conn.Close()
 
-	for i := 0; i <= 256 && !m_process_stop; i++ {
+	for i := 0; i <= 256 && !c.m_process_stop; i++ {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, m_send_data)
 	}
 
@@ -133,8 +136,5 @@ func (c *TunnelClient) process_client() quic.Connection {
 }
 
 func (c *TunnelClient) GetQuicConn() quic.Connection {
-	if c.m_stun_quic_conn == nil {
-		c.m_stun_quic_conn = c.process_client()
-	}
 	return c.m_stun_quic_conn
 }

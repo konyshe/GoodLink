@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -20,11 +21,13 @@ import (
 
 type TunnelServer struct {
 	m_stun_quic_conn quic.Connection
+	m_process_stop   bool
+	m_process_lock   sync.Mutex
 }
 
 func (c *TunnelServer) process_server2(conn *net.UDPConn, ip string, port int, m_send_data []byte) {
 	for i := 0; i <= 16; i++ {
-		process_send(conn, ip, port+i, m_send_data)
+		process_send(conn, ip, port+i, m_send_data, &c.m_process_lock, &c.m_process_stop)
 	}
 }
 
@@ -41,18 +44,18 @@ func (c *TunnelServer) process_server4(conn *net.UDPConn, ip string, m_send_data
 			continue
 		}
 		dst_port_map[dst_port] = true
-		process_send(conn, ip, dst_port, m_send_data)
+		process_send(conn, ip, dst_port, m_send_data, &c.m_process_lock, &c.m_process_stop)
 	}
 }
 
 func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
-	m_process_lock.Lock()
-	defer m_process_lock.Unlock()
+	c.m_process_lock.Lock()
+	defer c.m_process_lock.Unlock()
 
-	if m_process_stop {
+	if c.m_process_stop {
 		return
 	}
-	m_process_stop = true
+	c.m_process_stop = true
 
 	conn.SetDeadline(time.Time{})
 
@@ -163,7 +166,7 @@ func (c *TunnelServer) process_server_child() quic.Connection {
 	conn.SetDeadline(time.Now().Add(m_process_time_out))
 
 	go func() {
-		for !m_process_stop {
+		for !c.m_process_stop {
 			n, remoteAddr, err := conn.ReadFromUDP(m_recv_data) // 接收数据
 			if err == nil && n > 0 {
 				log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
@@ -176,11 +179,11 @@ func (c *TunnelServer) process_server_child() quic.Connection {
 	clientIP := strings.Split(m_cli_admin_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(m_cli_admin_remote_addr, ":")[1])
 
-	for i := -32; i >= 64 && !m_process_stop; i += 2 {
+	for i := -32; i >= 64 && !c.m_process_stop; i += 2 {
 		c.process_server2(conn, clientIP, clientPort+i, m_send_data)
 	}
 
-	if !m_process_stop {
+	if !c.m_process_stop {
 		c.process_server4(conn, clientIP, m_send_data)
 	}
 
@@ -192,8 +195,5 @@ func (c *TunnelServer) process_server_child() quic.Connection {
 }
 
 func (c *TunnelServer) GetQuicConn() quic.Connection {
-	if c.m_stun_quic_conn == nil {
-		c.m_stun_quic_conn = c.process_server_child()
-	}
 	return c.m_stun_quic_conn
 }

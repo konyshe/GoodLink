@@ -5,9 +5,10 @@ import (
 	"gogo"
 	"log"
 	"net"
+	"sync"
 )
 
-func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte) {
+func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, lock *sync.Mutex, process *bool) {
 	if conn == nil {
 		log.Println("process_send err conn: nil")
 		return
@@ -23,10 +24,10 @@ func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte) {
 		return
 	}
 
-	m_process_lock.Lock()
-	defer m_process_lock.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
 
-	if m_process_stop {
+	if *process {
 		return
 	}
 
@@ -36,7 +37,7 @@ func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte) {
 	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
 
 	go func() {
-		for !m_process_stop {
+		for !*process {
 			_, err = conn.WriteToUDP(m_send_data, remoteAddr)
 			assertErrorToNilf("process_send conn.WriteToUDP: %v", err)
 			gogo.Utils().TimeSleepMilliSecond(300)

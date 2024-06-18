@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 	//_ "net/http/pprof"
@@ -14,8 +13,6 @@ import (
 var (
 	m_recv_data        []byte
 	m_send_data        []byte
-	m_process_stop     = false
-	m_process_lock     sync.Mutex
 	m_process_time_out = 15 * time.Second
 )
 
@@ -34,9 +31,9 @@ func main2() {
 	} else {
 		go func() {
 			if m_cli_admin_remote_addr != "" && m_cli_admin_local_addr != "" && m_cli_tun_remote != "" {
-				process_proxy_remote(m_cli_tun_remote, tunnelServer.GetQuicConn())
+				process_proxy_remote(m_cli_tun_remote, tunnelServer.process_server_child())
 			} else if m_cli_tun_local != "" {
-				process_proxy_local(m_cli_tun_local, tunnelClient.GetQuicConn())
+				process_proxy_local(m_cli_tun_local, tunnelClient.process_client())
 			}
 		}()
 
