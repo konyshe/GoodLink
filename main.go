@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"gogo"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	//_ "net/http/pprof"
@@ -44,13 +46,15 @@ func main2() {
 		}
 	}
 
-	for {
-		time.Sleep(m_process_time_out)
-		if m_stun_quic_conn == nil {
-			fmt.Printf("main exit: %v\n", os.Args)
-			os.Exit(0)
-		}
+	time.Sleep(m_process_time_out)
+	if m_stun_quic_conn == nil {
+		fmt.Printf("main exit: %v\n", os.Args)
+		os.Exit(0)
 	}
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	<-ch
 }
 
 func main() {
