@@ -8,14 +8,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
 	//_ "net/http/pprof"
-
-	"github.com/quic-go/quic-go"
 )
 
 var (
-	m_stun_quic_conn   quic.Connection
 	m_recv_data        []byte
 	m_send_data        []byte
 	m_process_stop     = false
@@ -27,31 +23,27 @@ func main2() {
 	/*go func() {
 		log.Println(http.ListenAndServe("localhost:8080", nil))
 	}()*/
-
-	m_stun_quic_conn = nil
+	var tunnelClient TunnelClient
+	var tunnelServer TunnelServer
 	m_recv_data = make([]byte, 1600)
 	m_send_data = []byte(randomString(9))
 
 	if m_cli_tun_remote != "" && m_cli_admin_remote_addr == "" && m_cli_admin_local_addr == "" {
-		go process_server_parent()
+		go tunnelServer.process_server_parent()
 
 	} else {
 		go func() {
 			if m_cli_admin_remote_addr != "" && m_cli_admin_local_addr != "" && m_cli_tun_remote != "" {
-				if process_server_child() != nil {
-					process_proxy_remote(m_cli_tun_remote, m_stun_quic_conn)
-				}
+				process_proxy_remote(m_cli_tun_remote, tunnelServer.GetQuicConn())
 			} else if m_cli_tun_local != "" {
-				if process_client() != nil {
-					process_proxy_local(m_cli_tun_local, m_stun_quic_conn)
-				}
+				process_proxy_local(m_cli_tun_local, tunnelClient.GetQuicConn())
 			}
 		}()
 
 		go func() {
 			time.Sleep(m_process_time_out)
-			if m_stun_quic_conn == nil {
-				log.Printf("main exit: %v\n", os.Args)
+			if tunnelClient.GetQuicConn() == nil && tunnelServer.GetQuicConn() == nil {
+				log.Printf("main2 exit: %v\n", os.Args)
 				os.Exit(0)
 			}
 		}()
@@ -60,6 +52,8 @@ func main2() {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
+
+	log.Println("main2 end")
 }
 
 func main() {

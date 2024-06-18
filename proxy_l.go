@@ -10,28 +10,28 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func stunT2QProcess1(tc net.Conn, qc quic.Stream) {
+func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
 	for {
 		tc.SetDeadline(time.Now().Add(15 * time.Minute))
 		qc.SetDeadline(time.Now().Add(15 * time.Minute))
 		if n, err := io.Copy(tc, qc); n == 0 || err != nil {
 			log.Printf("stunT2QProcess1 tcp close: %v==>%v\n", tc.RemoteAddr(), tc.LocalAddr())
 			tc.Close()
-			log.Printf("stunT2QProcess1 quic stream close: %v, %v==>%v\n", qc.StreamID(), m_stun_quic_conn.RemoteAddr(), m_stun_quic_conn.LocalAddr())
+			log.Printf("stunT2QProcess1 quic stream close: %v, %v==>%v\n", qc.StreamID(), stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
 			qc.Close()
 			break
 		}
 	}
 }
 
-func stunQ2TProcess1(qc quic.Stream, tc net.Conn) {
+func stunQ2TProcess1(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
 	for {
 		tc.SetDeadline(time.Now().Add(15 * time.Minute))
 		qc.SetDeadline(time.Now().Add(15 * time.Minute))
 		if n, err := io.Copy(qc, tc); n == 0 || err != nil {
 			log.Printf("stunQ2TProcess1 tcp close: %v==>%v\n", tc.RemoteAddr(), tc.LocalAddr())
 			tc.Close()
-			log.Printf("stunQ2TProcess1 quic stream close: %v, %v==>%v\n", qc.StreamID(), m_stun_quic_conn.RemoteAddr(), m_stun_quic_conn.LocalAddr())
+			log.Printf("stunQ2TProcess1 quic stream close: %v, %v==>%v\n", qc.StreamID(), stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
 			qc.Close()
 			break
 		}
@@ -40,6 +40,11 @@ func stunQ2TProcess1(qc quic.Stream, tc net.Conn) {
 
 func process_proxy_local(addr string, stun_quic_conn quic.Connection) {
 	log.Println("process_proxy_local start...")
+
+	if stun_quic_conn == nil {
+		log.Println("process_proxy_local stun_quic_conn is nil")
+		return
+	}
 
 	// 创建 listener
 	listener, err := net.Listen("tcp", addr)
@@ -53,8 +58,8 @@ func process_proxy_local(addr string, stun_quic_conn quic.Connection) {
 			new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
 			if err == nil && new_quic_stream != nil {
 				log.Printf("process_proxy_local stun_quic_conn.OpenStreamSync: %v==>%v\n", stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
-				go stunT2QProcess1(new_tcp_conn, new_quic_stream)
-				go stunQ2TProcess1(new_quic_stream, new_tcp_conn)
+				go stunT2QProcess1(new_tcp_conn, new_quic_stream, stun_quic_conn)
+				go stunQ2TProcess1(new_quic_stream, new_tcp_conn, stun_quic_conn)
 			}
 		}
 	}

@@ -12,7 +12,11 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []byte) {
+type TunnelClient struct {
+	m_stun_quic_conn quic.Connection
+}
+
+func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []byte) {
 	m_process_lock.Lock()
 	defer m_process_lock.Unlock()
 
@@ -41,13 +45,13 @@ func process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []b
 	for {
 		if n, err := new_quic_stream.Write([]byte(m_send_data)); n > 0 && err == nil {
 			process_health(new_quic_stream)
-			m_stun_quic_conn = new_quic_conn
+			c.m_stun_quic_conn = new_quic_conn
 			break
 		}
 	}
 }
 
-func process_client2(ip string, port int, m_send_data []byte) {
+func (c *TunnelClient) process_client2(ip string, port int, m_send_data []byte) {
 	conn, err := net.ListenUDP("udp4", nil)
 	assertErrorToNilf("process_server2 net.ListenUDP: %v", err)
 
@@ -57,7 +61,7 @@ func process_client2(ip string, port int, m_send_data []byte) {
 		for !m_process_stop {
 			if n, remoteAddr, err := conn.ReadFromUDP(m_recv_data); err == nil && n > 0 {
 				log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
-				process_client3(conn, remoteAddr, m_send_data)
+				c.process_client3(conn, remoteAddr, m_send_data)
 				break
 			}
 		}
@@ -73,7 +77,7 @@ type RedisJsonType struct {
 	ClientPort int    `bson:"client_port" json:"client_port"`
 }
 
-func process_client() quic.Connection {
+func (c *TunnelClient) process_client() quic.Connection {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
@@ -118,12 +122,19 @@ func process_client() quic.Connection {
 	conn.Close()
 
 	for i := 0; i <= 256 && !m_process_stop; i++ {
-		process_client2(redisJson.ServerIP, redisJson.ServerPort, m_send_data)
+		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, m_send_data)
 	}
 
-	for i := 0; i <= 150 && m_stun_quic_conn == nil; i++ {
+	for c.m_stun_quic_conn == nil {
 		gogo.Utils().TimeSleepMilliSecond(100)
 	}
 
-	return m_stun_quic_conn
+	return c.m_stun_quic_conn
+}
+
+func (c *TunnelClient) GetQuicConn() quic.Connection {
+	if c.m_stun_quic_conn == nil {
+		c.m_stun_quic_conn = c.process_client()
+	}
+	return c.m_stun_quic_conn
 }
