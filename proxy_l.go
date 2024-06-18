@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"gogo"
 	"io"
 	"log"
 	"net"
@@ -42,17 +41,9 @@ func stunQ2TProcess1(qc quic.Stream, tc net.Conn) {
 func process_proxy_local(addr string) {
 	log.Println("process_proxy_local start...")
 
-	var err error
-	var listener net.Listener
-
 	// 创建 listener
-	for {
-		if listener, err = net.Listen("tcp", addr); err == nil {
-			break
-		}
-		log.Printf("process_proxy_local listening: %v\n", err)
-		gogo.Utils().TimeSleepSecond(1)
-	}
+	listener, err := net.Listen("tcp", addr)
+	assertErrorToNilf("net.Listen(tcp, addr): %v", err)
 
 	// 监听并接受来自客户端的连接
 	for {
