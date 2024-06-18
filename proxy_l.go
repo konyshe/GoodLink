@@ -49,6 +49,7 @@ func process_proxy_local(addr string, stun_quic_conn quic.Connection) {
 	// 创建 listener
 	listener, err := net.Listen("tcp", addr)
 	assertErrorToNilf("net.Listen(tcp, addr): %v", err)
+	defer listener.Close()
 
 	// 监听并接受来自客户端的连接
 	for {
