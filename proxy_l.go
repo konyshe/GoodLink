@@ -38,7 +38,7 @@ func stunQ2TProcess1(qc quic.Stream, tc net.Conn) {
 	}
 }
 
-func process_proxy_local(addr string) {
+func process_proxy_local(addr string, stun_quic_conn quic.Connection) {
 	log.Println("process_proxy_local start...")
 
 	// 创建 listener
@@ -50,9 +50,9 @@ func process_proxy_local(addr string) {
 		new_tcp_conn, err := listener.Accept()
 		if err == nil && new_tcp_conn != nil {
 			log.Printf("process_proxy_local listener.Accept: %v==>%v\n", new_tcp_conn.RemoteAddr(), new_tcp_conn.LocalAddr())
-			new_quic_stream, err := m_stun_quic_conn.OpenStreamSync(context.Background())
+			new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
 			if err == nil && new_quic_stream != nil {
-				log.Printf("process_proxy_local m_stun_quic_conn.OpenStreamSync: %v==>%v\n", m_stun_quic_conn.RemoteAddr(), m_stun_quic_conn.LocalAddr())
+				log.Printf("process_proxy_local stun_quic_conn.OpenStreamSync: %v==>%v\n", stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
 				go stunT2QProcess1(new_tcp_conn, new_quic_stream)
 				go stunQ2TProcess1(new_quic_stream, new_tcp_conn)
 			}

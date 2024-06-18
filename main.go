@@ -39,11 +39,11 @@ func main2() {
 		go func() {
 			if m_cli_admin_remote_addr != "" && m_cli_admin_local_addr != "" && m_cli_tun_remote != "" {
 				if process_server_child() != nil {
-					process_proxy_remote(m_cli_tun_remote)
+					process_proxy_remote(m_cli_tun_remote, m_stun_quic_conn)
 				}
 			} else if m_cli_tun_local != "" {
 				if process_client() != nil {
-					process_proxy_local(m_cli_tun_local)
+					process_proxy_local(m_cli_tun_local, m_stun_quic_conn)
 				}
 			}
 		}()
