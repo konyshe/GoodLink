@@ -60,19 +60,24 @@ func (c *TunnelClient) process_client2(ip string, port int, m_send_data []byte) 
 	conn, err := net.ListenUDP("udp4", nil)
 	assertErrorToNilf("process_server2 net.ListenUDP: %v", err)
 
-	conn.SetDeadline(time.Now().Add(m_process_time_out))
+	conn.SetReadDeadline(time.Now().Add(6 * time.Second))
 
-	go func() {
+	gogo.GetTask(0).Do(func() error {
 		for !c.m_process_stop {
 			if n, remoteAddr, err := conn.ReadFromUDP(m_recv_data); err == nil && n > 0 {
 				log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 				c.process_client3(conn, remoteAddr, m_send_data)
-				break
+				return nil
 			}
 		}
-	}()
+		conn.Close()
+		return nil
+	})
 
-	process_send(conn, ip, port, m_send_data, &c.m_process_lock, &c.m_process_stop)
+	gogo.GetTask(0).Do(func() error {
+		process_send(conn, ip, port, m_send_data, &c.m_process_lock, &c.m_process_stop)
+		return nil
+	})
 }
 
 type RedisJsonType struct {
@@ -87,6 +92,8 @@ func (c *TunnelClient) process_client() quic.Connection {
 	var conn *net.UDPConn
 
 	c.m_process_chain = make(chan quic.Connection, 1)
+
+	gogo.InitTask(0, 4096)
 
 	gogo.Redis().Init(&redis.Options{
 		Addr:     m_cli_redis_addr,
@@ -132,12 +139,22 @@ func (c *TunnelClient) process_client() quic.Connection {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, m_send_data)
 	}
 
+	ctx := context.WithValue(context.Background(), "client", "recv")
+	go func() {
+		gogo.WaitAllTask()
+		ctx.Done()
+	}()
+
 	select {
 	case <-c.m_process_chain:
 		return c.m_stun_quic_conn
 	case <-time.After(m_process_time_out):
-		return nil
+		c.m_process_stop = true
+	case <-ctx.Done():
+		break
 	}
+
+	return nil
 }
 
 func (c *TunnelClient) GetQuicConn() quic.Connection {
