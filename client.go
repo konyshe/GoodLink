@@ -87,7 +87,7 @@ type RedisJsonType struct {
 	ClientPort int    `bson:"client_port" json:"client_port"`
 }
 
-func (c *TunnelClient) process_client() quic.Connection {
+func (c *TunnelClient) process_client1() quic.Connection {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
@@ -155,6 +155,15 @@ func (c *TunnelClient) process_client() quic.Connection {
 	}
 
 	return nil
+}
+
+func (c *TunnelClient) process_client() quic.Connection {
+	for {
+		if ret := c.process_client1(); ret != nil {
+			return ret
+		}
+		gogo.Utils().TimeSleepSecond(1)
+	}
 }
 
 func (c *TunnelClient) GetQuicConn() quic.Connection {
