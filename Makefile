@@ -12,7 +12,8 @@ GOBUILD=GO111MODULE=on \
 		-w -s -buildid='
 
 PLATFORM_LIST = \
-	linux-amd64
+	linux-amd64 \
+	windows-amd64
 
 all: $(PLATFORM_LIST) strip
 
