@@ -89,7 +89,7 @@ type RedisJsonType struct {
 	ClientPort int    `bson:"client_port" json:"client_port"`
 }
 
-func (c *TunnelClient) process_client1() quic.Connection {
+func (c *TunnelClient) process_client1(radis_id int, redis_key string) quic.Connection {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
@@ -98,7 +98,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 	c.m_work_pool = workpool.NewWorkPool(10240)
 
 	for {
-		if res, err := gogo.Redis().GetDB(m_cli_redis_id).Get(m_cli_tun_key).Bytes(); err == nil && res != nil && len(res) > 0 {
+		if res, err := gogo.Redis().GetDB(radis_id).Get(redis_key).Bytes(); err == nil && res != nil && len(res) > 0 {
 			if err = json.Unmarshal(res, &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //等待服务器响应
 					log.Println("等待服务器响应")
@@ -110,7 +110,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 					assertErrorToNilf("main net.ListenUDP: %v", err)
 					redisJson.ClientIP, redisJson.ClientPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
-						gogo.Redis().Set(m_cli_redis_id, m_cli_tun_key, string(jsonByte), m_process_time_out)
+						gogo.Redis().Set(radis_id, redis_key, string(jsonByte), m_process_time_out)
 						break
 					}
 				}
@@ -123,7 +123,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 		//走到这里，表示当前没有其他正在建立隧道的会话，下面开始告知服务端准备建立隧道
 		log.Println("告知服务端准备建立隧道")
 		if jsonByte, err := json.Marshal(RedisJsonType{}); err == nil {
-			gogo.Redis().SetNx(m_cli_redis_id, m_cli_tun_key, string(jsonByte), m_process_time_out)
+			gogo.Redis().SetNx(radis_id, redis_key, string(jsonByte), m_process_time_out)
 		}
 	NEXT_CHECK:
 		gogo.Utils().TimeSleepSecond(1)
@@ -154,15 +154,15 @@ func (c *TunnelClient) process_client1() quic.Connection {
 	return nil
 }
 
-func (c *TunnelClient) process_client() quic.Connection {
+func (c *TunnelClient) process_client(redis_addr, redis_pass string, radis_id int, redis_key string) quic.Connection {
 	gogo.Redis().Init(&redis.Options{
-		Addr:     m_cli_redis_addr,
-		Password: m_cli_redis_pass,
-		DB:       m_cli_redis_id,
+		Addr:     redis_addr,
+		Password: redis_pass,
+		DB:       radis_id,
 	})
 
 	for {
-		if ret := c.process_client1(); ret != nil {
+		if ret := c.process_client1(radis_id, redis_key); ret != nil {
 			return ret
 		}
 		gogo.Utils().TimeSleepSecond(1)

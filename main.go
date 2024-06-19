@@ -34,7 +34,7 @@ func main2() {
 				process_proxy_server(m_cli_tun_remote, tunnelServer.process_server_child())
 				os.Exit(0)
 			} else if m_cli_tun_local != "" {
-				process_proxy_client(m_cli_tun_local, tunnelClient.process_client())
+				process_proxy_client(m_cli_tun_local, tunnelClient.process_client(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key))
 			}
 		}()
 	}
