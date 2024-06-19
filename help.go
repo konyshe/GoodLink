@@ -28,7 +28,7 @@ func help() {
 	flag.Bool("gogo-background", false, "gogo-background")
 
 	flag.StringVar(&m_cli_admin_remote_addr, "admin_remote_addr", "", "隧道对端地址,内部子进程使用,用户忽略")
-	flag.StringVar(&m_cli_admin_local_addr, "admin_local_addr", "", "隧道对端地址,内部子进程使用,用户忽略")
+	flag.StringVar(&m_cli_admin_local_addr, "admin_local_addr", "", "隧道本地地址,内部子进程使用,用户忽略")
 	flag.StringVar(&m_cli_redis_addr, "redis_addr", "", "redis访问地址, 例如: 1.1.2.2:6379")
 	flag.StringVar(&m_cli_redis_pass, "redis_pass", "", "redis访问密码, 例如: 12345678")
 	flag.IntVar(&m_cli_redis_id, "redis_id", 0, "redis可用的表ID")
