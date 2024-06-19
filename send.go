@@ -29,8 +29,7 @@ func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, pr
 	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
 
 	for !*process {
-		_, err = conn.WriteToUDP(m_send_data, remoteAddr)
-		assertErrorToNilf("process_send conn.WriteToUDP: %v", err)
+		conn.WriteToUDP(m_send_data, remoteAddr)
 		gogo.Utils().TimeSleepMilliSecond(300)
 	}
 }
