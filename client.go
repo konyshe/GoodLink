@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"gogo"
+	"gogo/workpool"
 	"log"
 	"net"
 	"sync"
@@ -18,6 +19,7 @@ type TunnelClient struct {
 	m_process_stop   bool
 	m_process_lock   sync.Mutex
 	m_process_chain  chan quic.Connection
+	m_work_pool      *workpool.WorkPool
 }
 
 func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, m_send_data []byte) {
@@ -62,7 +64,7 @@ func (c *TunnelClient) process_client2(ip string, port int, m_send_data []byte) 
 
 	conn.SetReadDeadline(time.Now().Add(6 * time.Second))
 
-	gogo.GetTask(0).Do(func() error {
+	c.m_work_pool.Do(func() error {
 		for !c.m_process_stop {
 			if n, remoteAddr, err := conn.ReadFromUDP(m_recv_data); err == nil && n > 0 {
 				log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
@@ -74,7 +76,7 @@ func (c *TunnelClient) process_client2(ip string, port int, m_send_data []byte) 
 		return nil
 	})
 
-	gogo.GetTask(0).Do(func() error {
+	c.m_work_pool.Do(func() error {
 		process_send(conn, ip, port, m_send_data, &c.m_process_stop)
 		return nil
 	})
@@ -91,15 +93,9 @@ func (c *TunnelClient) process_client1() quic.Connection {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
+	c.m_process_stop = false
 	c.m_process_chain = make(chan quic.Connection, 1)
-
-	gogo.InitTask(0, 10240)
-
-	gogo.Redis().Init(&redis.Options{
-		Addr:     m_cli_redis_addr,
-		Password: m_cli_redis_pass,
-		DB:       m_cli_redis_id,
-	})
+	c.m_work_pool = workpool.NewWorkPool(10240)
 
 	for {
 		if res, err := gogo.Redis().GetDB(m_cli_redis_id).Get(m_cli_tun_key).Bytes(); err == nil && res != nil && len(res) > 0 {
@@ -139,10 +135,11 @@ func (c *TunnelClient) process_client1() quic.Connection {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, m_send_data)
 	}
 
-	ctx := context.WithValue(context.Background(), "client", "recv")
+	work_pool_end := make(chan int, 1)
+
 	go func() {
-		gogo.WaitAllTask()
-		ctx.Done()
+		c.m_work_pool.Wait()
+		work_pool_end <- 1
 	}()
 
 	select {
@@ -150,7 +147,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 		return c.m_stun_quic_conn
 	case <-time.After(m_process_time_out):
 		c.m_process_stop = true
-	case <-ctx.Done():
+	case <-work_pool_end:
 		break
 	}
 
@@ -158,6 +155,12 @@ func (c *TunnelClient) process_client1() quic.Connection {
 }
 
 func (c *TunnelClient) process_client() quic.Connection {
+	gogo.Redis().Init(&redis.Options{
+		Addr:     m_cli_redis_addr,
+		Password: m_cli_redis_pass,
+		DB:       m_cli_redis_id,
+	})
+
 	for {
 		if ret := c.process_client1(); ret != nil {
 			return ret
