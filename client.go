@@ -75,7 +75,7 @@ func (c *TunnelClient) process_client2(ip string, port int, m_send_data []byte) 
 	})
 
 	gogo.GetTask(0).Do(func() error {
-		process_send(conn, ip, port, m_send_data, &c.m_process_lock, &c.m_process_stop)
+		process_send(conn, ip, port, m_send_data, &c.m_process_stop)
 		return nil
 	})
 }
@@ -93,7 +93,7 @@ func (c *TunnelClient) process_client() quic.Connection {
 
 	c.m_process_chain = make(chan quic.Connection, 1)
 
-	gogo.InitTask(0, 4096)
+	gogo.InitTask(0, 10240)
 
 	gogo.Redis().Init(&redis.Options{
 		Addr:     m_cli_redis_addr,

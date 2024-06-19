@@ -28,7 +28,7 @@ type TunnelServer struct {
 
 func (c *TunnelServer) process_server2(conn *net.UDPConn, ip string, port int, m_send_data []byte) {
 	for i := 0; i <= 16; i++ {
-		process_send(conn, ip, port+i, m_send_data, &c.m_process_lock, &c.m_process_stop)
+		go process_send(conn, ip, port+i, m_send_data, &c.m_process_stop)
 	}
 }
 
@@ -45,7 +45,7 @@ func (c *TunnelServer) process_server4(conn *net.UDPConn, ip string, m_send_data
 			continue
 		}
 		dst_port_map[dst_port] = true
-		process_send(conn, ip, dst_port, m_send_data, &c.m_process_lock, &c.m_process_stop)
+		go process_send(conn, ip, dst_port, m_send_data, &c.m_process_stop)
 	}
 }
 
