@@ -169,7 +169,7 @@ func (c *TunnelClient) ProcessClient(redis_addr, redis_pass string, radis_id int
 		if ret := c.process_client1(radis_id, redis_key, 15*time.Second, send_data, recv_data); ret != nil {
 			return ret
 		}
-		gogo.Utils().TimeSleepSecond(1)
+		gogo.Utils().TimeSleepSecond(5)
 	}
 }
 
