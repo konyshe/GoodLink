@@ -32,13 +32,7 @@ func main2() {
 		go func() {
 			if m_cli_admin_remote_addr != "" && m_cli_admin_local_addr != "" && m_cli_tun_remote != "" {
 				process_proxy_server(m_cli_tun_remote, tunnelServer.process_server_child())
-				go func() {
-					time.Sleep(m_process_time_out)
-					if tunnelServer.GetQuicConn() == nil {
-						log.Printf("main2 exit: %v\n", os.Args)
-						os.Exit(0)
-					}
-				}()
+				os.Exit(0)
 			} else if m_cli_tun_local != "" {
 				process_proxy_client(m_cli_tun_local, tunnelClient.process_client())
 			}
