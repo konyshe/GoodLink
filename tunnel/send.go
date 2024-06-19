@@ -3,6 +3,7 @@ package tunnel
 import (
 	"fmt"
 	"gogo"
+	"goodlink/tools"
 	"log"
 	"net"
 )
@@ -24,7 +25,7 @@ func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, pr
 	}
 
 	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
-	assertErrorToNilf("process_send net.ResolveUDPAddr: %v", err)
+	tools.AssertErrorToNilf("process_send net.ResolveUDPAddr: %v", err)
 
 	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
 

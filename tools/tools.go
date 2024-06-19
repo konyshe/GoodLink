@@ -7,13 +7,13 @@ import (
 	"log"
 )
 
-func assertErrorToNilf(message string, err error) {
+func AssertErrorToNilf(message string, err error) {
 	if err != nil {
 		log.Fatalf(message, err)
 	}
 }
 
-func randomString(length int) string {
+func RandomString(length int) string {
 	k := make([]byte, length)
 	_, err := io.ReadFull(rand.Reader, k)
 	if err != nil {
