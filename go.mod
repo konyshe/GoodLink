@@ -1,4 +1,4 @@
-module tunnel_test
+module goodlink
 
 go 1.22.0
 
