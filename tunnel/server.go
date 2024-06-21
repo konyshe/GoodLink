@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gogo"
+	"goodlink/proxy"
 	"goodlink/tools"
 	"log"
 	"math/rand"
 	"net"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,10 +19,11 @@ import (
 )
 
 type TunnelServer struct {
-	m_stun_quic_conn quic.Connection
-	m_process_stop   bool
-	m_process_lock   sync.Mutex
-	m_process_chain  chan quic.Connection
+	m_stun_quic_conn     quic.Connection
+	m_stun_health_stream quic.Stream
+	m_process_stop       bool
+	m_process_lock       sync.Mutex
+	m_process_chain      chan quic.Connection
 }
 
 func (c *TunnelServer) process_server2(conn *net.UDPConn, ip string, port int, m_send_data []byte) {
@@ -77,40 +76,18 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	for {
 		if n, err := new_quic_stream.Read(recv_data); err == nil && n > 0 {
 			log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(recv_data[:10]), n)
-			process_health(new_quic_stream, send_data, recv_data)
 			c.m_stun_quic_conn = new_quic_conn
+			c.m_stun_health_stream = new_quic_stream
 			c.m_process_chain <- new_quic_conn
 			break
 		}
 	}
 }
 
-func (c *TunnelServer) start_server_child(local_addr, remote_addr string) {
-	var args []string
-
-	log.Printf("start_server_child: %s==>%s\n", local_addr, remote_addr)
-
-	args = append(args, fmt.Sprintf("--admin_remote_addr=%s", remote_addr))
-	args = append(args, fmt.Sprintf("--admin_local_addr=%s", local_addr))
-	for _, temp_arg := range os.Args {
-		if strings.HasPrefix(temp_arg, "--remote") {
-			args = append(args, temp_arg)
-		}
-	}
-
-	cmd := exec.Command(os.Args[0], args...)
-	cmd.Stdout = os.Stdout //指向标准输出
-	cmd.Stderr = os.Stderr //指向标准错误输出
-	tools.AssertErrorToNilf("cmd.Run(): %v", cmd.Run())
-}
-
-func (c *TunnelServer) ProcessServerChild(local_addr, remote_addr string) quic.Connection {
+func (c *TunnelServer) ProcessServerChild(local_addr, remote_addr string, send_data, recv_data []byte) quic.Connection {
 	var conn *net.UDPConn
 
 	process_time_out := 15 * time.Second
-
-	recv_data := make([]byte, 1600)
-	send_data := []byte(tools.RandomString(9))
 
 	c.m_process_chain = make(chan quic.Connection, 1)
 
@@ -156,22 +133,40 @@ func (c *TunnelServer) GetQuicConn() quic.Connection {
 	return c.m_stun_quic_conn
 }
 
-func (c *TunnelServer) ProcessServerParent(redis_addr, redis_pass string, radis_id int, redis_key string) {
+func ProcessServer2(m_cli_tun_remote string, local_addr, remote_addr string) {
+	log.Printf("start_server_child: %s==>%s\n", local_addr, remote_addr)
+	var tunnelServer TunnelServer
+	recv_data := make([]byte, 1600)
+	send_data := []byte(tools.RandomString(9))
+	go proxy.ProcessProxyServer(m_cli_tun_remote, tunnelServer.ProcessServerChild(local_addr, remote_addr, send_data, recv_data))
+	process_health(tunnelServer.m_stun_health_stream, send_data, recv_data)
+
+	log.Printf("stop_server_child: %s==>%s\n", local_addr, remote_addr)
+	tunnelServer.m_stun_quic_conn.CloseWithError(0, "0")
+}
+
+func ProcessServer(m_cli_tun_remote, redis_addr, redis_pass string, radis_id int, redis_key string) {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
 	process_time_out := 15 * time.Second
 
-	gogo.Redis().Init(&redis.Options{
+	//连接服务器
+	redisdb := redis.NewClient(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
 		DB:       radis_id,
 	})
 
-	gogo.Redis().Del(radis_id, redis_key)
+	if redisdb == nil {
+		log.Println("Redis初始化失败")
+		return
+	}
+
+	redisdb.Del(redis_key)
 
 	for {
-		if res, err := gogo.Redis().GetDB(radis_id).Get(redis_key).Bytes(); err == nil && res != nil && len(res) > 0 {
+		if res, err := redisdb.Get(redis_key).Bytes(); err == nil && res != nil && len(res) > 0 {
 			if err = json.Unmarshal(res, &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //收到客户端通知,发送IPPORT
 					log.Println("收到客户端通知,发送IPPORT")
@@ -183,7 +178,7 @@ func (c *TunnelServer) ProcessServerParent(redis_addr, redis_pass string, radis_
 					tools.AssertErrorToNilf("process_server net.ListenUDP: %v", err)
 					redisJson.ServerIP, redisJson.ServerPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
-						gogo.Redis().Set(radis_id, redis_key, string(jsonByte), process_time_out)
+						redisdb.Set(redis_key, string(jsonByte), process_time_out)
 					}
 					goto NEXT_CHECK
 
@@ -193,20 +188,22 @@ func (c *TunnelServer) ProcessServerParent(redis_addr, redis_pass string, radis_
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort > 0 { //客户端返回IPORT
 					log.Println("收到客户端返回的IPORT")
-					gogo.Redis().Del(radis_id, redis_key)
-					localAddr := conn.LocalAddr().String()
+					redisdb.Del(redis_key)
+					local_addr := conn.LocalAddr().String()
 					conn.Close()
 					conn = nil
-					go c.start_server_child(localAddr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
+					go func() {
+						ProcessServer2(m_cli_tun_remote, local_addr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
+					}()
 					goto NEXT_CHECK
 				}
 
-				log.Println("gogo.Redis().GetDB other")
+				log.Println("redisdb.GetDB other")
 				goto NEXT_CHECK
 			}
 		}
 
 	NEXT_CHECK:
-		gogo.Utils().TimeSleepSecond(1)
+		time.Sleep(1 * time.Second)
 	}
 }

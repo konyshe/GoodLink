@@ -2,7 +2,6 @@ package main
 
 import (
 	"gogo"
-	"goodlink/proxy"
 	"goodlink/tunnel"
 	"log"
 	"os"
@@ -16,21 +15,11 @@ func main2() {
 		log.Println(http.ListenAndServe("localhost:8080", nil))
 	}()*/
 
-	if m_cli_tun_remote != "" && m_cli_admin_remote_addr == "" && m_cli_admin_local_addr == "" {
-		var tunnelServer tunnel.TunnelServer
-		go tunnelServer.ProcessServerParent(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
+	if m_cli_tun_remote != "" {
+		go tunnel.ProcessServer(m_cli_tun_remote, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
 
-	} else {
-		go func() {
-			if m_cli_admin_remote_addr != "" && m_cli_admin_local_addr != "" && m_cli_tun_remote != "" {
-				var tunnelServer tunnel.TunnelServer
-				proxy.ProcessProxyServer(m_cli_tun_remote, tunnelServer.ProcessServerChild(m_cli_admin_local_addr, m_cli_admin_remote_addr))
-				os.Exit(0)
-			} else if m_cli_tun_local != "" {
-				var tunnelClient tunnel.TunnelClient
-				proxy.ProcessProxyClient(m_cli_tun_local, tunnelClient.ProcessClient(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key))
-			}
-		}()
+	} else if m_cli_tun_local != "" {
+		go tunnel.ProcessClient(m_cli_tun_local, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
 	}
 
 	ch := make(chan os.Signal, 1)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"gogo"
 	"gogo/workpool"
+	"goodlink/proxy"
 	"goodlink/tools"
 	"log"
 	"net"
@@ -16,11 +17,12 @@ import (
 )
 
 type TunnelClient struct {
-	m_stun_quic_conn quic.Connection
-	m_process_stop   bool
-	m_process_lock   sync.Mutex
-	m_process_chain  chan quic.Connection
-	m_work_pool      *workpool.WorkPool
+	m_stun_quic_conn     quic.Connection
+	m_stun_health_stream quic.Stream
+	m_process_stop       bool
+	m_process_lock       sync.Mutex
+	m_process_chain      chan quic.Connection
+	m_work_pool          *workpool.WorkPool
 }
 
 func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data, recv_data []byte) {
@@ -51,7 +53,7 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	log.Printf("process_server5 new_quic_stream.Write: %v==>%v\n", new_quic_conn.LocalAddr(), new_quic_conn.RemoteAddr())
 	for {
 		if n, err := new_quic_stream.Write([]byte(send_data)); n > 0 && err == nil {
-			process_health(new_quic_stream, send_data, recv_data)
+			c.m_stun_health_stream = new_quic_stream
 			c.m_stun_quic_conn = new_quic_conn
 			c.m_process_chain <- new_quic_conn
 			break
@@ -155,7 +157,7 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 	return nil
 }
 
-func (c *TunnelClient) ProcessClient(redis_addr, redis_pass string, radis_id int, redis_key string) quic.Connection {
+func ProcessClient(m_cli_tun_local, redis_addr, redis_pass string, radis_id int, redis_key string) quic.Connection {
 	gogo.Redis().Init(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
@@ -166,9 +168,10 @@ func (c *TunnelClient) ProcessClient(redis_addr, redis_pass string, radis_id int
 	send_data := []byte(tools.RandomString(9))
 
 	for {
-		if ret := c.process_client1(radis_id, redis_key, 15*time.Second, send_data, recv_data); ret != nil {
-			return ret
-		}
+		var tunnelClient TunnelClient
+		go proxy.ProcessProxyClient(m_cli_tun_local, tunnelClient.process_client1(radis_id, redis_key, 15*time.Second, send_data, recv_data))
+		process_health(tunnelClient.m_stun_health_stream, send_data, recv_data)
+		tunnelClient.m_stun_quic_conn.CloseWithError(0, "0")
 		time.Sleep(5 * time.Second)
 	}
 }
