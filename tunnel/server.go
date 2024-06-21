@@ -170,6 +170,8 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		return
 	}
 
+	defer redisdb.Close()
+
 	redisdb.Del(tun_key)
 
 	for {
