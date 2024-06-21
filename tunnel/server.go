@@ -164,12 +164,10 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		Password: redis_pass,
 		DB:       radis_id,
 	})
-
 	if redisdb == nil {
 		log.Println("Redis初始化失败")
 		return
 	}
-
 	defer redisdb.Close()
 
 	redisdb.Del(tun_key)
