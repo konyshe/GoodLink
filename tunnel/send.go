@@ -2,10 +2,10 @@ package tunnel
 
 import (
 	"fmt"
-	"gogo"
 	"goodlink/tools"
 	"log"
 	"net"
+	"time"
 )
 
 func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, process *bool) {
@@ -31,6 +31,6 @@ func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, pr
 
 	for !*process {
 		conn.WriteToUDP(m_send_data, remoteAddr)
-		gogo.Utils().TimeSleepMilliSecond(300)
+		time.Sleep(300 * time.Millisecond)
 	}
 }

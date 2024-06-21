@@ -38,7 +38,7 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	_, err := conn.WriteToUDP(send_data, remoteAddr)
 	tools.AssertErrorToNilf("process_client3 conn.WriteToUDP: %v", err)
 
-	gogo.Utils().TimeSleepSecond(1)
+	time.Sleep(1 * time.Second)
 
 	log.Printf("process_client3 quic.Dial: %v==>%v\n", conn.LocalAddr(), remoteAddr)
 	new_quic_conn, err := quic.Dial(context.Background(), conn, remoteAddr, getClientTLSConfig(), nil)
@@ -127,7 +127,7 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 			gogo.Redis().SetNx(radis_id, redis_key, string(jsonByte), time_out)
 		}
 	NEXT_CHECK:
-		gogo.Utils().TimeSleepSecond(1)
+		time.Sleep(1 * time.Second)
 	}
 
 	conn.Close()
@@ -169,7 +169,7 @@ func (c *TunnelClient) ProcessClient(redis_addr, redis_pass string, radis_id int
 		if ret := c.process_client1(radis_id, redis_key, 15*time.Second, send_data, recv_data); ret != nil {
 			return ret
 		}
-		gogo.Utils().TimeSleepSecond(5)
+		time.Sleep(5 * time.Second)
 	}
 }
 
