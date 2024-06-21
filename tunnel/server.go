@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -165,7 +166,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 	})
 	if redisdb == nil {
 		log.Println("Redis初始化失败")
-		return
+		os.Exit(0)
 	}
 	defer redisdb.Close()
 
