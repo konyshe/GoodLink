@@ -158,7 +158,6 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 
 	process_time_out := 15 * time.Second
 
-	//连接服务器
 	redisdb := redis.NewClient(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
