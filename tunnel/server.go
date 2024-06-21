@@ -133,19 +133,19 @@ func (c *TunnelServer) GetQuicConn() quic.Connection {
 	return c.m_stun_quic_conn
 }
 
-func ProcessServer2(m_cli_tun_remote string, local_addr, remote_addr string) {
+func ProcessServer2(m_cli_tun_remote_addr string, local_addr, remote_addr string) {
 	log.Printf("start_server_child: %s==>%s\n", local_addr, remote_addr)
 	var tunnelServer TunnelServer
 	recv_data := make([]byte, 1600)
 	send_data := []byte(tools.RandomString(9))
-	go proxy.ProcessProxyServer(m_cli_tun_remote, tunnelServer.ProcessServerChild(local_addr, remote_addr, send_data, recv_data))
+	go proxy.ProcessProxyServer(m_cli_tun_remote_addr, tunnelServer.ProcessServerChild(local_addr, remote_addr, send_data, recv_data))
 	process_health(tunnelServer.m_stun_health_stream, send_data, recv_data)
 
 	log.Printf("stop_server_child: %s==>%s\n", local_addr, remote_addr)
 	tunnelServer.m_stun_quic_conn.CloseWithError(0, "0")
 }
 
-func ProcessServer(m_cli_tun_remote, redis_addr, redis_pass string, radis_id int, redis_key string) {
+func ProcessServer(m_cli_tun_remote_addr, redis_addr, redis_pass string, radis_id int, redis_key string) {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
@@ -193,7 +193,7 @@ func ProcessServer(m_cli_tun_remote, redis_addr, redis_pass string, radis_id int
 					conn.Close()
 					conn = nil
 					go func() {
-						ProcessServer2(m_cli_tun_remote, local_addr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
+						ProcessServer2(m_cli_tun_remote_addr, local_addr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
 					}()
 					goto NEXT_CHECK
 				}

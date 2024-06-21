@@ -15,11 +15,11 @@ func main2() {
 		log.Println(http.ListenAndServe("localhost:8080", nil))
 	}()*/
 
-	if m_cli_tun_remote != "" {
-		go tunnel.ProcessServer(m_cli_tun_remote, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
+	if m_cli_tun_remote_addr != "" {
+		go tunnel.ProcessServer(m_cli_tun_remote_addr, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
 
-	} else if m_cli_tun_local != "" {
-		go tunnel.ProcessClient(m_cli_tun_local, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
+	} else if m_cli_tun_local_addr != "" {
+		go tunnel.ProcessClient(m_cli_tun_local_addr, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
 	}
 
 	ch := make(chan os.Signal, 1)
