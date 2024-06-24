@@ -134,7 +134,7 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 
 	conn.Close()
 
-	for i := 0; i <= 256 && !c.m_process_stop; i++ {
+	for i := 0; i <= 512 && !c.m_process_stop; i++ {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, send_data, recv_data)
 	}
 

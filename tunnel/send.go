@@ -31,6 +31,6 @@ func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, pr
 
 	for !*process {
 		conn.WriteToUDP(m_send_data, remoteAddr)
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 	}
 }

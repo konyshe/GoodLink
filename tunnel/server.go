@@ -41,7 +41,7 @@ func (c *TunnelServer) process_server4(conn *net.UDPConn, tun_remote_ip string, 
 	tun_remote_port_map := make(map[int]bool)
 	tun_remote_port := 0
 
-	for len(tun_remote_port_map) <= 512 {
+	for len(tun_remote_port_map) <= 1024 {
 		tun_remote_port = rand.Intn(65535)
 		if tun_remote_port == 0 {
 			continue
