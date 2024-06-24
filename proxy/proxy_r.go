@@ -12,7 +12,7 @@ func ProcessProxyServer(addr string, stun_quic_conn quic.Connection) {
 	log.Println("ProcessProxyServer start...")
 
 	if stun_quic_conn == nil {
-		log.Println("ProcessProxyClient stun_quic_conn is nil")
+		log.Println("ProcessProxyServer stun_quic_conn is nil")
 		return
 	}
 
