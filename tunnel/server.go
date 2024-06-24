@@ -28,6 +28,10 @@ type TunnelServer struct {
 }
 
 func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, tun_remote_port int, send_data []byte) {
+	if tun_remote_port <= 0 {
+		return
+	}
+
 	for i := 0; i <= 16; i++ {
 		go process_send(conn, tun_remote_ip, tun_remote_port+i, send_data, &c.m_process_stop)
 	}
@@ -117,6 +121,8 @@ func (c *TunnelServer) ProcessServerChild(tun_local_addr, tun_remote_addr string
 	for i := -32; i >= 64 && !c.m_process_stop; i += 2 {
 		c.process_server2(conn, clientIP, clientPort+i, send_data)
 	}
+
+	time.Sleep(500 * time.Millisecond)
 
 	if !c.m_process_stop {
 		c.process_server4(conn, clientIP, send_data)
