@@ -9,12 +9,12 @@ import (
 )
 
 func ProcessProxyServer(addr string, stun_quic_conn quic.Connection) {
-	log.Println("ProcessProxyServer start...")
-
 	if stun_quic_conn == nil {
 		log.Println("ProcessProxyServer stun_quic_conn is nil")
 		return
 	}
+
+	log.Println("ProcessProxyServer start...")
 
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())

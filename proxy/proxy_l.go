@@ -9,12 +9,12 @@ import (
 )
 
 func ProcessProxyClient(addr string, stun_quic_conn quic.Connection) {
-	log.Println("ProcessProxyClient start...")
-
 	if stun_quic_conn == nil {
 		log.Println("ProcessProxyClient stun_quic_conn is nil")
 		return
 	}
+
+	log.Println("ProcessProxyClient start...")
 
 	// 创建 listener
 	listener, err := net.Listen("tcp", addr)
