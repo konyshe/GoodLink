@@ -3,24 +3,12 @@ package tunnel
 import (
 	"fmt"
 	"goodlink/tools"
-	"log"
 	"net"
 	"time"
 )
 
 func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, process *bool) {
-	if conn == nil {
-		log.Println("process_send err conn: nil")
-		return
-	}
-
-	if ip == "" {
-		log.Printf("process_send err ip: %s\n", ip)
-		return
-	}
-
-	if port <= 0 || port >= 65535 {
-		log.Printf("process_send err port: %d\n", port)
+	if conn == nil || ip == "" || port <= 0 || port >= 65535 {
 		return
 	}
 

@@ -38,19 +38,17 @@ func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, 
 }
 
 func (c *TunnelServer) process_server4(conn *net.UDPConn, tun_remote_ip string, send_data []byte) {
-	tun_remote_port_map := make(map[int]bool)
-	tun_remote_port := 0
-
-	for len(tun_remote_port_map) <= 1024 {
-		tun_remote_port = rand.Intn(65535)
-		if tun_remote_port <= 0 {
-			continue
+	for i := 1; i <= 8; i++ {
+		log.Println("***********************************************")
+		for tun_remote_port_map := make(map[int]bool); len(tun_remote_port_map) <= 128; {
+			if tun_remote_port := rand.Intn(8196 * i); tun_remote_port > 8196*(i-1) && tun_remote_port <= 8196*i {
+				if _, ok := tun_remote_port_map[tun_remote_port]; !ok {
+					log.Printf("rand port: %d\n", tun_remote_port)
+					tun_remote_port_map[tun_remote_port] = true
+					go process_send(conn, tun_remote_ip, tun_remote_port, send_data, &c.m_process_stop)
+				}
+			}
 		}
-		if _, ok := tun_remote_port_map[tun_remote_port]; ok {
-			continue
-		}
-		tun_remote_port_map[tun_remote_port] = true
-		go process_send(conn, tun_remote_ip, tun_remote_port, send_data, &c.m_process_stop)
 	}
 }
 
