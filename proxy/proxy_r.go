@@ -10,7 +10,7 @@ import (
 
 func ProcessProxyServer(addr string, stun_quic_conn quic.Connection) {
 	if stun_quic_conn == nil {
-		log.Println("ProcessProxyServer stun_quic_conn is nil")
+		log.Println("ProcessProxyServer 隧道建立失败！")
 		return
 	}
 
