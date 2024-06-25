@@ -28,12 +28,12 @@ type TunnelClient struct {
 }
 
 func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data []byte) {
-	c.m_process_lock.Lock()
-	defer c.m_process_lock.Unlock()
-
 	if c.m_stun_quic_conn != nil {
 		return
 	}
+
+	c.m_process_lock.Lock()
+	defer c.m_process_lock.Unlock()
 
 	conn.SetDeadline(time.Time{})
 
@@ -77,10 +77,6 @@ func (c *TunnelClient) release_conn_list(addr_string string) {
 func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data []byte) {
 	c.m_process_lock.Lock()
 	defer c.m_process_lock.Unlock()
-
-	if c.m_stun_quic_conn != nil {
-		return
-	}
 
 	conn, err := net.ListenUDP("udp4", nil)
 	tools.AssertErrorToNilf("process_server2 net.ListenUDP: %v", err)
@@ -155,7 +151,7 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 
 	c.m_conn_list = list.New()
 
-	for i := 0; i <= 256; i++ {
+	for i := 0; i <= 256 && c.m_stun_quic_conn == nil; i++ {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, send_data, recv_data)
 	}
 
