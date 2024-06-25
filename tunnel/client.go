@@ -75,6 +75,13 @@ func (c *TunnelClient) release_conn_list(addr_string string) {
 }
 
 func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data []byte) {
+	c.m_process_lock.Lock()
+	defer c.m_process_lock.Unlock()
+
+	if c.m_stun_quic_conn != nil {
+		return
+	}
+
 	conn, err := net.ListenUDP("udp4", nil)
 	tools.AssertErrorToNilf("process_server2 net.ListenUDP: %v", err)
 
