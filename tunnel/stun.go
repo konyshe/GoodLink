@@ -36,7 +36,7 @@ func getStunServerList() (list []string) {
 }
 
 func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
-	log.Printf("get stun from: %s\n", addr)
+	log.Printf("隧道服务器: %s\n", addr)
 
 	rand.Seed(time.Now().UnixNano())
 
