@@ -165,7 +165,7 @@ func getWanIpPort(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	for _, stun_svr := range stun_svr_list {
 		conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
-			log.Printf("本地隧道地址: %s:%d\n", wan_ip, wan_port)
+			//log.Printf("本地隧道地址: %s:%d\n", wan_ip, wan_port)
 			conn.SetDeadline(time.Time{})
 			break
 		}
