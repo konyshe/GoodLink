@@ -27,6 +27,22 @@ type TunnelServer struct {
 	m_process_chain      chan quic.Connection
 }
 
+func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, process *bool) {
+	if conn == nil || ip == "" || port <= 0 || port >= 65535 {
+		return
+	}
+
+	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
+	tools.AssertErrorToNilf("process_send net.ResolveUDPAddr: %v", err)
+
+	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
+
+	for !*process {
+		conn.WriteToUDP(m_send_data, remoteAddr)
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, tun_remote_port int, send_data []byte) {
 	if tun_remote_port <= 0 {
 		return
@@ -39,11 +55,10 @@ func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, 
 
 func (c *TunnelServer) process_server4(conn *net.UDPConn, tun_remote_ip string, send_data []byte) {
 	for i := 1; i <= 8; i++ {
-		log.Println("***********************************************")
-		for tun_remote_port_map := make(map[int]bool); len(tun_remote_port_map) <= 64; {
+		for tun_remote_port_map := make(map[int]bool); len(tun_remote_port_map) <= 128; {
 			if tun_remote_port := rand.Intn(8196 * i); tun_remote_port > 8196*(i-1) && tun_remote_port <= 8196*i {
 				if _, ok := tun_remote_port_map[tun_remote_port]; !ok {
-					log.Printf("rand port: %d\n", tun_remote_port)
+					//log.Printf("rand port: %d\n", tun_remote_port)
 					tun_remote_port_map[tun_remote_port] = true
 					go process_send(conn, tun_remote_ip, tun_remote_port, send_data, &c.m_process_stop)
 				}
@@ -180,7 +195,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		if res, err := redisdb.Get(tun_key).Bytes(); err == nil && res != nil && len(res) > 0 {
 			if err = json.Unmarshal(res, &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //收到客户端通知,发送IPPORT
-					log.Println("收到客户端通知,发送IPPORT")
+					log.Println("收到客户端建立隧道的请求")
 					if conn != nil {
 						conn.Close()
 						conn = nil
@@ -189,6 +204,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 					tools.AssertErrorToNilf("process_server net.ListenUDP: %v", err)
 					redisJson.ServerIP, redisJson.ServerPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
+						log.Printf("发送服务端的IPPORT: %v\n", redisJson)
 						redisdb.Set(tun_key, string(jsonByte), process_time_out)
 					}
 					goto NEXT_CHECK
@@ -198,7 +214,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 					goto NEXT_CHECK
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort > 0 { //客户端返回IPORT
-					log.Println("收到客户端返回的IPORT")
+					log.Printf("收到客户端返回的IPPORT: %v\n", redisJson)
 					redisdb.Del(tun_key)
 					tun_local_addr := conn.LocalAddr().String()
 					conn.Close()

@@ -3,6 +3,7 @@ package tunnel
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"gogo"
 	"gogo/workpool"
 	"goodlink/proxy"
@@ -79,10 +80,12 @@ func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data
 		return nil
 	})
 
-	c.m_work_pool.Do(func() error {
-		process_send(conn, ip, port, send_data, &c.m_process_stop)
-		return nil
-	})
+	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
+	tools.AssertErrorToNilf("process_send net.ResolveUDPAddr: %v", err)
+
+	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
+
+	conn.WriteToUDP(send_data, remoteAddr)
 }
 
 type RedisJsonType struct {
@@ -104,15 +107,16 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 		if res, err := gogo.Redis().GetDB(radis_id).Get(redis_key).Bytes(); err == nil && res != nil && len(res) > 0 {
 			if err = json.Unmarshal(res, &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //等待服务器响应
-					log.Println("等待服务器响应")
+					log.Println("等待服务端响应")
 					goto NEXT_CHECK
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort == 0 { //服务器已返回IPPORT
-					log.Println("收到服务器返回的IPPORT")
+					log.Printf("收到服务端返回的IPPORT: %v\n", redisJson)
 					conn, err = net.ListenUDP("udp4", nil)
 					tools.AssertErrorToNilf("main net.ListenUDP: %v", err)
 					redisJson.ClientIP, redisJson.ClientPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
+						log.Printf("发送客户端的IPPORT: %v\n", redisJson)
 						gogo.Redis().Set(radis_id, redis_key, string(jsonByte), time_out)
 						break
 					}
