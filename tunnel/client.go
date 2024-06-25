@@ -84,7 +84,6 @@ func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data
 	c.m_conn_list.PushBack(conn)
 
 	c.m_work_pool.Do(func() error {
-		conn.SetReadDeadline(time.Now().Add(6 * time.Second))
 		if n, remoteAddr, _ := conn.ReadFromUDP(recv_data); n > 0 {
 			log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(recv_data[:10]), n)
 			c.process_client3(conn, remoteAddr, send_data)
