@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"container/list"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,20 +21,19 @@ import (
 type TunnelClient struct {
 	m_stun_quic_conn     quic.Connection
 	m_stun_health_stream quic.Stream
-	m_process_stop       bool
 	m_process_lock       sync.Mutex
 	m_process_chain      chan quic.Connection
+	m_conn_list          *list.List
 	m_work_pool          *workpool.WorkPool
 }
 
-func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data, recv_data []byte) {
+func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data []byte) {
 	c.m_process_lock.Lock()
 	defer c.m_process_lock.Unlock()
 
-	if c.m_process_stop {
+	if c.m_stun_quic_conn != nil {
 		return
 	}
-	c.m_process_stop = true
 
 	conn.SetDeadline(time.Time{})
 
@@ -59,24 +59,33 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 			c.m_process_chain <- new_quic_conn
 			break
 		}
+		time.Sleep(200 * time.Millisecond)
 	}
+}
+
+func (c *TunnelClient) release_conn_list(addr_string string) {
+	for e := c.m_conn_list.Front(); e != nil; e = e.Next() {
+		if conn := e.Value.(*net.UDPConn); conn != nil {
+			if addr_string != conn.LocalAddr().String() {
+				conn.Close()
+			}
+		}
+	}
+	c.m_conn_list.Init()
 }
 
 func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data []byte) {
 	conn, err := net.ListenUDP("udp4", nil)
 	tools.AssertErrorToNilf("process_server2 net.ListenUDP: %v", err)
 
-	conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+	c.m_conn_list.PushBack(conn)
 
 	c.m_work_pool.Do(func() error {
-		for !c.m_process_stop {
-			if n, remoteAddr, err := conn.ReadFromUDP(recv_data); err == nil && n > 0 {
-				log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(recv_data[:10]), n)
-				c.process_client3(conn, remoteAddr, send_data, recv_data)
-				return nil
-			}
+		conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+		if n, remoteAddr, _ := conn.ReadFromUDP(recv_data); n > 0 {
+			log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(recv_data[:10]), n)
+			c.process_client3(conn, remoteAddr, send_data)
 		}
-		conn.Close()
 		return nil
 	})
 
@@ -99,7 +108,6 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
-	c.m_process_stop = false
 	c.m_process_chain = make(chan quic.Connection, 1)
 	c.m_work_pool = workpool.NewWorkPool(10240)
 
@@ -111,12 +119,12 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 					goto NEXT_CHECK
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort == 0 { //服务器已返回IPPORT
-					log.Printf("收到服务端返回的IPPORT: %v\n", redisJson)
+					log.Printf("收到服务端的隧道地址: %v\n", redisJson)
 					conn, err = net.ListenUDP("udp4", nil)
 					tools.AssertErrorToNilf("main net.ListenUDP: %v", err)
 					redisJson.ClientIP, redisJson.ClientPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
-						log.Printf("发送客户端的IPPORT: %v\n", redisJson)
+						log.Printf("发送客户端的隧道地址: %v\n", redisJson)
 						gogo.Redis().Set(radis_id, redis_key, string(jsonByte), time_out)
 						break
 					}
@@ -138,27 +146,23 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 
 	conn.Close()
 
-	for i := 0; i <= 256 && !c.m_process_stop; i++ {
+	c.m_conn_list = list.New()
+
+	for i := 0; i <= 256; i++ {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, send_data, recv_data)
 	}
 
-	work_pool_end := make(chan int, 1)
-
-	go func() {
-		c.m_work_pool.Wait()
-		work_pool_end <- 1
-	}()
-
 	select {
 	case <-c.m_process_chain:
-		return c.m_stun_quic_conn
+		c.release_conn_list(c.m_stun_quic_conn.LocalAddr().String())
+		break
 	case <-time.After(time_out):
-		c.m_process_stop = true
-	case <-work_pool_end:
+		c.release_conn_list("")
+		c.m_work_pool.Wait()
 		break
 	}
 
-	return nil
+	return c.m_stun_quic_conn
 }
 
 func (c *TunnelClient) GetQuicConn() quic.Connection {

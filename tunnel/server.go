@@ -204,7 +204,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 					tools.AssertErrorToNilf("process_server net.ListenUDP: %v", err)
 					redisJson.ServerIP, redisJson.ServerPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
-						log.Printf("发送服务端的IPPORT: %v\n", redisJson)
+						log.Printf("发送服务端的隧道地址: %v\n", redisJson)
 						redisdb.Set(tun_key, string(jsonByte), process_time_out)
 					}
 					goto NEXT_CHECK
@@ -214,7 +214,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 					goto NEXT_CHECK
 
 				} else if redisJson.ServerPort > 0 && redisJson.ClientPort > 0 { //客户端返回IPORT
-					log.Printf("收到客户端返回的IPPORT: %v\n", redisJson)
+					log.Printf("收到客户端的隧道地址: %v\n", redisJson)
 					redisdb.Del(tun_key)
 					tun_local_addr := conn.LocalAddr().String()
 					conn.Close()
