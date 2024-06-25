@@ -35,8 +35,6 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	c.m_process_lock.Lock()
 	defer c.m_process_lock.Unlock()
 
-	conn.SetDeadline(time.Time{})
-
 	log.Printf("process_client3 conn.WriteToUDP: %v==>%v\n", conn.LocalAddr(), remoteAddr)
 	_, err := conn.WriteToUDP(send_data, remoteAddr)
 	tools.AssertErrorToNilf("process_client3 conn.WriteToUDP: %v", err)

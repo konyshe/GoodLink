@@ -10,8 +10,6 @@ import (
 
 func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
 	for {
-		//tc.SetDeadline(time.Now().Add(15 * time.Minute))
-		//qc.SetDeadline(time.Now().Add(15 * time.Minute))
 		if n, err := io.Copy(tc, qc); n == 0 || err != nil {
 			log.Printf("stunT2QProcess1 tcp close: %v==>%v\n", tc.RemoteAddr(), tc.LocalAddr())
 			tc.Close()
@@ -24,8 +22,6 @@ func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection
 
 func stunQ2TProcess1(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
 	for {
-		//tc.SetDeadline(time.Now().Add(15 * time.Minute))
-		//qc.SetDeadline(time.Now().Add(15 * time.Minute))
 		if n, err := io.Copy(qc, tc); n == 0 || err != nil {
 			log.Printf("stunQ2TProcess1 tcp close: %v==>%v\n", tc.RemoteAddr(), tc.LocalAddr())
 			tc.Close()
