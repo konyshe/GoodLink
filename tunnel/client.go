@@ -65,17 +65,6 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	}
 }
 
-func (c *TunnelClient) release_conn_list(addr_string string) {
-	for e := c.m_conn_list.Front(); e != nil; e = e.Next() {
-		if conn := e.Value.(*net.UDPConn); conn != nil {
-			if addr_string != conn.LocalAddr().String() {
-				conn.Close()
-			}
-		}
-	}
-	c.m_conn_list.Init()
-}
-
 func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data []byte) {
 	c.m_process_lock.Lock()
 	defer c.m_process_lock.Unlock()
@@ -89,10 +78,14 @@ func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data
 	c.m_conn_list.PushBack(conn)
 
 	c.m_work_pool.Do(func() error {
+		conn.SetDeadline(time.Now().Add(6 * time.Second))
 		if n, remoteAddr, _ := conn.ReadFromUDP(recv_data); n > 0 {
+			conn.SetDeadline(time.Time{})
 			log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(recv_data[:10]), n)
 			c.process_client3(conn, remoteAddr, send_data)
+			return nil
 		}
+		conn.Close()
 		return nil
 	})
 
@@ -167,10 +160,9 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 
 	select {
 	case <-c.m_process_chain:
-		c.release_conn_list(c.m_stun_quic_conn.LocalAddr().String())
 		break
 	case <-time.After(time_out):
-		c.release_conn_list("")
+		log.Println("建立隧道超时!")
 		c.m_work_pool.Wait()
 		break
 	}
