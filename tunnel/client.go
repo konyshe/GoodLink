@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"container/list"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -23,7 +22,6 @@ type TunnelClient struct {
 	m_stun_health_stream quic.Stream
 	m_process_lock       sync.Mutex
 	m_process_chain      chan quic.Connection
-	m_conn_list          *list.List
 	m_work_pool          *workpool.WorkPool
 }
 
@@ -74,8 +72,6 @@ func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data
 		log.Printf("process_server2 net.ListenUDP: %v\n", err)
 		return
 	}
-
-	c.m_conn_list.PushBack(conn)
 
 	c.m_work_pool.Do(func() error {
 		conn.SetDeadline(time.Now().Add(6 * time.Second))
@@ -151,8 +147,6 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 	}
 
 	conn.Close()
-
-	c.m_conn_list = list.New()
 
 	for i := 0; i <= 256 && c.m_stun_quic_conn == nil; i++ {
 		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, send_data, recv_data)
