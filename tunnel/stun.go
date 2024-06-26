@@ -163,7 +163,7 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
 func getWanIpPort(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	stun_svr_list := getStunServerList()
 	for _, stun_svr := range stun_svr_list {
-		conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+		conn.SetDeadline(time.Now().Add(1 * time.Second))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
 			//log.Printf("本地隧道地址: %s:%d\n", wan_ip, wan_port)
 			conn.SetDeadline(time.Time{})
