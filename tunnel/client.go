@@ -190,10 +190,16 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		var tunnelClient TunnelClient
 		if conn := tunnelClient.process_client1(radis_id, redis_key, 15*time.Second, send_data, recv_data); conn != nil {
 			if listener, err := net.Listen("tcp", tun_local_addr); listener != nil && err == nil {
-				go proxy.ProcessProxyClient(listener, conn)
+				work_pool := workpool.NewWorkPool(1)
+				work_pool.Do(func() error {
+					proxy.ProcessProxyClient(listener, conn)
+					return nil
+				})
 				process_health(tunnelClient.m_stun_health_stream, send_data, recv_data)
+				log.Println("隧道已断开!")
 				tunnelClient.Release()
 				listener.Close()
+				work_pool.Wait()
 			}
 		}
 		time.Sleep(5 * time.Second)
