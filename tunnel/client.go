@@ -176,7 +176,7 @@ func (c *TunnelClient) Release() {
 	}
 }
 
-func ProcessClient(m_cli_tun_local_addr, redis_addr, redis_pass string, radis_id int, redis_key string) quic.Connection {
+func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, redis_key string) quic.Connection {
 	gogo.Redis().Init(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
@@ -188,9 +188,14 @@ func ProcessClient(m_cli_tun_local_addr, redis_addr, redis_pass string, radis_id
 
 	for {
 		var tunnelClient TunnelClient
-		go proxy.ProcessProxyClient(m_cli_tun_local_addr, tunnelClient.process_client1(radis_id, redis_key, 15*time.Second, send_data, recv_data))
-		process_health(tunnelClient.m_stun_health_stream, send_data, recv_data)
-		tunnelClient.Release()
+		if conn := tunnelClient.process_client1(radis_id, redis_key, 15*time.Second, send_data, recv_data); conn != nil {
+			if listener, err := net.Listen("tcp", tun_local_addr); listener != nil && err == nil {
+				go proxy.ProcessProxyClient(listener, conn)
+				process_health(tunnelClient.m_stun_health_stream, send_data, recv_data)
+				tunnelClient.Release()
+				listener.Close()
+			}
+		}
 		time.Sleep(5 * time.Second)
 	}
 }

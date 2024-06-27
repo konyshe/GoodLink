@@ -8,23 +8,9 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func ProcessProxyClient(addr string, stun_quic_conn quic.Connection) {
-	if stun_quic_conn == nil {
-		log.Println("ProcessProxyClient 隧道建立失败！")
-		return
-	}
-
+func ProcessProxyClient(listener net.Listener, stun_quic_conn quic.Connection) {
 	log.Println("ProcessProxyClient start...")
 
-	// 创建 listener
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		log.Printf("net.Listen(tcp, addr): %v", err)
-		return
-	}
-	defer listener.Close()
-
-	// 监听并接受来自客户端的连接
 	for {
 		new_tcp_conn, err := listener.Accept()
 		if err == nil {
