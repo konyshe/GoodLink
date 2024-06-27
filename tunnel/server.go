@@ -22,25 +22,35 @@ import (
 type TunnelServer struct {
 	m_stun_quic_conn     quic.Connection
 	m_stun_health_stream quic.Stream
-	m_process_stop       bool
 	m_process_lock       sync.Mutex
 	m_process_chain      chan quic.Connection
 }
 
-func process_send(conn *net.UDPConn, ip string, port int, m_send_data []byte, process *bool) {
-	if conn == nil || ip == "" || port <= 0 || port >= 65535 {
+func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port int, send_data []byte) {
+	if conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 65535 {
 		return
 	}
 
-	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
+	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
 	tools.AssertErrorToNilf("process_send net.ResolveUDPAddr: %v", err)
 
 	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
 
-	for !*process {
-		conn.WriteToUDP(m_send_data, remoteAddr)
-		time.Sleep(1 * time.Second)
-	}
+	go func() {
+		for {
+			c.m_process_lock.Lock()
+			if c.m_stun_quic_conn != nil {
+				break
+			}
+
+			if _, err := conn.WriteToUDP(send_data, remoteAddr); err != nil {
+				break
+			}
+			c.m_process_lock.Unlock()
+			time.Sleep(1 * time.Second)
+		}
+		c.m_process_lock.Unlock()
+	}()
 }
 
 func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, tun_remote_port int, send_data []byte) {
@@ -49,7 +59,7 @@ func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, 
 	}
 
 	for i := 0; i <= 16; i++ {
-		go process_send(conn, tun_remote_ip, tun_remote_port+i, send_data, &c.m_process_stop)
+		c.process_send(conn, tun_remote_ip, tun_remote_port+i, send_data)
 	}
 }
 
@@ -60,7 +70,7 @@ func (c *TunnelServer) process_server4(conn *net.UDPConn, tun_remote_ip string, 
 				if _, ok := tun_remote_port_map[tun_remote_port]; !ok {
 					//log.Printf("rand port: %d\n", tun_remote_port)
 					tun_remote_port_map[tun_remote_port] = true
-					go process_send(conn, tun_remote_ip, tun_remote_port, send_data, &c.m_process_stop)
+					c.process_send(conn, tun_remote_ip, tun_remote_port, send_data)
 				}
 			}
 		}
@@ -71,12 +81,9 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, tun_remote_addr *net.U
 	c.m_process_lock.Lock()
 	defer c.m_process_lock.Unlock()
 
-	if c.m_process_stop {
+	if c.m_stun_quic_conn != nil {
 		return
 	}
-	c.m_process_stop = true
-
-	conn.SetDeadline(time.Time{})
 
 	log.Printf("quic.Listen: %v\n", conn.LocalAddr())
 	listener, err := quic.Listen(conn, getServerTLSConfig(), nil)
@@ -91,14 +98,13 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, tun_remote_addr *net.U
 	tools.AssertErrorToNilf("process_server5 new_quic_conn.AcceptStream: %v", err)
 
 	log.Printf("process_client3 new_quic_stream.Read: %v==>%v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
-	for {
-		if n, err := new_quic_stream.Read(recv_data); err == nil && n > 0 {
-			log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), tun_remote_addr, string(recv_data[:10]), n)
-			c.m_stun_quic_conn = new_quic_conn
-			c.m_stun_health_stream = new_quic_stream
-			c.m_process_chain <- new_quic_conn
-			break
-		}
+	new_quic_stream.SetReadDeadline(time.Now().Add(15 * time.Second))
+	if n, err := new_quic_stream.Read(recv_data); err == nil && n > 0 {
+		new_quic_stream.SetReadDeadline(time.Time{})
+		log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), tun_remote_addr, string(recv_data[:10]), n)
+		c.m_stun_quic_conn = new_quic_conn
+		c.m_stun_health_stream = new_quic_stream
+		c.m_process_chain <- new_quic_conn
 	}
 }
 
@@ -115,29 +121,28 @@ func (c *TunnelServer) ProcessServerChild(tun_local_addr, tun_remote_addr string
 	conn, err = net.ListenUDP("udp4", localAddr)
 	tools.AssertErrorToNilf("process_server net.ListenUDP: %v", err)
 
-	conn.SetDeadline(time.Now().Add(process_time_out))
-
 	go func() {
-		for !c.m_process_stop {
-			n, conn_remote_addr, err := conn.ReadFromUDP(recv_data) // 接收数据
-			if err == nil && n > 0 {
-				log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), conn_remote_addr, string(recv_data[:10]), n)
-				c.process_server5(conn, conn_remote_addr, recv_data)
-				break
-			}
+		conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+		n, conn_remote_addr, err := conn.ReadFromUDP(recv_data) // 接收数据
+		if err == nil && n > 0 {
+			conn.SetReadDeadline(time.Time{})
+			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), conn_remote_addr, string(recv_data[:10]), n)
+			c.process_server5(conn, conn_remote_addr, recv_data)
+			return
 		}
+		conn.Close()
 	}()
 
 	clientIP := strings.Split(tun_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(tun_remote_addr, ":")[1])
 
-	for i := -32; i >= 64 && !c.m_process_stop; i += 2 {
+	for i := -32; i >= 64 && c.m_stun_quic_conn == nil; i += 2 {
 		c.process_server2(conn, clientIP, clientPort+i, send_data)
 	}
 
 	time.Sleep(500 * time.Millisecond)
 
-	if !c.m_process_stop {
+	if c.m_stun_quic_conn == nil {
 		c.process_server4(conn, clientIP, send_data)
 	}
 
@@ -145,6 +150,7 @@ func (c *TunnelServer) ProcessServerChild(tun_local_addr, tun_remote_addr string
 	case <-c.m_process_chain:
 		return c.m_stun_quic_conn
 	case <-time.After(process_time_out):
+		log.Println("建立隧道超时!")
 		return nil
 	}
 }

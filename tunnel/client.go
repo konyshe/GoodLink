@@ -34,8 +34,6 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 		return
 	}
 
-	conn.SetDeadline(time.Time{})
-
 	log.Printf("process_client3 conn.WriteToUDP: %v==>%v\n", conn.LocalAddr(), remoteAddr)
 	if _, err := conn.WriteToUDP(send_data, remoteAddr); err != nil {
 		log.Printf("process_client3 conn.WriteToUDP: %v\n", err)
@@ -79,6 +77,7 @@ func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data
 	c.m_work_pool.Do(func() error {
 		conn.SetDeadline(time.Now().Add(6 * time.Second))
 		if n, remoteAddr, _ := conn.ReadFromUDP(recv_data); n > 0 {
+			conn.SetDeadline(time.Time{})
 			log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(recv_data[:10]), n)
 			c.process_client3(conn, remoteAddr, send_data)
 			return nil
