@@ -148,6 +148,7 @@ func (c *TunnelServer) ProcessServerChild(tun_local_addr, tun_remote_addr string
 
 	select {
 	case <-c.m_process_chain:
+		log.Println("建立隧道成功!")
 		return c.m_stun_quic_conn
 	case <-time.After(process_time_out):
 		log.Println("建立隧道超时!")

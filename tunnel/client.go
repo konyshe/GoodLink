@@ -155,6 +155,7 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 
 	select {
 	case <-c.m_process_chain:
+		log.Println("建立隧道成功!")
 		break
 	case <-time.After(time_out):
 		log.Println("建立隧道超时!")
