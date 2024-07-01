@@ -186,6 +186,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 
 	listener, err := net.Listen("tcp", tun_local_addr)
 	if listener == nil || err != nil {
+		log.Printf("地址监听失败: %v\n", tun_local_addr)
 		return nil
 	}
 	defer listener.Close()
