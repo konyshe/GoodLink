@@ -23,6 +23,10 @@ make clean; make
 
 ## 使用说明
 
+### 直接下载发布版本
+
+[下载地址](https://gitee.com/konyshe/goodlink/releases "下载地址")
+
 ### 需要被访问的目标电脑
 
 ```
