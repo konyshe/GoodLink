@@ -177,7 +177,7 @@ func (c *TunnelClient) Release() {
 	}
 }
 
-func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, redis_key string, retry bool) {
+func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, redis_key string, retry bool) error {
 	gogo.Redis().Init(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
@@ -186,8 +186,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 
 	listener, err := net.Listen("tcp", tun_local_addr)
 	if listener == nil || err != nil {
-		log.Printf("地址监听失败: %v\n", tun_local_addr)
-		return
+		return fmt.Errorf("地址监听失败: %v", tun_local_addr)
 	}
 	defer listener.Close()
 
@@ -203,13 +202,13 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 				return nil
 			})
 			process_health(tunnelClient.m_stun_health_stream, send_data, recv_data)
-			log.Println("隧道已断开!")
+			log.Println("隧道已断开")
 			tunnelClient.Release()
 			work_pool.Wait()
 		}
 
 		if !retry {
-			break
+			return fmt.Errorf("隧道已断开")
 		}
 		time.Sleep(15 * time.Second)
 	}

@@ -19,7 +19,12 @@ func main2() {
 		go tunnel.ProcessServer(m_cli_tun_remote_addr, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
 
 	} else if m_cli_tun_local_addr != "" {
-		go tunnel.ProcessClient(m_cli_tun_local_addr, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key, false)
+		go func() {
+			if err := tunnel.ProcessClient(m_cli_tun_local_addr, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key, false); err != nil {
+				log.Println(err)
+				os.Exit(0)
+			}
+		}()
 	}
 
 	ch := make(chan os.Signal, 1)
