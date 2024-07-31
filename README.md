@@ -48,9 +48,9 @@ nohup ./goodlink-linux-amd64 --gogo-restart-delay=1000 --redis_addr=1.2.3.4:6379
 
 --redis_id: redis服务器可用的表ID
 
---remote: 指向目标服务的IP和PORT
+--remote: 需要映射目标服务的IP和PORT
 
---local: 本地映射的IP和PORT，127.0.0.1表示只允许本机使用
+--local: 本地提供代理服务的IP和PORT，127.0.0.1表示只允许本机连接
 
 --key: 如果有多个需要被访问的目标电脑，需要指定不同的key区分
 ```
