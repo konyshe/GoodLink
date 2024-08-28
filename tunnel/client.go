@@ -210,6 +210,6 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		if !retry {
 			return fmt.Errorf("隧道已断开")
 		}
-		time.Sleep(15 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
