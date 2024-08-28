@@ -15,7 +15,7 @@ PLATFORM_LIST = \
 	linux-amd64 \
 	windows-amd64
 
-all: $(PLATFORM_LIST) strip
+all: $(PLATFORM_LIST)
 
 linux-amd64:
 	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
