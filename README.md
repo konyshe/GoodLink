@@ -1,13 +1,13 @@
 # goodlink
 
 ## 介绍
-两个无公网IP的PC之间，建立直连的内网穿透解决方案，无配置纯命令行，无需在公网服务端部署程序（只需要Redis服务），无病毒报错
+两个无公网IP的PC之间，建立直连的内网穿透解决方案，无配置纯命令行，无需在公网服务端部署程序（只需要部署Redis服务），windows端无病毒报错
 
 ### 特点说明
 
-1. 手写NAT穿透算法，未使用第三方内核，不会报病毒
+1. 手写NAT穿透算法，未使用第三方内核，windows端无病毒报错
 
-2. 公网服务器无程序部署，只需Redis服务，直接买个Redis服务就可以
+2. 公网服务器无程序部署，只需租个Redis服务。可参照使用说明，使用作者提供的免费Redis服务
 
 3. 完全命令行方式运行，无需配置文件，简单明了
 
@@ -29,16 +29,16 @@ make clean; make
 
 [下载地址](https://gitee.com/konyshe/goodlink/releases "下载地址")
 
-### 需要被访问的目标电脑
+### 需要被访问的目标PC（linux）
 
 ```
-nohup ./goodlink-linux-amd64 --gogo-restart-delay=1000 --redis_addr=1.2.3.4:6379 --redis_pass=123456 --redis_id=15 --remote=127.0.0.1:22 --key=ssh_20240730 &
+./goodlink-linux-amd64 --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --remote=127.0.0.1:22 --key=ssh_20240730
 ```
 
-### 需要请求访问的本机电脑
+### 需要请求访问的本地PC（windows）
 
 ```
-.\goodlink-windows-amd64.exe --redis_addr=1.2.3.4:6379 --redis_pass=123456 --redis_id=15 --local=127.0.0.1:18001 --key=ssh_20240730
+.\goodlink-windows-amd64.exe --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --local=127.0.0.1:18001 --key=ssh_20240730
 ```
 
 ### 选项说明
