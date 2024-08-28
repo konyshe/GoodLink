@@ -32,14 +32,16 @@ make clean; make
 ### 需要被访问的目标PC（linux）
 
 ```
-./goodlink-linux-amd64 --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --remote=127.0.0.1:22 --key=ssh_20240730
+./goodlink-linux-amd64 --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --remote=127.0.0.1:80 --key=ssh_20240730
 ```
 
 ### 需要请求访问的本地PC（windows）
 
 ```
-.\goodlink-windows-amd64.exe --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --local=127.0.0.1:18001 --key=ssh_20240730
+.\goodlink-windows-amd64.exe --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --local=127.0.0.1:18080 --key=ssh_20240730
 ```
+
+此时浏览器访问本地PC的18080端口，即可看到目标PC的80端口网页。目前仅支持TCP协议代理，UDP协议还在开发中
 
 ### 选项说明
 
