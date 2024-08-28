@@ -16,7 +16,7 @@
 ## 编译说明
 
 ```
-cd /root/go/src     //该步骤仅针对Linux系统
+cd /root/go/src
 git clone -b main https://gitee.com/konyshe/gogo.git
 git clone https://gitee.com/konyshe/goodlink.git
 cd goodlink
