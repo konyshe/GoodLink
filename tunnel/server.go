@@ -172,8 +172,10 @@ func ProcessServer2(proxy_remote_addr string, tun_local_addr, tun_remote_addr st
 	var tunnelServer TunnelServer
 	recv_data := make([]byte, 1600)
 	send_data := []byte(tools.RandomString(9))
-	go proxy.ProcessProxyServer(proxy_remote_addr, tunnelServer.ProcessServerChild(tun_local_addr, tun_remote_addr, send_data, recv_data))
-	process_health(tunnelServer.m_stun_health_stream, send_data, recv_data)
+	if quic_tunl := tunnelServer.ProcessServerChild(tun_local_addr, tun_remote_addr, send_data, recv_data); quic_tunl != nil {
+		go proxy.ProcessProxyServer(proxy_remote_addr, quic_tunl)
+		process_health(tunnelServer.m_stun_health_stream, send_data, recv_data)
+	}
 
 	log.Printf("stop_server_child: %s==>%s\n", tun_local_addr, tun_remote_addr)
 	tunnelServer.Release()
@@ -226,9 +228,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 					tun_local_addr := conn.LocalAddr().String()
 					conn.Close()
 					conn = nil
-					go func() {
-						ProcessServer2(tun_remote_addr, tun_local_addr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
-					}()
+					go ProcessServer2(tun_remote_addr, tun_local_addr, fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort))
 					goto NEXT_CHECK
 				}
 
