@@ -28,7 +28,7 @@ RUN --mount=target=. \
 COPY upx /usr/bin/
 RUN upx --best /goodlink
 
-FROM scratch
+FROM alpine:3
 
 #MAINTAINER 维护者信息
 MAINTAINER kony
@@ -39,7 +39,4 @@ COPY --from=builder /goodlink /home/
 WORKDIR /home/
 
 #ENTRYPOINT 运行命令+固定参数
-ENTRYPOINT ["./goodlink", "--gogo-restart-delay=1000"]
-
-#CMD 可变参数, 会被docker run带入的参数替换
-CMD ["-h"]
+ENTRYPOINT ["./goodlink", "--h"]
