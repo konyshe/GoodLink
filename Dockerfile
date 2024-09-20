@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:latest as builder
+FROM --platform=${BUILDPLATFORM} golang:latest AS builder
 
 RUN export ALL_PROXY="socks5://10.1.20.129:7899"
 RUN export all_proxy="socks5://10.1.20.129:7899"

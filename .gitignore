@@ -4,4 +4,5 @@
 __debug_bin*
 *.pdf
 bin
-slave_test.sh
+upx
+gogo
