@@ -1,20 +1,13 @@
 FROM --platform=${BUILDPLATFORM} golang:latest AS builder
 
-RUN export ALL_PROXY="socks5://10.1.20.129:7899"
-RUN export all_proxy="socks5://10.1.20.129:7899"
 RUN echo 'Acquire::http::proxy "http://10.1.20.129:7898";' | tee -a /etc/apt/apt.conf
 RUN echo 'Acquire::https::proxy "https://10.1.20.129:7898";' | tee -a /etc/apt/apt.conf
-RUN echo 'https_proxy=socks5://10.1.20.129:7899' | tee -a ~/.wgetrc
-RUN echo 'http_proxy=socks5://10.1.20.129:7899' | tee -a ~/.wgetrc
-RUN echo 'ftp_proxy=socks5://10.1.20.129:7899' | tee -a ~/.wgetrc
-RUN echo '#check_certificate = off' >> ~/.wgetrc
-RUN echo 'proxy="socks5://10.1.20.129:7899"' >> ~/.curlrc
 RUN export GO111MODULE=on
 RUN export GOPROXY=https://goproxy.cn,direct
 
 RUN apt update \
     && apt upgrade -y \
-    && apt install zlib1g-dev gperf libc++-dev libc++abi-dev -y \
+    && apt install make -y \
     && apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends ca-certificates
 
@@ -28,7 +21,7 @@ COPY gogo /go/src/gogo
 RUN --mount=target=. \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    make clean \
+    make clean && \
     make linux-amd64 BINDIR= ${TARGETOS}-${TARGETARCH}${TARGETVARIANT} && \
     mv /goodlink* /goodlink
 
