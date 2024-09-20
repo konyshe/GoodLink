@@ -30,7 +30,6 @@ RUN --mount=target=. \
     --mount=type=cache,target=/go/pkg/mod \
     make clean \
     make linux-amd64 BINDIR= ${TARGETOS}-${TARGETARCH}${TARGETVARIANT} && \
-    make strip \
     mv /goodlink* /goodlink
 
 COPY upx /usr/bin/
