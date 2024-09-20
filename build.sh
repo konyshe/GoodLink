@@ -13,6 +13,7 @@ cp /usr/bin/upx .
 BUILD_TIME=$(date +'%Y%m%d%H%M')
 sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
 
+docker rmi konyshe/goodlink:latest -f
 docker rmi konyshe/goodlink:$1 -f
 
 docker pull golang:latest
