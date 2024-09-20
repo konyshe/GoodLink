@@ -14,6 +14,10 @@ BUILD_TIME=$(date +'%Y%m%d%H%M')
 sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
 
 docker rmi konyshe/goodlink:$1 -f
+
+docker pull golang:latest
+docker pull tonistiigi/xx:golang
+
 docker buildx build --platform linux/amd64 -t konyshe/goodlink:$1 .
 
 rm -rf gogo upx
