@@ -26,8 +26,7 @@ sed -i "/$BUILD_TIME/s/$BUILD_TIME/111111111111/g" Dockerfile
 
 #./login_docker.sh
 
-#docker push konyshe/goodlink:$1
-
+docker push konyshe/goodlink:$1
 docker tag konyshe/goodlink:$1 konyshe/goodlink:latest
 docker push konyshe/goodlink:latest
 
