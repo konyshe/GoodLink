@@ -207,7 +207,14 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			})
 			process_health(tunnelClient.m_stun_health_stream, send_data, recv_data)
 			log.Println("隧道已断开")
+			conn.CloseWithError(0, "0")
 			tunnelClient.Release()
+
+			if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
+				conn.Write([]byte("hello"))
+				conn.Close() // 关闭连接
+			}
+
 			work_pool.Wait()
 		}
 
