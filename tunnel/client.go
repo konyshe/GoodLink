@@ -155,15 +155,19 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 
 	select {
 	case <-c.m_process_chain:
-		log.Println("建立隧道成功!")
 		break
 	case <-time.After(time_out):
 		c.m_work_pool.Wait()
-		log.Println("建立隧道超时!")
 		break
 	}
 
-	return c.m_stun_quic_conn
+	if c.m_stun_quic_conn != nil {
+		log.Println("建立隧道成功!")
+		return c.m_stun_quic_conn
+	}
+
+	log.Println("建立隧道超时!")
+	return nil
 }
 
 func (c *TunnelClient) GetQuicConn() quic.Connection {
