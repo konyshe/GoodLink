@@ -34,19 +34,21 @@ make clean; make
 
 ### 需要被远程访问的电脑 (linux，Docker)
 
+下载国内镜像源：registry.cn-shanghai.aliyuncs.com/kony/goodlink
+
 ```
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --remote=127.0.0.1:80 --key=ssh_20240730
 ```
 
 ### 需要请求访问的本地电脑 (windows, 命令行)
 
-[下载地址](https://gitee.com/konyshe/goodlink/releases)
+[下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ```
 .\goodlink-windows-amd64.exe --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --local=127.0.0.1:18080 --key=ssh_20240730
 ```
 
-注：该工具既支持命令行方式，也支持 Docker 方式，可随意切换。以上仅作两种方式的举例。
+注：该程序既支持命令行方式，也支持 Docker 方式，可随意切换。以上仅作两种方式的举例。
 
 ## 选项说明
 
