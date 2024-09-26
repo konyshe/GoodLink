@@ -2,9 +2,6 @@
 
 #set -x
 
-
-#apt install shc -y
-
 rm -rf gogo
 cp -r ../gogo .
 
@@ -21,20 +18,32 @@ make clean
 BUILD_TIME=$(date +'%Y%m%d%H%M')
 sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
 
-docker rmi konyshe/goodlink:latest -f
-docker rmi konyshe/goodlink:$1 -f
+docker rmi dev/goodlink:latest -f
 
 docker pull golang:latest
 docker pull tonistiigi/xx:golang
 
-docker buildx build --platform linux/amd64 -t konyshe/goodlink:$1 .
+docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
 
 rm -rf gogo upx
 
 sed -i "/$BUILD_TIME/s/$BUILD_TIME/111111111111/g" Dockerfile
 
-docker push konyshe/goodlink:$1
-docker tag konyshe/goodlink:$1 konyshe/goodlink:latest
-docker push konyshe/goodlink:latest
+if [ $# -eq 1 ]; then
+    docker rmi konyshe/goodlink:$1 -f
+    docker tag dev/goodlink:latest konyshe/goodlink:$1
+    docker push konyshe/goodlink:$1
 
-docker images | grep konyshe | grep goodlink
+    docker tag dev/goodlink:latest konyshe/goodlink:latest
+    docker push konyshe/goodlink:latest
+
+    docker tag dev/goodlink:latest registry.cn-shanghai.aliyuncs.com/kony/goodlink:$1
+    docker push registry.cn-shanghai.aliyuncs.com/kony/goodlink:$1
+
+    docker tag dev/goodlink:latest registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
+    docker push registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
+
+    docker rmi dev/goodlink:latest -f
+fi
+
+docker images | grep goodlink
