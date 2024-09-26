@@ -14,16 +14,6 @@
 
 4. 数据传输走 QUIC，高性能，已加密，安全可靠
 
-## 编译
-
-```
-cd /root/go/src
-git clone -b main https://gitee.com/konyshe/gogo.git
-git clone https://gitee.com/konyshe/goodlink.git
-cd goodlink
-make clean; make
-```
-
 ## 使用说明
 
 ### 场景说明
@@ -66,4 +56,14 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 --local: 本地提供代理服务的IP和PORT，127.0.0.1表示只允许本机连接
 
 --key: 一个key只能对应一个需要被远程访问的电脑端口，多个端口需要自定义不同的key
+```
+
+## 编译说明
+
+```
+cd /root/go/src
+git clone -b main https://gitee.com/konyshe/gogo.git
+git clone https://gitee.com/konyshe/goodlink.git
+cd goodlink
+make clean; make
 ```
