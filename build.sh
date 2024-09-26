@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
 
-set -x
+#set -x
 
-make clean
 
 #apt install shc -y
 
 rm -rf gogo
 cp -r ../gogo .
-cp /usr/bin/upx .
+
+if [ -e "/usr/bin/upx" ]; then
+    cp /usr/bin/upx .
+else
+    echo "请先下载 upx, 解压并保存为 /usr/bin/upx"
+    echo "下载地址: https://github.com/upx/upx/releases"
+    exit
+fi
+
+make clean
 
 BUILD_TIME=$(date +'%Y%m%d%H%M')
 sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
