@@ -34,7 +34,7 @@ make clean; make
 
 ### 需要被远程访问的电脑 (linux，Docker)
 
-下载国内镜像源：registry.cn-shanghai.aliyuncs.com/kony/goodlink
+下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
 ```
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --remote=127.0.0.1:80 --key=ssh_20240730
