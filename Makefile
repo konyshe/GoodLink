@@ -13,12 +13,16 @@ GOBUILD=GO111MODULE=on \
 
 PLATFORM_LIST = \
 	linux-amd64 \
+	linux-arm64 \
 	windows-amd64
 
 all: clean $(PLATFORM_LIST) strip
 
 linux-amd64:
 	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+
+linux-arm64:
+	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 windows-amd64:
 	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
