@@ -44,7 +44,7 @@ COPY --from=builder /goodlink /home/
 WORKDIR /home/
 
 #ENTRYPOINT 运行命令+固定参数
-ENTRYPOINT ["./goodlink"]
+ENTRYPOINT ["./goodlink", "--gogo-restart-delay=2000"]
 
 #CMD 可变参数, 会被docker run带入的参数替换
 CMD ["--h"]
