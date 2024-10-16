@@ -28,7 +28,7 @@ RUN --mount=target=. \
 COPY upx /usr/bin/
 RUN upx --best /goodlink
 
-FROM scratch
+FROM --platform=${BUILDPLATFORM} scratch
 
 #MAINTAINER 维护者信息
 MAINTAINER kony
