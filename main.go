@@ -5,10 +5,10 @@ import (
 	"goodlink/tunnel"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
-	//_ "net/http/pprof"
 )
 
 func main2() {
