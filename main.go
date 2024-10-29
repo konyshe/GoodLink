@@ -4,6 +4,7 @@ import (
 	"gogo"
 	"goodlink/tunnel"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,9 +12,9 @@ import (
 )
 
 func main2() {
-	/*go func() {
-		log.Println(http.ListenAndServe("localhost:8080", nil))
-	}()*/
+	if *mp_cli_pprof {
+		go log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+	}
 
 	if m_cli_tun_remote_addr != "" {
 		go tunnel.ProcessServer(m_cli_tun_remote_addr, m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
