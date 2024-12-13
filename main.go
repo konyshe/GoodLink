@@ -12,8 +12,8 @@ import (
 )
 
 func main2() {
-	if *mp_cli_pprof {
-		go log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+	if m_cli_pprof_addr != "" {
+		go log.Println(http.ListenAndServe(m_cli_pprof_addr, nil))
 	}
 
 	if m_cli_tun_remote_addr != "" {

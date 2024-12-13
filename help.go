@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	m_cli_pprof_addr string
 	m_cli_admin_remote_addr string
 	m_cli_admin_local_addr  string
 
@@ -17,8 +18,6 @@ var (
 	m_cli_redis_pass      string
 	m_cli_redis_id        int
 	m_cli_tun_key         string
-
-	mp_cli_pprof *bool
 )
 
 func help() {
@@ -29,8 +28,7 @@ func help() {
 	flag.Int64Var(&temp_value, "gogo-restart-delay", 100, "gogo-restart-delay")
 	flag.Bool("gogo-background", false, "gogo-background")
 
-	mp_cli_pprof = flag.Bool("pprof", false, "If present, exposes pprof information on 0.0.0.0:6060")
-
+	flag.StringVar(&m_cli_pprof_addr, "pprof_addr", "", "用于性能检测, 例如: 0.0.0.0:6060")
 	flag.StringVar(&m_cli_admin_remote_addr, "admin_remote_addr", "", "隧道对端地址,内部子进程使用,用户忽略")
 	flag.StringVar(&m_cli_admin_local_addr, "admin_local_addr", "", "隧道本地地址,内部子进程使用,用户忽略")
 	flag.StringVar(&m_cli_redis_addr, "redis_addr", "", "redis访问地址, 例如: 1.1.2.2:6379")
