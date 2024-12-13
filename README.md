@@ -52,7 +52,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 在公司访问 http://127.0.0.1:9999 , 等于访问家里的NAS管理页面http://192.168.3.2:9999
 
-### 需要被远程访问的电脑 (linux，Docker)
+### 家里的NAS (linux，Docker)
 
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
@@ -60,7 +60,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --remote=127.0.0.1:9999 --key=nas_20240730
 ```
 
-### 需要请求访问的本地电脑 (windows, 命令行)
+### 公司的电脑 (windows, 命令行)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
