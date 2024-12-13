@@ -200,6 +200,15 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 
 	redisdb.Del(tun_key)
 
+	if tun_remote_addr == "" {
+		tun_remote_addr = tools.GetFreeLocalAddr()
+		if tun_remote_addr == "" {
+			log.Println("获取本地端口失败")
+			os.Exit(0)
+		}
+		go proxy.ListenSocks5(tun_remote_addr)
+	}
+
 	for {
 		if res, err := redisdb.Get(tun_key).Bytes(); err == nil && res != nil && len(res) > 0 {
 			if err = json.Unmarshal(res, &redisJson); err == nil {
