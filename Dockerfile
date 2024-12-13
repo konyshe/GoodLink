@@ -1,7 +1,7 @@
 FROM --platform=${BUILDPLATFORM} golang:latest AS builder
 
-RUN echo 'Acquire::http::proxy "http://192.168.9.1:7899";' | tee -a /etc/apt/apt.conf
-RUN echo 'Acquire::https::proxy "http://192.168.9.1:7899";' | tee -a /etc/apt/apt.conf
+RUN echo 'Acquire::http::proxy "http://172.17.0.1:7899";' | tee -a /etc/apt/apt.conf
+RUN echo 'Acquire::https::proxy "http://172.17.0.1:7899";' | tee -a /etc/apt/apt.conf
 RUN export GO111MODULE=on
 RUN export GOPROXY=https://goproxy.cn,direct
 
