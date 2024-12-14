@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gogo"
 	"gogo/workpool"
 	"goodlink/aes"
 	"goodlink/md5"
@@ -13,6 +12,7 @@ import (
 	"goodlink/tools"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -107,7 +107,7 @@ type RedisJsonType struct {
 	ClientPort int    `bson:"client_port" json:"client_port"`
 }
 
-func (c *TunnelClient) process_client1(radis_id int, tun_key string, time_out time.Duration, send_data, recv_data []byte) quic.Connection {
+func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, time_out time.Duration, send_data, recv_data []byte) quic.Connection {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
 
@@ -117,7 +117,7 @@ func (c *TunnelClient) process_client1(radis_id int, tun_key string, time_out ti
 	c.m_work_pool = workpool.NewWorkPool(10240)
 
 	for {
-		if aes_res, err := gogo.Redis().GetDB(radis_id).Get(md5_tun_key).Bytes(); err == nil && aes_res != nil && len(aes_res) > 0 {
+		if aes_res, err := redisdb.Get(md5_tun_key).Bytes(); err == nil && aes_res != nil && len(aes_res) > 0 {
 			if err = json.Unmarshal(aes.Decrypt(aes_res, tun_key), &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //等待服务器响应
 					log.Println("等待服务端响应")
@@ -133,7 +133,7 @@ func (c *TunnelClient) process_client1(radis_id int, tun_key string, time_out ti
 					redisJson.ClientIP, redisJson.ClientPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
 						log.Printf("发送客户端的隧道地址: %v\n", redisJson)
-						gogo.Redis().Set(radis_id, md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
+						redisdb.Set(md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
 						break
 					}
 				}
@@ -146,7 +146,7 @@ func (c *TunnelClient) process_client1(radis_id int, tun_key string, time_out ti
 		//走到这里，表示当前没有其他正在建立隧道的会话，下面开始告知服务端准备建立隧道
 		log.Println("告知服务端准备建立隧道")
 		if jsonByte, err := json.Marshal(RedisJsonType{}); err == nil {
-			gogo.Redis().SetNx(radis_id, md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
+			redisdb.SetNX(md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
 		}
 	NEXT_CHECK:
 		time.Sleep(1 * time.Second)
@@ -187,11 +187,16 @@ func (c *TunnelClient) Release() {
 }
 
 func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, tun_key string, retry bool) error {
-	gogo.Redis().Init(&redis.Options{
+	redisdb := redis.NewClient(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
 		DB:       radis_id,
 	})
+	if redisdb == nil {
+		log.Println("Redis初始化失败")
+		os.Exit(0)
+	}
+	defer redisdb.Close()
 
 	listener, err := net.Listen("tcp", tun_local_addr)
 	if listener == nil || err != nil {
@@ -204,7 +209,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 
 	for {
 		var tunnelClient TunnelClient
-		if conn := tunnelClient.process_client1(radis_id, tun_key, 3*time.Second, send_data, recv_data); conn != nil {
+		if conn := tunnelClient.process_client1(redisdb, tun_key, 3*time.Second, send_data, recv_data); conn != nil {
 			work_pool := workpool.NewWorkPool(1)
 			work_pool.Do(func() error {
 				proxy.ProcessProxyClient(listener, conn)
