@@ -82,7 +82,7 @@ Usage of bin/goodlink-linux-amd64:
   -gogo-restart-delay int
         自动重启的延迟时间, 单位: 毫秒 (default 1000)
   -key string
-        自定义, 请保证客户端和服务端一致。为避免冲突, 建议16-32个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
+        自定义, 客户端和服务端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
   -local string
         客户端监听的地址端口
   -pprof_addr string

@@ -5,10 +5,30 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
+	"fmt"
+	"goodlink/md5"
 )
 
+func getKey(key string) []byte {
+	if len(key) > 24 {
+		return []byte(key[:24])
+	}
+
+	// 填充key
+	for len(key) < 24 {
+		key = key + "0"
+	}
+	return []byte(key)
+}
+
+func PKCS7Padding(ciphertext []byte, blocksize int) []byte {
+	padding := blocksize - len(ciphertext)%blocksize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(ciphertext, padtext...)
+}
+
 func Encrypt(origData []byte, key string) string {
-	k := []byte(key)
+	k := getKey(key)
 	block, _ := aes.NewCipher(k)
 	blockSize := block.BlockSize()
 	origData = PKCS7Padding(origData, blockSize)
@@ -18,9 +38,15 @@ func Encrypt(origData []byte, key string) string {
 	return base64.StdEncoding.EncodeToString(cryted)
 }
 
+func PKCS7UnPadding(origData []byte) []byte {
+	length := len(origData)
+	unpadding := int(origData[length-1])
+	return origData[:(length - unpadding)]
+}
+
 func Decrypt(cryted []byte, key string) []byte {
 	crytedByte, _ := base64.StdEncoding.DecodeString(string(cryted))
-	k := []byte(key)
+	k := getKey(key)
 	block, _ := aes.NewCipher(k)
 	blockSize := block.BlockSize()
 	blockMode := cipher.NewCBCDecrypter(block, k[:blockSize])
@@ -29,14 +55,23 @@ func Decrypt(cryted []byte, key string) []byte {
 	return PKCS7UnPadding(orig)
 }
 
-func PKCS7Padding(ciphertext []byte, blocksize int) []byte {
-	padding := blocksize - len(ciphertext)%blocksize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(ciphertext, padtext...)
-}
+func AesTest() {
+	text := []byte("hello world")
 
-func PKCS7UnPadding(origData []byte) []byte {
-	length := len(origData)
-	unpadding := int(origData[length-1])
-	return origData[:(length - unpadding)]
+	temp0 := md5.Encode(string(text))
+	fmt.Printf("md5后: %s\n", temp0)
+
+	key := "1234567812345677777777777781238"
+	temp1 := Encrypt(text, key)
+	fmt.Printf("加密后: %s\n", temp1)
+
+	temp2 := Decrypt([]byte(temp1), key)
+	fmt.Printf("解密后: %s\n", temp2)
+
+	key = "123456781238"
+	temp1 = Encrypt(text, key)
+	fmt.Printf("加密后: %s\n", temp1)
+
+	temp2 = Decrypt([]byte(temp1), key)
+	fmt.Printf("解密后: %s\n", temp2)
 }

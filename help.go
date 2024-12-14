@@ -32,7 +32,7 @@ func help() {
 	flag.IntVar(&m_cli_redis_id, "redis_id", 15, "Redis服务可使用的表ID")
 	flag.StringVar(&m_cli_tun_local_addr, "local", "", "客户端监听的地址端口")
 	flag.StringVar(&m_cli_tun_remote_addr, "remote", "", "服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999")
-	flag.StringVar(&m_cli_tun_key, "key", "", "自定义, 请保证客户端和服务端一致。为避免冲突, 建议16-32个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
+	flag.StringVar(&m_cli_tun_key, "key", "", "自定义, 客户端和服务端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
 
 	flag.Parse()
 
