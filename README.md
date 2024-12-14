@@ -70,19 +70,17 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --local=0.0.0.0:9999 --key=nas_202412140928
 ```
 
-注：服务端和客户端均支持命令行/ Docker 方式，以上仅作两种方式的举例。
-
 # 选项说明
 
 ```
 root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
 Usage of bin/goodlink-linux-amd64:
-  -key string
-        自定义, 客户端和服务端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
-  -local string
-        客户端监听的地址端口
   -remote string
         服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
+  -local string
+        客户端监听的地址端口
+  -key string
+        自定义, 客户端和服务端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
 
   -redis_addr string
         Redis服务地址端口, 例如: 1.2.3.4:6379
