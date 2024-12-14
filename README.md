@@ -1,4 +1,6 @@
-# 特点介绍
+![GoodLink Logo](https://gitee.com/konyshe/goodlink/raw/master/logo.png "GoodLink")
+
+# 功能介绍
 
 1. 一条命令搞定，无需安装、无需注册，无需公网IP，无需配置文件
 
