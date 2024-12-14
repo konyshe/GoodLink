@@ -6,7 +6,6 @@ require gogo v0.0.0
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 // indirect
 	github.com/bmizerany/pq v0.0.0-20131128184720-da2b95e392c1 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/gaukas/godicttls v0.0.3 // indirect

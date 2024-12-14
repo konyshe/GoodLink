@@ -1,7 +1,5 @@
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
-github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
-github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/bmizerany/pq v0.0.0-20131128184720-da2b95e392c1 h1:1clOQIolnXGoH1SUo8ZPgdfOWFp/6i8NuRerrVL/TAc=
 github.com/bmizerany/pq v0.0.0-20131128184720-da2b95e392c1/go.mod h1:YR6v6TjYGQnPky7rSf5U+AiQ4+EHIVmFYbhHUPo5L2U=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

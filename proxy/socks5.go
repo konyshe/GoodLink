@@ -3,7 +3,7 @@ package proxy
 import (
 	"log"
 
-	"github.com/armon/go-socks5"
+	"goodlink/socks5"
 )
 
 func ListenSocks5(addr string) {
