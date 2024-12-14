@@ -16,7 +16,7 @@ func getKey(key string) []byte {
 
 	// 填充key
 	for len(key) < 24 {
-		key = key + "0"
+		key = key + key[0:1]
 	}
 	return []byte(key)
 }
