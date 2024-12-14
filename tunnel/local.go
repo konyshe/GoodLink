@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"gogo"
 	"gogo/workpool"
+	"goodlink/md5"
 	"goodlink/proxy"
-	"goodlink/tools"
 	"goodlink/tls2"
+	"goodlink/tools"
 	"log"
 	"net"
 	"sync"
@@ -182,12 +183,14 @@ func (c *TunnelClient) Release() {
 	}
 }
 
-func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, redis_key string, retry bool) error {
+func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, tun_key string, retry bool) error {
 	gogo.Redis().Init(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
 		DB:       radis_id,
 	})
+
+	md5_tun_key := md5.Encode(tun_key)
 
 	listener, err := net.Listen("tcp", tun_local_addr)
 	if listener == nil || err != nil {
@@ -200,7 +203,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 
 	for {
 		var tunnelClient TunnelClient
-		if conn := tunnelClient.process_client1(radis_id, redis_key, 3*time.Second, send_data, recv_data); conn != nil {
+		if conn := tunnelClient.process_client1(radis_id, md5_tun_key, 3*time.Second, send_data, recv_data); conn != nil {
 			work_pool := workpool.NewWorkPool(1)
 			work_pool.Do(func() error {
 				proxy.ProcessProxyClient(listener, conn)
