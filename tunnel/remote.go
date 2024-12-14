@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"goodlink/aes"
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/tls2"
@@ -214,8 +215,8 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 	}
 
 	for {
-		if res, err := redisdb.Get(md5_tun_key).Bytes(); err == nil && res != nil && len(res) > 0 {
-			if err = json.Unmarshal(res, &redisJson); err == nil {
+		if aes_res, err := redisdb.Get(md5_tun_key).Bytes(); err == nil && aes_res != nil && len(aes_res) > 0 {
+			if err = json.Unmarshal(aes.Decrypt(aes_res, tun_key), &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //收到客户端通知,发送IPPORT
 					log.Println("收到客户端建立隧道的请求")
 					if conn != nil {
@@ -227,7 +228,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 					redisJson.ServerIP, redisJson.ServerPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
 						log.Printf("发送服务端的隧道地址: %v\n", redisJson)
-						redisdb.Set(md5_tun_key, string(jsonByte), process_time_out)
+						redisdb.Set(md5_tun_key, aes.Encrypt(jsonByte, tun_key), process_time_out)
 					}
 					goto NEXT_CHECK
 

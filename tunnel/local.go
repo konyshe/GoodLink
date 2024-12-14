@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gogo"
 	"gogo/workpool"
+	"goodlink/aes"
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/tls2"
@@ -106,16 +107,18 @@ type RedisJsonType struct {
 	ClientPort int    `bson:"client_port" json:"client_port"`
 }
 
-func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out time.Duration, send_data, recv_data []byte) quic.Connection {
+func (c *TunnelClient) process_client1(radis_id int, tun_key string, time_out time.Duration, send_data, recv_data []byte) quic.Connection {
 	var redisJson RedisJsonType
 	var conn *net.UDPConn
+
+	md5_tun_key := md5.Encode(tun_key)
 
 	c.m_process_chain = make(chan quic.Connection, 1)
 	c.m_work_pool = workpool.NewWorkPool(10240)
 
 	for {
-		if res, err := gogo.Redis().GetDB(radis_id).Get(redis_key).Bytes(); err == nil && res != nil && len(res) > 0 {
-			if err = json.Unmarshal(res, &redisJson); err == nil {
+		if aes_res, err := gogo.Redis().GetDB(radis_id).Get(md5_tun_key).Bytes(); err == nil && aes_res != nil && len(aes_res) > 0 {
+			if err = json.Unmarshal(aes.Decrypt(aes_res, tun_key), &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //等待服务器响应
 					log.Println("等待服务端响应")
 					goto NEXT_CHECK
@@ -130,7 +133,7 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 					redisJson.ClientIP, redisJson.ClientPort = getWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
 						log.Printf("发送客户端的隧道地址: %v\n", redisJson)
-						gogo.Redis().Set(radis_id, redis_key, string(jsonByte), time_out)
+						gogo.Redis().Set(radis_id, md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
 						break
 					}
 				}
@@ -143,7 +146,7 @@ func (c *TunnelClient) process_client1(radis_id int, redis_key string, time_out 
 		//走到这里，表示当前没有其他正在建立隧道的会话，下面开始告知服务端准备建立隧道
 		log.Println("告知服务端准备建立隧道")
 		if jsonByte, err := json.Marshal(RedisJsonType{}); err == nil {
-			gogo.Redis().SetNx(radis_id, redis_key, string(jsonByte), time_out)
+			gogo.Redis().SetNx(radis_id, md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
 		}
 	NEXT_CHECK:
 		time.Sleep(1 * time.Second)
@@ -190,8 +193,6 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		DB:       radis_id,
 	})
 
-	md5_tun_key := md5.Encode(tun_key)
-
 	listener, err := net.Listen("tcp", tun_local_addr)
 	if listener == nil || err != nil {
 		return fmt.Errorf("地址监听失败: %v", tun_local_addr)
@@ -203,7 +204,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 
 	for {
 		var tunnelClient TunnelClient
-		if conn := tunnelClient.process_client1(radis_id, md5_tun_key, 3*time.Second, send_data, recv_data); conn != nil {
+		if conn := tunnelClient.process_client1(radis_id, tun_key, 3*time.Second, send_data, recv_data); conn != nil {
 			work_pool := workpool.NewWorkPool(1)
 			work_pool.Do(func() error {
 				proxy.ProcessProxyClient(listener, conn)
