@@ -19,20 +19,20 @@ var (
 )
 
 func help() {
-	v := flag.Bool("v", false, "show version info")
+	v := flag.Bool("v", false, "查看版本信息")
 
 	/* 没有用到的参数 */
 	var temp_value int64
-	flag.Int64Var(&temp_value, "gogo-restart-delay", 100, "gogo-restart-delay")
-	flag.Bool("gogo-background", false, "gogo-background")
+	flag.Int64Var(&temp_value, "gogo-restart-delay", 1000, "自动重启的延迟时间, 单位: 毫秒")
+	flag.Bool("gogo-background", false, "后台执行")
 
-	flag.StringVar(&m_cli_pprof_addr, "pprof_addr", "", "提供性能检测的访问地址, 例如: 0.0.0.0:6060")
-	flag.StringVar(&m_cli_redis_addr, "redis_addr", "", "redis访问地址, 例如: 1.1.2.2:6379")
-	flag.StringVar(&m_cli_redis_pass, "redis_pass", "", "redis访问密码, 例如: 12345678")
-	flag.IntVar(&m_cli_redis_id, "redis_id", 0, "redis可用的表ID")
-	flag.StringVar(&m_cli_tun_local_addr, "local", "", "客户端提供穿透服务的监听地址, 例如: 127.0.0.1:9022")
-	flag.StringVar(&m_cli_tun_remote_addr, "remote", "", "服务端连接目标服务的地址, 例如: 192.168.3.2:22")
-	flag.StringVar(&m_cli_tun_key, "key", "", "隧道Key, 请保证客户端和服务端一致")
+	flag.StringVar(&m_cli_pprof_addr, "pprof_addr", "", "性能检测服务监听的地址端口, 例如: 0.0.0.0:6060")
+	flag.StringVar(&m_cli_redis_addr, "redis_addr", "goodlink.kony.vip:16379", "Redis服务地址端口")
+	flag.StringVar(&m_cli_redis_pass, "redis_pass", "goodlink", "Redis服务密码")
+	flag.IntVar(&m_cli_redis_id, "redis_id", 15, "Redis服务可使用的表ID")
+	flag.StringVar(&m_cli_tun_local_addr, "local", "", "客户端监听的地址端口")
+	flag.StringVar(&m_cli_tun_remote_addr, "remote", "", "服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999")
+	flag.StringVar(&m_cli_tun_key, "key", "", "自定义, 请保证客户端和服务端一致。为避免冲突, 建议16-32个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
 
 	flag.Parse()
 

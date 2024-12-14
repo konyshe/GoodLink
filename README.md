@@ -2,7 +2,7 @@
 
 1. 一条命令搞定，无需安装、无需注册，无需公网IP，无需配置文件
 
-2. 仅需公网 Redis 服务，可直接使用作者提供的免费 Redis 服务（参考使用说明）
+2. 仅需公网Redis服务，默认使用作者提供的免费 Redis 服务
 
 3. P2P通信走QUIC，高性能，已加密
 
@@ -33,7 +33,7 @@
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --key= nas_20240730
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
 ```
 
 ### 公司的电脑  ( windows, 命令行 )
@@ -41,7 +41,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ```
-.\goodlink-windows-amd64.exe --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --local=0.0.0.0:18080 --key=nas_20240730
+.\goodlink-windows-amd64.exe --local=0.0.0.0:18080 --key=nas_202412140928
 ```
 
 注：服务端和客户端均支持命令行/ Docker 方式，以上仅作两种方式的举例。
@@ -57,7 +57,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --remote=127.0.0.1:9999 --key=nas_20240730
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=127.0.0.1:9999 --key=nas_202412140928
 ```
 
 ### 公司的电脑 (windows, 命令行)
@@ -65,7 +65,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ```
-.\goodlink-windows-amd64.exe --redis_addr=goodlink.kony.vip:16379 --redis_pass=goodlink --redis_id=15 --local=0.0.0.0:9999 --key=nas_20240730
+.\goodlink-windows-amd64.exe --local=0.0.0.0:9999 --key=nas_202412140928
 ```
 
 注：服务端和客户端均支持命令行/ Docker 方式，以上仅作两种方式的举例。
@@ -73,19 +73,28 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 # 选项说明
 
 ```
---gogo-restart-delay: 进程守护，如果异常退出，会自动重启。需要指定自动重启时间间隔，单位毫秒
-
---redis_addr: Redis服务的公网域名或IP，仅用于帮助客户端和服务端之间建立P2P直连，不用于数据转发
-
---redis_pass: Redis服务的密码
-
---redis_id: Redis服务的表ID
-
---remote: 用于服务端指定所处网络中的某一个主机端口。如果不指定，则工作在P2P代理模式
-
---local: 用于客户端指定本地监听端口，127.0.0.1表示只能本机访问
-
---key: 客户端和服务端，需要使用同一个key，才能建立连接。最好16-32个字节长度，以避免和其他人冲突。
+root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
+Usage of bin/goodlink-linux-amd64:
+  -gogo-background
+        后台执行
+  -gogo-restart-delay int
+        自动重启的延迟时间, 单位: 毫秒 (default 1000)
+  -key string
+        自定义, 请保证客户端和服务端一致。为避免冲突, 建议16-32个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
+  -local string
+        客户端监听的地址端口
+  -pprof_addr string
+        性能检测服务监听的地址端口, 例如: 0.0.0.0:6060
+  -redis_addr string
+        Redis服务地址端口, 例如: 1.2.3.4:6379
+  -redis_id int
+        Redis服务可使用的表ID, 例如: 15
+  -redis_pass string
+        Redis服务密码, 例如: 12345678
+  -remote string
+        服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
+  -v    show version info
+		查看版本信息
 ```
 
 注：P2P转发模式仅支持 TCP 协议，如果服务端需要转发多个 TCP端口，需同时执行多个命令或启动多个 Docker（--key不能重复）
