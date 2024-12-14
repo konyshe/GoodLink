@@ -16,19 +16,22 @@ PLATFORM_LIST = \
 	linux-arm64 \
 	windows-amd64
 
-all: clean $(PLATFORM_LIST) strip
+all: clean $(PLATFORM_LIST)
 
 linux-amd64:
 	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+	upx $(BINDIR)/$(NAME)-$@
+	7z a $(BINDIR)/$(NAME)-$@.7z $(BINDIR)/$(NAME)-$@
 
 linux-arm64:
 	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+	upx $(BINDIR)/$(NAME)-$@
+	7z a $(BINDIR)/$(NAME)-$@.7z $(BINDIR)/$(NAME)-$@
 
 windows-amd64:
 	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
+	upx $(BINDIR)/$(NAME)-$@.exe
+	7z a $(BINDIR)/$(NAME)-$@.7z $(BINDIR)/$(NAME)-$@.exe
 
-strip:
-	upx $(BINDIR)/*
-	
 clean:
 	rm -rf $(BINDIR)
