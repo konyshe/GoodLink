@@ -1,4 +1,4 @@
-package tunnel
+package tls2
 
 import (
 	"crypto/rand"
@@ -9,15 +9,8 @@ import (
 	"math/big"
 )
 
-func getClientTLSConfig() *tls.Config {
-	return &tls.Config{
-		InsecureSkipVerify: true,
-		NextProtos:         []string{"quic-echo-example"},
-	}
-}
-
 // Setup a bare-bones TLS config for the server
-func getServerTLSConfig() *tls.Config {
+func GetServerTLSConfig() *tls.Config {
 	key, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		panic(err)
@@ -36,6 +29,6 @@ func getServerTLSConfig() *tls.Config {
 	}
 	return &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
-		NextProtos:   []string{"quic-echo-example"},
+		NextProtos:   []string{"goodlink"},
 	}
 }

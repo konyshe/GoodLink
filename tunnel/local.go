@@ -8,6 +8,7 @@ import (
 	"gogo/workpool"
 	"goodlink/proxy"
 	"goodlink/tools"
+	"goodlink/tls2"
 	"log"
 	"net"
 	"sync"
@@ -43,7 +44,7 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	time.Sleep(1 * time.Second)
 
 	log.Printf("process_client3 quic.Dial: %v==>%v\n", conn.LocalAddr(), remoteAddr)
-	new_quic_conn, err := quic.Dial(context.Background(), conn, remoteAddr, getClientTLSConfig(), nil)
+	new_quic_conn, err := quic.Dial(context.Background(), conn, remoteAddr, tls2.GetClientTLSConfig(), nil)
 	if err != nil {
 		log.Printf("process_client3 quic.Dial: %v\n", err)
 		return

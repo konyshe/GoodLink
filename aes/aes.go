@@ -47,11 +47,11 @@ func PKCS7UnPadding(origData []byte) []byte {
 func EncodeTest() {
 	orig := "hello world"
 	key := "123456781234567812345678"
-	fmt.Println("Ô­ÎÄ£º", orig)
+	fmt.Println("åŽŸæ–‡ï¼š", orig)
 
 	encryptCode := Encrypt(orig, key)
-	fmt.Println("ÃÜÎÄ£º", encryptCode)
+	fmt.Println("å¯†æ–‡ï¼š", encryptCode)
 
 	decryptCode := Decrypt(encryptCode, key)
-	fmt.Println("½âÃÜ½á¹û£º", decryptCode)
+	fmt.Println("è§£å¯†ç»“æžœï¼š", decryptCode)
 }

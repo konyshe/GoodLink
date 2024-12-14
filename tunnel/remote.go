@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"goodlink/proxy"
+	"goodlink/tls2"
 	"goodlink/tools"
 	"log"
 	"math/rand"
@@ -86,7 +87,7 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, tun_remote_addr *net.U
 	}
 
 	log.Printf("quic.Listen: %v\n", conn.LocalAddr())
-	listener, err := quic.Listen(conn, getServerTLSConfig(), nil)
+	listener, err := quic.Listen(conn, tls2.GetServerTLSConfig(), nil)
 	tools.AssertErrorToNilf("process_client3 quic.Listen: %v", err)
 
 	log.Printf("process_server5 listener.Accept: %v\n", conn.LocalAddr())
