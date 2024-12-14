@@ -46,7 +46,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --local=0.0.0.0:18080 --key=nas_202412140928
 ```
 
-注：服务端和客户端均支持命令行/ Docker 方式，以上仅作两种方式的举例。
+注：服务端和客户端均支持命令行 和 Docker 方式，以上仅作两种方式的举例。
 
 ## P2P转发模式 - 举例
 
@@ -77,27 +77,22 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 ```
 root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
 Usage of bin/goodlink-linux-amd64:
-  -gogo-background
-        后台执行
-  -gogo-restart-delay int
-        自动重启的延迟时间, 单位: 毫秒 (default 1000)
   -key string
         自定义, 客户端和服务端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
   -local string
         客户端监听的地址端口
-  -pprof_addr string
-        性能检测服务监听的地址端口, 例如: 0.0.0.0:6060
+  -remote string
+        服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
+
   -redis_addr string
         Redis服务地址端口, 例如: 1.2.3.4:6379
   -redis_id int
         Redis服务可使用的表ID, 例如: 15
   -redis_pass string
         Redis服务密码, 例如: 12345678
-  -remote string
-        服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
-  -v    show version info
-		查看版本信息
 ```
+
+注：以上只截取了部分说明, 如果不想用作者的Redis服务, 可需参考-h选项说明, 指定自己的Redis服务地址
 
 注：P2P转发模式仅支持 TCP 协议，如果服务端需要转发多个 TCP端口，需同时执行多个命令或启动多个 Docker（--key不能重复）
 
