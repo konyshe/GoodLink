@@ -7,8 +7,8 @@ import (
 	"goodlink/aes"
 	"goodlink/md5"
 	"goodlink/proxy"
-	"goodlink/stun"
-	_ "goodlink/stun"
+	"goodlink/stun2"
+	_ "goodlink/stun2"
 	"goodlink/tls2"
 	"goodlink/tools"
 	"log"
@@ -232,7 +232,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 					}
 					conn, err = net.ListenUDP("udp4", nil)
 					tools.AssertErrorToNilf("process_server net.ListenUDP: %v", err)
-					redisJson.ServerIP, redisJson.ServerPort = stun.GetWanIpPort(conn)
+					redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
 						log.Printf("发送服务端的隧道地址: %v\n", redisJson)
 						redisdb.Set(md5_tun_key, aes.Encrypt(jsonByte, tun_key), process_time_out)

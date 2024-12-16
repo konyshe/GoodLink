@@ -1,4 +1,4 @@
-package stun
+package stun2
 
 import (
 	"bytes"

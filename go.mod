@@ -27,6 +27,11 @@ require (
 	github.com/montanaflynn/stats v0.7.0 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
 	github.com/onsi/ginkgo/v2 v2.10.0 // indirect
+	github.com/pion/dtls/v2 v2.2.7 // indirect
+	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/stun/v2 v2.0.0 // indirect
+	github.com/pion/transport/v2 v2.2.1 // indirect
+	github.com/pion/transport/v3 v3.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/playwright-community/playwright-go v0.4201.1 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
@@ -35,6 +40,7 @@ require (
 	github.com/quic-go/quic-go v0.42.0 // indirect
 	github.com/rbrahul/exception v1.0.6 // indirect
 	github.com/refraction-networking/utls v1.3.2 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
