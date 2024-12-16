@@ -98,7 +98,7 @@ func (s *Server) serveConn(c net.PacketConn, res, req *stun.Message) error {
 		s.log.Printf("basicProcess: %v", err)
 		return nil
 	}
-	log.Println(res.Raw)
+	log.Println(string(res.Raw))
 	_, err = c.WriteTo(res.Raw, addr)
 	if err != nil {
 		s.log.Printf("WriteTo: %v", err)
