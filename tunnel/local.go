@@ -8,6 +8,8 @@ import (
 	"goodlink/aes"
 	"goodlink/md5"
 	"goodlink/proxy"
+	"goodlink/stun"
+	_ "goodlink/stun"
 	"goodlink/tls2"
 	"goodlink/tools"
 	"log"
@@ -130,7 +132,7 @@ func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, ti
 						log.Printf("main net.ListenUDP: %v\n", err)
 						goto NEXT_CHECK
 					}
-					redisJson.ClientIP, redisJson.ClientPort = getWanIpPort(conn)
+					redisJson.ClientIP, redisJson.ClientPort = stun.GetWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
 						log.Printf("发送客户端的隧道地址: %v\n", redisJson)
 						redisdb.Set(md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)

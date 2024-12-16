@@ -1,4 +1,4 @@
-package tunnel
+package stun
 
 import (
 	"bytes"
@@ -10,33 +10,8 @@ import (
 	"time"
 )
 
-func getStunServerList() (list []string) {
-	list = append(list, "stun.easyvoip.com:3478")
-	list = append(list, "s1.taraba.net:3478")
-	list = append(list, "s2.taraba.net:3478")
-	list = append(list, "s1.voipstation.jp:3478")
-	list = append(list, "s2.voipstation.jp:3478")
-	list = append(list, "stun.xten.com:3478")
-	list = append(list, "stun.voipbuster.com:3478")
-	list = append(list, "stun.sipgate.net:3478")
-	list = append(list, "stun.ekiga.net:3478")
-	list = append(list, "stun.ideasip.com:3478")
-	list = append(list, "stun.schlund.de:3478")
-	list = append(list, "stun.voiparound.com:3478")
-	list = append(list, "stun.voipbuster.com:3478")
-	list = append(list, "stun.voipstunt.com:3478")
-	list = append(list, "stun.counterpath.com:3478")
-	list = append(list, "stun.1und1.de:3478")
-	list = append(list, "stun.gmx.net:3478")
-	list = append(list, "stun.callwithus.com:3478")
-	list = append(list, "stun.counterpath.net:3478")
-	list = append(list, "stun.internetcalls.com:3478")
-	list = append(list, "numb.viagenie.ca:3478")
-	return
-}
-
 func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
-	log.Printf("隧道服务器: %s\n", addr)
+	log.Printf("stun_svr: %s\n", addr)
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -160,12 +135,40 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
 	return net.IP(ip).String(), int(port2), nil
 }
 
-func getWanIpPort(conn *net.UDPConn) (wan_ip string, wan_port int) {
-	stun_svr_list := getStunServerList()
-	for _, stun_svr := range stun_svr_list {
+var m_stun_list []string
+
+func init() {
+	m_stun_list = []string{
+		"stun.easyvoip.com:3478",
+		"stun.easyvoip.com:3478",
+		"s1.taraba.net:3478",
+		"s2.taraba.net:3478",
+		"s1.voipstation.jp:3478",
+		"s2.voipstation.jp:3478",
+		"stun.xten.com:3478",
+		"stun.voipbuster.com:3478",
+		"stun.sipgate.net:3478",
+		"stun.ekiga.net:3478",
+		"stun.ideasip.com:3478",
+		"stun.schlund.de:3478",
+		"stun.voiparound.com:3478",
+		"stun.voipbuster.com:3478",
+		"stun.voipstunt.com:3478",
+		"stun.counterpath.com:3478",
+		"stun.1und1.de:3478",
+		"stun.gmx.net:3478",
+		"stun.callwithus.com:3478",
+		"stun.counterpath.net:3478",
+		"stun.internetcalls.com:3478",
+		"numb.viagenie.ca:3478",
+	}
+}
+
+func GetWanIpPort(conn *net.UDPConn) (wan_ip string, wan_port int) {
+	for {
+		stun_svr := m_stun_list[rand.Intn(len(m_stun_list)-1)]
 		conn.SetDeadline(time.Now().Add(1 * time.Second))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
-			//log.Printf("本地隧道地址: %s:%d\n", wan_ip, wan_port)
 			conn.SetDeadline(time.Time{})
 			break
 		}
