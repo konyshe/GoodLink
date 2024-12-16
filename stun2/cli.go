@@ -167,7 +167,7 @@ func init() {
 
 func GetWanIpPort(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	for {
-		stun_svr := m_stun_list[rand.Intn(len(m_stun_list)-1)]
+		stun_svr := m_stun_list[rand.Intn(len(m_stun_list))]
 		conn.SetDeadline(time.Now().Add(1 * time.Second))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
 			conn.SetDeadline(time.Time{})
