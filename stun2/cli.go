@@ -161,6 +161,7 @@ func init() {
 		"stun.counterpath.net:3478",
 		"stun.internetcalls.com:3478",
 		"numb.viagenie.ca:3478",
+		"124.223.50.150:13478",
 	}
 }
 
