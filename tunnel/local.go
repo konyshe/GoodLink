@@ -132,7 +132,6 @@ func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, ti
 					conn.Close()
 
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
-
 						for i := 0; i <= 256 && c.m_stun_quic_conn == nil; i++ {
 							c.process_client2(redisJson.ServerIP, redisJson.ServerPort, send_data, recv_data, time_out)
 						}
