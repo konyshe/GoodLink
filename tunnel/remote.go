@@ -198,7 +198,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		DB:       radis_id,
 	})
 	if redisdb == nil {
-		log.Println("Redis初始化失败")
+		log.Fatalln("Redis初始化失败")
 		os.Exit(0)
 	}
 	defer redisdb.Close()
@@ -208,13 +208,18 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 	if tun_remote_addr == "" {
 		tun_remote_addr = tools.GetFreeLocalAddr()
 		if tun_remote_addr == "" {
-			log.Println("获取本地端口失败")
+			log.Fatalln("获取本地端口失败")
 			os.Exit(0)
 		}
 		go proxy.ListenSocks5(tun_remote_addr)
 	}
 
 	for {
+		if _, err := redisdb.Ping().Result(); err != nil {
+			log.Fatalf("Redis: %s\n", err)
+			os.Exit(0)
+		}
+
 		if aes_res, err := redisdb.Get(md5_tun_key).Bytes(); err == nil && aes_res != nil && len(aes_res) > 0 {
 			if err = json.Unmarshal(aes.Decrypt(aes_res, tun_key), &redisJson); err == nil {
 				if redisJson.ServerPort == 0 && redisJson.ClientPort == 0 { //收到客户端通知,发送IPPORT

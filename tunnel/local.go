@@ -208,6 +208,11 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 	send_data := []byte(tools.RandomString(9))
 
 	for {
+		if _, err := redisdb.Ping().Result(); err != nil {
+			log.Fatalf("Redis: %s\n", err)
+			os.Exit(0)
+		}
+
 		var tunnelClient TunnelClient
 		if conn := tunnelClient.process_client1(redisdb, tun_key, 3*time.Second, send_data, recv_data); conn != nil {
 			work_pool := workpool.NewWorkPool(1)

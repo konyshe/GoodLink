@@ -2,6 +2,7 @@ package main
 
 import (
 	"gogo"
+	"goodlink/config"
 	"goodlink/tunnel"
 	"log"
 	"net/http"
@@ -14,6 +15,13 @@ import (
 func main2() {
 	if m_cli_pprof_addr != "" {
 		go log.Println(http.ListenAndServe(m_cli_pprof_addr, nil))
+	}
+
+	if m_cli_redis_addr == "" {
+		config.Init()
+		m_cli_redis_addr = config.GetAddr()
+		m_cli_redis_pass = config.GetPasswd()
+		m_cli_redis_id = config.GetID()
 	}
 
 	if m_cli_tun_local_addr != "" {
