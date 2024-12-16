@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gogo/workpool"
 	"goodlink/aes"
 	"goodlink/md5"
 	"goodlink/proxy"
@@ -27,7 +26,6 @@ type TunnelClient struct {
 	m_stun_health_stream quic.Stream
 	m_process_lock       sync.Mutex
 	m_process_chain      chan quic.Connection
-	m_work_pool          *workpool.WorkPool
 }
 
 func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data []byte) {
@@ -79,17 +77,16 @@ func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data
 		return
 	}
 
-	c.m_work_pool.Do(func() error {
-		conn.SetDeadline(time.Now().Add(time_out))
+	go func() {
+		conn.SetReadDeadline(time.Now().Add(time_out))
 		if n, remoteAddr, _ := conn.ReadFromUDP(recv_data); n > 0 {
-			conn.SetDeadline(time.Time{})
+			conn.SetReadDeadline(time.Time{})
 			log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(recv_data[:10]), n)
 			c.process_client3(conn, remoteAddr, send_data)
-			return nil
+			return
 		}
 		conn.Close()
-		return nil
-	})
+	}()
 
 	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
@@ -116,7 +113,6 @@ func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, ti
 	md5_tun_key := md5.Encode(tun_key)
 
 	c.m_process_chain = make(chan quic.Connection, 1)
-	c.m_work_pool = workpool.NewWorkPool(10240)
 
 	for {
 		if aes_res, err := redisdb.Get(md5_tun_key).Bytes(); err == nil && aes_res != nil && len(aes_res) > 0 {
@@ -164,7 +160,6 @@ func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, ti
 	case <-c.m_process_chain:
 		break
 	case <-time.After(time_out):
-		c.m_work_pool.Wait()
 		break
 	}
 
@@ -217,11 +212,12 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 
 		var tunnelClient TunnelClient
 		if conn := tunnelClient.process_client1(redisdb, tun_key, 3*time.Second, send_data, recv_data); conn != nil {
-			work_pool := workpool.NewWorkPool(1)
-			work_pool.Do(func() error {
+			chain := make(chan int, 1)
+			go func() {
 				proxy.ProcessProxyClient(listener, conn)
-				return nil
-			})
+				chain <- 1
+			}()
+
 			process_health(tunnelClient.m_stun_health_stream, send_data, recv_data)
 			log.Println("隧道已断开")
 			conn.CloseWithError(0, "0")
@@ -232,7 +228,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 				conn.Close() // 关闭连接
 			}
 
-			work_pool.Wait()
+			<-chain
 		}
 
 		if !retry {
