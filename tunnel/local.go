@@ -130,6 +130,12 @@ func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, ti
 					}
 					redisJson.ClientIP, redisJson.ClientPort = stun2.GetWanIpPort(conn)
 					if jsonByte, err := json.Marshal(redisJson); err == nil {
+						conn.Close()
+
+						for i := 0; i <= 256 && c.m_stun_quic_conn == nil; i++ {
+							c.process_client2(redisJson.ServerIP, redisJson.ServerPort, send_data, recv_data, time_out)
+						}
+
 						log.Printf("发送客户端的隧道地址: %v\n", redisJson)
 						redisdb.Set(md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
 						break
@@ -148,12 +154,6 @@ func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, ti
 		}
 	NEXT_CHECK:
 		time.Sleep(1 * time.Second)
-	}
-
-	conn.Close()
-
-	for i := 0; i <= 256 && c.m_stun_quic_conn == nil; i++ {
-		c.process_client2(redisJson.ServerIP, redisJson.ServerPort, send_data, recv_data, time_out)
 	}
 
 	select {
