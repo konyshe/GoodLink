@@ -101,7 +101,7 @@ func (c *TunnelServer) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 	}
 }
 
-func (c *TunnelServer) process2() {
+func (c *TunnelServer) process2(count int) {
 	log.Printf("start_server_child: %s==>%s\n", c.tun_local_addr, c.tun_remote_addr)
 
 	c.process_chain = make(chan quic.Connection, 1)
@@ -134,11 +134,11 @@ func (c *TunnelServer) process2() {
 	clientIP := strings.Split(c.tun_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(c.tun_remote_addr, ":")[1])
 
-	for i := -1024; i >= 1024 && c.stun_quic_conn == nil; i++ {
+	for i := -count; i >= count && c.stun_quic_conn == nil; i++ {
 		c.process_send(conn, clientIP, clientPort+i)
 	}
 
-	c.process_rand(conn, clientIP, 1024)
+	c.process_rand(conn, clientIP, count)
 }
 
 func (c *TunnelServer) GetQuicConn() quic.Connection {
@@ -170,7 +170,7 @@ func (c *TunnelServer) Release() {
 	c.send_conn_map = nil
 }
 
-func (c *TunnelServer) process1() quic.Connection {
+func (c *TunnelServer) process1(count int) quic.Connection {
 	var conn *net.UDPConn
 
 	c.process_chain = make(chan quic.Connection, 1)
@@ -220,8 +220,10 @@ func (c *TunnelServer) process1() quic.Connection {
 			c.tun_local_addr = conn.LocalAddr().String()
 			conn.Close()
 			conn = nil
+
+			log.Printf("   发起连接: %d\n", count)
 			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort)
-			c.process2()
+			c.process2(count)
 
 			log.Printf("3: 通知对端等待连接: %v\n", redisJson)
 			redisJson.State = 3
@@ -271,6 +273,9 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		}
 		go proxy.ListenSocks5(tun_remote_addr)
 	}
+
+	count := 0
+
 	for {
 		tunnelServer := TunnelServer{
 			redisdb:     redisdb,
@@ -280,7 +285,12 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 			RecvData:    make([]byte, 1600),
 		}
 
-		conn := tunnelServer.process1()
+		count++
+		if count > 200 {
+			count = 128
+		}
+
+		conn := tunnelServer.process1(64 * count)
 		if conn == nil {
 			tunnelServer.Release()
 

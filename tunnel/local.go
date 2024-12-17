@@ -160,6 +160,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 			conn.Close()
 
+			log.Printf("   发起连接: %d\n", count)
 			for i := 0; i <= count; i++ {
 				c.process_send(redisJson.ServerIP, redisJson.ServerPort)
 			}
@@ -255,10 +256,17 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		RecvData:        make([]byte, 1600),
 	}
 
+	count := 0
+
 	for {
 		tunnelClient.Release()
 
-		conn := tunnelClient.process1(1024)
+		count++
+		if count > 200 {
+			count = 128
+		}
+
+		conn := tunnelClient.process1(64 * count)
 
 		redisdb.Del(tunnelClient.md5_tun_key)
 
