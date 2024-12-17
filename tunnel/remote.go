@@ -176,6 +176,7 @@ func (c *TunnelServer) process1() quic.Connection {
 	c.process_chain = make(chan quic.Connection, 1)
 
 	redisJson := RedisJsonType{}
+	last_state := redisJson.State
 
 	for RedisGet(c.redisdb, c.tun_key, c.md5_tun_key, &redisJson) != nil {
 		time.Sleep(3 * time.Second)
@@ -205,7 +206,10 @@ func (c *TunnelServer) process1() quic.Connection {
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 1:
-			log.Println("1: 等待对端响应")
+			if last_state != redisJson.State {
+				log.Println("1: 等待对端响应")
+				last_state = redisJson.State
+			}
 
 		case 2:
 			log.Println("2: 收到对端地址")
@@ -220,7 +224,10 @@ func (c *TunnelServer) process1() quic.Connection {
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 3:
-			log.Println("3: 等待对端响应")
+			if last_state != redisJson.State {
+				log.Println("3: 等待对端响应")
+				last_state = redisJson.State
+			}
 
 		case 4:
 			log.Println("4: 收到对端响应, 开始计算超时")
