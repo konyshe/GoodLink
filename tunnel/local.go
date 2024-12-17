@@ -165,6 +165,16 @@ func (c *TunnelClient) GetQuicConn() quic.Connection {
 }
 
 func (c *TunnelClient) Release() {
+	c.process_lock.Lock()
+	defer c.process_lock.Unlock()
+
+	c.process_chain = nil
+
+	if c.stun_health_stream != nil {
+		c.stun_health_stream.Close()
+		c.stun_health_stream = nil
+	}
+
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
@@ -189,16 +199,18 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 	}
 	defer listener.Close()
 
+	tunnelClient := TunnelClient{
+		redisdb:              redisdb,
+		tun_key:              tun_key,
+		md5_tun_key:          md5.Encode(tun_key),
+		redis_time_out:       6 * time.Second,
+		wait_socket_time_out: 3 * time.Second,
+		SendData:             []byte(tools.RandomString(3)),
+		RecvData:             make([]byte, 1600),
+	}
+
 	for {
-		tunnelClient := TunnelClient{
-			redisdb:              redisdb,
-			tun_key:              tun_key,
-			md5_tun_key:          md5.Encode(tun_key),
-			redis_time_out:       6 * time.Second,
-			wait_socket_time_out: 3 * time.Second,
-			SendData:             []byte(tools.RandomString(3)),
-			RecvData:             make([]byte, 1600),
-		}
+		tunnelClient.Release()
 
 		conn := tunnelClient.process1()
 
@@ -213,7 +225,6 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 
 			process_health(tunnelClient.stun_health_stream, tunnelClient.SendData, tunnelClient.RecvData)
 			log.Println("连接已断开")
-			conn.CloseWithError(0, "0")
 			tunnelClient.Release()
 
 			if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
