@@ -106,7 +106,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 
 	redisJson := RedisJsonType{}
 
-	log.Println("0: 通知对端开始建立隧道")
+	log.Println("0: 通知对端建立连接")
 	RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, &redisJson)
 
 	for {
