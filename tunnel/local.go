@@ -112,7 +112,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 	for {
 		time.Sleep(1 * time.Second)
 
-		err := RedisGet(c.redisdb, c.md5_tun_key, c.tun_key, &redisJson)
+		err := RedisGet(c.redisdb, c.tun_key, c.md5_tun_key, &redisJson)
 		if err != nil {
 			log.Println(err)
 			return nil
@@ -125,7 +125,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 		case 1:
 			log.Printf("1: 收到对端地址: %v\n", redisJson)
 			if conn, err = net.ListenUDP("udp4", nil); err != nil {
-				log.Printf("main net.ListenUDP: %v\n", err)
+				log.Printf("net.ListenUDP: %v\n", err)
 				return nil
 			}
 			redisJson.ClientIP, redisJson.ClientPort = stun2.GetWanIpPort(conn)
