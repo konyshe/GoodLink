@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"time"
 )
 
 func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
-	log.Printf("stun_svr: %s\n", addr)
+	//log.Printf("stun_svr: %s\n", addr)
 
 	rand.Seed(time.Now().UnixNano())
 

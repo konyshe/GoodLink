@@ -16,7 +16,7 @@ func process_health(health_stream quic.Stream, send_data, recv_data []byte) {
 	}()
 
 	for health_stream != nil {
-		health_stream.SetReadDeadline(time.Now().Add(6 * time.Second))
+		health_stream.SetReadDeadline(time.Now().Add(3 * time.Second))
 		if n, err := health_stream.Read(recv_data); err != nil || n == 0 {
 			break
 		}

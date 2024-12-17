@@ -10,11 +10,13 @@ import (
 )
 
 type RedisJsonType struct {
-	State      int    `bson:"state" json:"state"`
-	ServerIP   string `bson:"server_ip" json:"server_ip"`
-	ServerPort int    `bson:"server_port" json:"server_port"`
-	ClientIP   string `bson:"client_ip" json:"client_ip"`
-	ClientPort int    `bson:"client_port" json:"client_port"`
+	State         int           `bson:"state" json:"state"`
+	SocketTimeOut time.Duration `bson:"time_out" json:"time_out"`
+	RedisTimeOut  time.Duration `bson:"redis_time_out" json:"redis_time_out"`
+	ServerIP      string        `bson:"server_ip" json:"server_ip"`
+	ServerPort    int           `bson:"server_port" json:"server_port"`
+	ClientIP      string        `bson:"client_ip" json:"client_ip"`
+	ClientPort    int           `bson:"client_port" json:"client_port"`
 }
 
 func RedisSet(redisdb *redis.Client, tun_key, md5_tun_key string, time_out time.Duration, redisJson *RedisJsonType) {
@@ -25,7 +27,7 @@ func RedisSet(redisdb *redis.Client, tun_key, md5_tun_key string, time_out time.
 
 func RedisGet(redisdb *redis.Client, tun_key, md5_tun_key string, redisJson *RedisJsonType) error {
 	aes_res, err := redisdb.Get(md5_tun_key).Bytes()
-	if err != nil && aes_res == nil && len(aes_res) == 0 {
+	if err != nil || aes_res == nil || len(aes_res) == 0 {
 		return fmt.Errorf("获取信令数据失败: %v", err)
 	}
 
