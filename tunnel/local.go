@@ -84,7 +84,7 @@ func (c *TunnelClient) process_send(ip string, port int) {
 			log.Printf("process_send local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 			c.process_quic(conn, remoteAddr)
 
-			log.Println("清空历史连接")
+			log.Println("   清空历史连接")
 			for addr, conn := range c.send_conn_map {
 				if addr != conn.LocalAddr().String() {
 					conn.Close()
@@ -172,14 +172,14 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 
 			select {
 			case <-c.process_chain:
-				log.Println("连接成功!")
+				log.Println("   连接成功!")
 				for port, conn := range c.send_conn_map {
 					conn.Close()
 					delete(c.send_conn_map, port)
 				}
 				return c.stun_quic_conn
 			case <-time.After(c.socket_time_out):
-				log.Println("连接超时!")
+				log.Println("   连接超时!")
 				return nil
 			}
 

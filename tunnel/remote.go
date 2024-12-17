@@ -119,7 +119,7 @@ func (c *TunnelServer) process2() {
 			log.Printf("process udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), conn_remote_addr, string(c.RecvData[:10]), n)
 			c.process_quic(conn, conn_remote_addr, c.SendData, c.RecvData)
 
-			log.Println("清空历史连接")
+			log.Println("   清空历史连接")
 			for port, conn := range c.send_conn_map {
 				if port != conn_remote_addr.Port {
 					conn.Close()
@@ -191,6 +191,11 @@ func (c *TunnelServer) process1() quic.Connection {
 			return nil
 		}
 
+		if redisJson.State < last_state {
+			log.Println("   对端出现重启")
+			return nil
+		}
+
 		switch redisJson.State {
 		case 0:
 			log.Println("0: 收到对端请求")
@@ -201,7 +206,7 @@ func (c *TunnelServer) process1() quic.Connection {
 			log.Print("0: 获取本端地址")
 			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort(conn)
 
-			log.Printf("发送本端地址: %v\n", redisJson)
+			log.Printf("   发送本端地址: %v\n", redisJson)
 			redisJson.State = 1
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
@@ -233,15 +238,15 @@ func (c *TunnelServer) process1() quic.Connection {
 			log.Println("4: 收到对端响应, 开始计算超时")
 			select {
 			case <-c.process_chain:
-				log.Println("连接成功!")
+				log.Println("   连接成功!")
 				return c.stun_quic_conn
 			case <-time.After(redisJson.SocketTimeOut):
-				log.Println("连接超时!")
+				log.Println("   连接超时!")
 				return nil
 			}
 
 		default:
-			log.Printf("发现异常状态: %d\n", redisJson.State)
+			log.Printf("   发现异常状态: %d\n", redisJson.State)
 			return nil
 		}
 	}
@@ -276,7 +281,11 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 			RecvData:    make([]byte, 1600),
 		}
 
-		if conn := tunnelServer.process1(); conn != nil {
+		conn := tunnelServer.process1()
+		if conn == nil {
+			tunnelServer.Release()
+
+		} else {
 			go func() {
 				go proxy.ProcessProxyServer(tun_remote_addr, conn)
 				process_health(tunnelServer.stun_health_stream, tunnelServer.SendData, tunnelServer.RecvData)
