@@ -180,10 +180,7 @@ func (c *TunnelServer) process1() quic.Connection {
 
 	c.process_chain = make(chan quic.Connection, 1)
 
-	redisJson := RedisJsonType{
-		SocketTimeOut: c.socket_time_out,
-		RedisTimeOut:  c.redis_time_out,
-	}
+	redisJson := RedisJsonType{}
 	last_state := redisJson.State
 
 	for RedisGet(c.redisdb, c.tun_key, c.md5_tun_key, &redisJson) != nil {
@@ -218,12 +215,14 @@ func (c *TunnelServer) process1() quic.Connection {
 			}
 			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort(conn)
 
-			log.Printf("   发送本端地址: %v\n", redisJson)
+			redisJson.SocketTimeOut = c.socket_time_out
+			redisJson.RedisTimeOut = c.redis_time_out
 			redisJson.State = 1
 			redisJson.SendPortCount = redisJson.ConnectCount * 64
 			if redisJson.SendPortCount > 10240 {
 				redisJson.SendPortCount = 10240
 			}
+			log.Printf("   发送本端地址: %v\n", redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 1:
