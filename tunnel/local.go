@@ -196,7 +196,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			md5_tun_key:          md5.Encode(tun_key),
 			redis_time_out:       6 * time.Second,
 			wait_socket_time_out: 3 * time.Second,
-			SendData:             []byte(tools.RandomString(9)),
+			SendData:             []byte(tools.RandomString(3)),
 			RecvData:             make([]byte, 1600),
 		}
 
@@ -213,7 +213,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			tunnelClient.Release()
 
 			if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
-				conn.Write([]byte("hello"))
+				conn.Write(tunnelClient.SendData)
 				conn.Close() // 关闭连接
 			}
 
