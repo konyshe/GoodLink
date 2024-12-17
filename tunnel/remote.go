@@ -35,6 +35,8 @@ type TunnelServer struct {
 	SendData           []byte
 	RecvData           []byte
 	send_conn_map      map[int]*net.UDPConn
+	redis_time_out     time.Duration
+	socket_time_out    time.Duration
 }
 
 func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port int) {
@@ -173,12 +175,15 @@ func (c *TunnelServer) Release() {
 	c.send_conn_map = nil
 }
 
-func (c *TunnelServer) process1(count int) quic.Connection {
+func (c *TunnelServer) process1() quic.Connection {
 	var conn *net.UDPConn
 
 	c.process_chain = make(chan quic.Connection, 1)
 
-	redisJson := RedisJsonType{}
+	redisJson := RedisJsonType{
+		SocketTimeOut: c.socket_time_out,
+		RedisTimeOut:  c.redis_time_out,
+	}
 	last_state := redisJson.State
 
 	for RedisGet(c.redisdb, c.tun_key, c.md5_tun_key, &redisJson) != nil {
@@ -199,6 +204,11 @@ func (c *TunnelServer) process1(count int) quic.Connection {
 			return nil
 		}
 
+		if redisJson.State-last_state > 1 {
+			c.redisdb.Del(c.md5_tun_key)
+			return nil
+		}
+
 		switch redisJson.State {
 		case 0:
 			log.Println("0: 收到对端请求")
@@ -210,6 +220,10 @@ func (c *TunnelServer) process1(count int) quic.Connection {
 
 			log.Printf("   发送本端地址: %v\n", redisJson)
 			redisJson.State = 1
+			redisJson.SendPortCount = redisJson.ConnectCount * 64
+			if redisJson.SendPortCount > 10240 {
+				redisJson.SendPortCount = 10240
+			}
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 1:
@@ -224,9 +238,9 @@ func (c *TunnelServer) process1(count int) quic.Connection {
 			conn.Close()
 			conn = nil
 
-			log.Printf("   发起连接: %d\n", count)
+			log.Printf("   发起连接: %d\n", redisJson.SendPortCount*2)
 			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort)
-			c.process2(count)
+			c.process2(redisJson.SendPortCount)
 
 			log.Printf("3: 通知对端等待连接: %v\n", redisJson)
 			redisJson.State = 3
@@ -277,23 +291,18 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		go proxy.ListenSocks5(tun_remote_addr)
 	}
 
-	count := 25
-
 	for {
 		tunnelServer := TunnelServer{
-			redisdb:     redisdb,
-			tun_key:     tun_key,
-			md5_tun_key: md5.Encode(tun_key),
-			SendData:    []byte(tools.RandomString(3)),
-			RecvData:    make([]byte, 1600),
+			redisdb:         redisdb,
+			tun_key:         tun_key,
+			md5_tun_key:     md5.Encode(tun_key),
+			SendData:        []byte(tools.RandomString(3)),
+			RecvData:        make([]byte, 1600),
+			redis_time_out:  30 * time.Second,
+			socket_time_out: 3 * time.Second,
 		}
 
-		count++
-		if count > 200 {
-			count = 128
-		}
-
-		conn := tunnelServer.process1(64 * count)
+		conn := tunnelServer.process1()
 		if conn == nil {
 			tunnelServer.Release()
 

@@ -27,8 +27,6 @@ type TunnelClient struct {
 	redisdb            *redis.Client
 	tun_key            string
 	md5_tun_key        string
-	redis_time_out     time.Duration
-	socket_time_out    time.Duration
 	SendData           []byte
 	RecvData           []byte
 	send_conn_map      map[string]*net.UDPConn
@@ -118,12 +116,11 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 	c.send_conn_map = make(map[string]*net.UDPConn)
 
 	redisJson := RedisJsonType{
-		SocketTimeOut: c.socket_time_out,
-		RedisTimeOut:  c.redis_time_out,
+		ConnectCount: count,
 	}
 
 	log.Println("0: 通知对端连接")
-	RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, &redisJson)
+	RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, 30*time.Second, &redisJson)
 
 	last_state := redisJson.State
 
@@ -163,14 +160,14 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 			conn.Close()
 
-			log.Printf("   发起连接: %d\n", count)
-			for i := 0; i <= count; i++ {
+			log.Printf("   发起连接: %d\n", redisJson.SendPortCount)
+			for i := 0; i <= redisJson.SendPortCount; i++ {
 				c.process_send(redisJson.ServerIP, redisJson.ServerPort)
 			}
 
 			log.Printf("2: 发送本端地址: %v\n", redisJson)
 			redisJson.State = 2
-			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, &redisJson)
+			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 2:
 			if last_state != redisJson.State {
@@ -182,7 +179,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			log.Println("3: 对端已发起连接, 开始计算超时")
 			log.Println("3: 通知对端开始计算超时")
 			redisJson.State = 4
-			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, &redisJson)
+			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 			select {
 			case <-c.process_chain:
@@ -192,7 +189,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 					delete(c.send_conn_map, port)
 				}
 				return c.stun_quic_conn
-			case <-time.After(c.socket_time_out):
+			case <-time.After(redisJson.SocketTimeOut):
 				log.Println("   连接超时!")
 				return nil
 			}
@@ -250,26 +247,21 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 	defer listener.Close()
 
 	tunnelClient := TunnelClient{
-		redisdb:         redisdb,
-		tun_key:         tun_key,
-		md5_tun_key:     md5.Encode(tun_key),
-		redis_time_out:  30 * time.Second,
-		socket_time_out: 3 * time.Second,
-		SendData:        []byte(tools.RandomString(3)),
-		RecvData:        make([]byte, 1600),
+		redisdb:     redisdb,
+		tun_key:     tun_key,
+		md5_tun_key: md5.Encode(tun_key),
+		SendData:    []byte(tools.RandomString(3)),
+		RecvData:    make([]byte, 1600),
 	}
 
-	count := 25
+	count := 0
 
 	for {
 		tunnelClient.Release()
 
 		count++
-		if count > 200 {
-			count = 128
-		}
 
-		conn := tunnelClient.process1(64 * count)
+		conn := tunnelClient.process1(count)
 
 		redisdb.Del(tunnelClient.md5_tun_key)
 
@@ -290,6 +282,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			}
 
 			<-chain
+			count = 0
 		}
 
 		if !retry {
