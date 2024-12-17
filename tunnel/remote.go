@@ -79,14 +79,6 @@ func (c *TunnelServer) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 		return
 	}
 
-	log.Println("已建立连接, 开始清空历史连接")
-	for port, conn := range c.send_conn_map {
-		if port == remoteAddr.Port {
-			conn.Close()
-			delete(c.send_conn_map, port)
-		}
-	}
-
 	log.Printf("process_client3 quic.Dial: %v==>%v\n", conn.LocalAddr(), remoteAddr)
 	new_quic_conn, err := quic.Dial(context.Background(), conn, remoteAddr, tls2.GetClientTLSConfig(), nil)
 	if err != nil {
@@ -126,6 +118,14 @@ func (c *TunnelServer) process2() {
 		if err == nil && n > 0 {
 			log.Printf("process udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), conn_remote_addr, string(c.RecvData[:10]), n)
 			c.process_quic(conn, conn_remote_addr, c.SendData, c.RecvData)
+
+			log.Println("清空历史连接")
+			for port, conn := range c.send_conn_map {
+				if port != conn_remote_addr.Port {
+					conn.Close()
+					delete(c.send_conn_map, port)
+				}
+			}
 			return
 		}
 		conn.Close()

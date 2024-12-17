@@ -43,14 +43,6 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 		return
 	}
 
-	log.Println("已建立连接, 开始清空历史连接")
-	for addr, conn := range c.send_conn_map {
-		if addr == conn.LocalAddr().String() {
-			conn.Close()
-			delete(c.send_conn_map, addr)
-		}
-	}
-
 	log.Printf("quic.Listen: %v\n", conn.LocalAddr())
 	listener, err := quic.Listen(conn, tls2.GetServerTLSConfig(), nil)
 	tools.AssertErrorToNilf("process_quic quic.Listen: %v", err)
@@ -91,6 +83,14 @@ func (c *TunnelClient) process_send(ip string, port int) {
 		if n, remoteAddr, _ := conn.ReadFromUDP(c.RecvData); n > 0 {
 			log.Printf("process_send local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 			c.process_quic(conn, remoteAddr)
+
+			log.Println("清空历史连接")
+			for addr, conn := range c.send_conn_map {
+				if addr != conn.LocalAddr().String() {
+					conn.Close()
+					delete(c.send_conn_map, addr)
+				}
+			}
 			return
 		}
 		conn.Close()
@@ -240,7 +240,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		tun_key:         tun_key,
 		md5_tun_key:     md5.Encode(tun_key),
 		redis_time_out:  30 * time.Second,
-		socket_time_out: 9 * time.Second,
+		socket_time_out: 3 * time.Second,
 		SendData:        []byte(tools.RandomString(3)),
 		RecvData:        make([]byte, 1600),
 	}
