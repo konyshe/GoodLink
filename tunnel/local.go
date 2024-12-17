@@ -22,10 +22,16 @@ import (
 )
 
 type TunnelClient struct {
-	m_stun_quic_conn     quic.Connection
-	m_stun_health_stream quic.Stream
-	m_process_lock       sync.Mutex
-	m_process_chain      chan quic.Connection
+	stun_quic_conn     quic.Connection
+	stun_health_stream quic.Stream
+	process_lock       sync.Mutex
+	process_chain      chan quic.Connection
+	redisdb            *redis.Client
+	tun_key            string
+	md5_tun_key        string
+	time_out           time.Duration
+	SendData           []byte
+	RecvData           []byte
 }
 
 func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data, recv_data []byte) {
@@ -96,13 +102,6 @@ func (c *TunnelClient) process_client2(ip string, port int, send_data, recv_data
 	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
 
 	conn.WriteToUDP(send_data, remoteAddr)
-}
-
-type RedisJsonType struct {
-	ServerIP   string `bson:"server_ip" json:"server_ip"`
-	ServerPort int    `bson:"server_port" json:"server_port"`
-	ClientIP   string `bson:"client_ip" json:"client_ip"`
-	ClientPort int    `bson:"client_port" json:"client_port"`
 }
 
 func (c *TunnelClient) process_client1(redisdb *redis.Client, tun_key string, time_out time.Duration, send_data, recv_data []byte) quic.Connection {
