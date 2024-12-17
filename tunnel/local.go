@@ -35,9 +35,6 @@ type TunnelClient struct {
 }
 
 func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
-	c.process_lock.Lock()
-	defer c.process_lock.Unlock()
-
 	if c.stun_quic_conn != nil {
 		conn.Close()
 		return
@@ -62,7 +59,9 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	tools.AssertErrorToNilf("process_server5 new_quic_conn.AcceptStream: %v", err)
 
 	log.Printf("process_quic new_quic_stream.Read: %v==>%v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
+	new_quic_stream.SetDeadline(time.Now().Add(30 * time.Second))
 	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
+		new_quic_stream.SetDeadline(time.Time{})
 		log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 		c.stun_health_stream = new_quic_stream
 		c.stun_quic_conn = new_quic_conn
@@ -76,11 +75,14 @@ func (c *TunnelClient) process_send(ip string, port int) {
 		log.Printf("process_server2 net.ListenUDP: %v\n", err)
 		return
 	}
+	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	c.send_conn_map[conn.LocalAddr().String()] = conn
 
 	go func() {
 		if n, remoteAddr, _ := conn.ReadFromUDP(c.RecvData); n > 0 {
+			c.process_lock.Lock()
+
 			log.Printf("process_send local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 			c.process_quic(conn, remoteAddr)
 
@@ -91,6 +93,7 @@ func (c *TunnelClient) process_send(ip string, port int) {
 					delete(c.send_conn_map, addr)
 				}
 			}
+			c.process_lock.Unlock()
 			return
 		}
 		conn.Close()
@@ -256,7 +259,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		RecvData:        make([]byte, 1600),
 	}
 
-	count := 0
+	count := 25
 
 	for {
 		tunnelClient.Release()
