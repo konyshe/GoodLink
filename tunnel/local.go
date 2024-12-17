@@ -2,9 +2,7 @@ package tunnel
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"goodlink/aes"
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/stun2"
@@ -63,9 +61,8 @@ func (c *TunnelClient) process_client3(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	tools.AssertErrorToNilf("process_server5 new_quic_conn.AcceptStream: %v", err)
 
 	log.Printf("process_client3 new_quic_stream.Read: %v==>%v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
-	new_quic_stream.SetReadDeadline(time.Now().Add(c.wait_socket_time_out))
 	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
-		new_quic_stream.SetReadDeadline(time.Time{})
+		conn.SetReadDeadline(time.Now().Add(c.wait_socket_time_out))
 		log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 		c.stun_health_stream = new_quic_stream
 		c.stun_quic_conn = new_quic_conn
@@ -83,7 +80,7 @@ func (c *TunnelClient) process_client2(ip string, port int) {
 	go func() {
 		conn.SetReadDeadline(time.Now().Add(c.wait_socket_time_out))
 		if n, remoteAddr, _ := conn.ReadFromUDP(c.RecvData); n > 0 {
-			conn.SetReadDeadline(time.Time{})
+			conn.SetReadDeadline(time.Now().Add(c.wait_socket_time_out))
 			log.Printf("process_client2 udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 			c.process_client3(conn, remoteAddr)
 			return
@@ -110,19 +107,14 @@ func (c *TunnelClient) process_client1() quic.Connection {
 	redisJson := RedisJsonType{}
 
 	log.Println("0: 通知对端开始建立隧道")
-	RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, redisJson)
+	RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, &redisJson)
 
 	for {
 		time.Sleep(1 * time.Second)
 
-		aes_res, err := c.redisdb.Get(c.md5_tun_key).Bytes()
-		if err != nil && aes_res == nil && len(aes_res) == 0 {
-			log.Printf("获取信令数据失败: %v\n", err)
-			return nil
-		}
-
-		if err = json.Unmarshal(aes.Decrypt(aes_res, c.tun_key), &redisJson); err != nil {
-			log.Printf("解析信令数据失败: %v\n", err)
+		err := RedisGet(c.redisdb, c.md5_tun_key, c.tun_key, &redisJson)
+		if err != nil {
+			log.Println(err)
 			return nil
 		}
 
@@ -145,7 +137,7 @@ func (c *TunnelClient) process_client1() quic.Connection {
 
 			log.Printf("2: 发送本端地址: %v\n", redisJson)
 			redisJson.State = 2
-			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, redisJson)
+			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, &redisJson)
 
 		case 2:
 			log.Println("2: 等待对端响应")
@@ -154,10 +146,10 @@ func (c *TunnelClient) process_client1() quic.Connection {
 			log.Println("3: 等待对端连接")
 			select {
 			case <-c.process_chain:
-				log.Println("建立隧道成功!")
+				log.Println("连接成功!")
 				return c.stun_quic_conn
 			case <-time.After(c.wait_socket_time_out):
-				log.Println("建立隧道超时!")
+				log.Println("连接超时!")
 				return nil
 			}
 

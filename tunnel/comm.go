@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"encoding/json"
+	"fmt"
 	"goodlink/aes"
 	"time"
 
@@ -16,8 +17,21 @@ type RedisJsonType struct {
 	ClientPort int    `bson:"client_port" json:"client_port"`
 }
 
-func RedisSet(redisdb *redis.Client, tun_key, md5_tun_key string, time_out time.Duration, redisJson RedisJsonType) {
-	if jsonByte, err := json.Marshal(redisJson); err == nil {
+func RedisSet(redisdb *redis.Client, tun_key, md5_tun_key string, time_out time.Duration, redisJson *RedisJsonType) {
+	if jsonByte, err := json.Marshal(*redisJson); err == nil {
 		redisdb.Set(md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
 	}
+}
+
+func RedisGet(redisdb *redis.Client, md5_tun_key, tun_key string, redisJson *RedisJsonType) error {
+	aes_res, err := redisdb.Get(md5_tun_key).Bytes()
+	if err != nil && aes_res == nil && len(aes_res) == 0 {
+		return fmt.Errorf("获取信令数据失败: %v", err)
+	}
+
+	if err = json.Unmarshal(aes.Decrypt(aes_res, tun_key), redisJson); err != nil {
+		return fmt.Errorf("解析信令数据失败: %v", err)
+	}
+
+	return nil
 }
