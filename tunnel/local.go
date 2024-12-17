@@ -200,7 +200,11 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			RecvData:             make([]byte, 1600),
 		}
 
-		if conn := tunnelClient.process_client1(); conn != nil {
+		conn := tunnelClient.process_client1()
+
+		redisdb.Del(tunnelClient.md5_tun_key)
+
+		if conn != nil {
 			chain := make(chan int, 1)
 			go func() {
 				proxy.ProcessProxyClient(listener, conn)
