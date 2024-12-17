@@ -208,7 +208,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			}()
 
 			process_health(tunnelClient.stun_health_stream, tunnelClient.SendData, tunnelClient.RecvData)
-			log.Println("隧道已断开")
+			log.Println("连接已断开")
 			conn.CloseWithError(0, "0")
 			tunnelClient.Release()
 
@@ -221,7 +221,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		}
 
 		if !retry {
-			return fmt.Errorf("隧道已断开")
+			return fmt.Errorf("连接已断开")
 		}
 		time.Sleep(1 * time.Second)
 	}
