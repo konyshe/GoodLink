@@ -192,7 +192,7 @@ func (c *TunnelServer) process1() quic.Connection {
 		}
 
 		if redisJson.State < last_state {
-			log.Println("   对端出现重启")
+			log.Println("   重启连接")
 			return nil
 		}
 
@@ -203,7 +203,6 @@ func (c *TunnelServer) process1() quic.Connection {
 				log.Printf("net.ListenUDP: %v\n", err)
 				return nil
 			}
-			log.Print("0: 获取本端地址")
 			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort(conn)
 
 			log.Printf("   发送本端地址: %v\n", redisJson)

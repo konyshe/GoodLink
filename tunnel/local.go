@@ -109,6 +109,7 @@ func (c *TunnelClient) process_send(ip string, port int) {
 
 func (c *TunnelClient) process1(count int) quic.Connection {
 	var conn *net.UDPConn
+	var err error
 
 	c.process_chain = make(chan quic.Connection, 1)
 	c.send_conn_map = make(map[string]*net.UDPConn)
@@ -122,6 +123,20 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 	RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, c.redis_time_out, &redisJson)
 
 	last_state := redisJson.State
+
+	wan_ip_chain := make(chan string, 1)
+	wan_port_chain := make(chan int, 1)
+
+	if conn, err = net.ListenUDP("udp4", nil); err != nil {
+		log.Printf("net.ListenUDP: %v\n", err)
+		return nil
+	}
+
+	go func() {
+		ClientIP, ClientPort := stun2.GetWanIpPort(conn)
+		wan_ip_chain <- ClientIP
+		wan_port_chain <- ClientPort
+	}()
 
 	for {
 		time.Sleep(1 * time.Second)
@@ -141,13 +156,8 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 
 		case 1:
 			log.Printf("1: 收到对端地址: %v\n", redisJson)
-			if conn, err = net.ListenUDP("udp4", nil); err != nil {
-				log.Printf("net.ListenUDP: %v\n", err)
-				return nil
-			}
 
-			log.Print("1: 获取本端地址")
-			redisJson.ClientIP, redisJson.ClientPort = stun2.GetWanIpPort(conn)
+			redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 			conn.Close()
 
 			for i := 0; i <= count; i++ {

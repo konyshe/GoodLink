@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"time"
@@ -165,6 +166,8 @@ func init() {
 }
 
 func GetWanIpPort(conn *net.UDPConn) (wan_ip string, wan_port int) {
+	log.Println("   获取本端地址")
+
 	for {
 		stun_svr := m_stun_list[rand.Intn(len(m_stun_list))]
 		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
