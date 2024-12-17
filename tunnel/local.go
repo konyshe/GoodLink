@@ -232,7 +232,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		tun_key:         tun_key,
 		md5_tun_key:     md5.Encode(tun_key),
 		redis_time_out:  30 * time.Second,
-		socket_time_out: 3 * time.Second,
+		socket_time_out: 9 * time.Second,
 		SendData:        []byte(tools.RandomString(3)),
 		RecvData:        make([]byte, 1600),
 	}
