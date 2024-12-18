@@ -29,7 +29,7 @@ type TunnelClient struct {
 	md5_tun_key        string
 	SendData           []byte
 	RecvData           []byte
-	send_conn_map      map[string]*net.UDPConn
+	conn_list          []*net.UDPConn
 	remote_addr        *net.UDPAddr
 }
 
@@ -66,7 +66,7 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 }
 
 func (c *TunnelClient) process_send_map() {
-	for _, conn := range c.send_conn_map {
+	for _, conn := range c.conn_list {
 		if conn != nil && c.stun_quic_conn == nil {
 			if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err != nil {
 				break
@@ -81,7 +81,7 @@ func (c *TunnelClient) process3(time_out time.Duration) {
 		log.Fatalf("   process3 net.ListenUDP: %v\n", err)
 		return
 	}
-	c.send_conn_map[conn.LocalAddr().String()] = conn //这里不用加锁
+	c.conn_list = append(c.conn_list, conn) //这里不用加锁
 
 	conn.SetReadDeadline(time.Now().Add(time_out))
 
@@ -106,7 +106,6 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 	var err error
 
 	c.process_chain = make(chan quic.Connection, 1)
-	c.send_conn_map = make(map[string]*net.UDPConn)
 
 	redisJson := RedisJsonType{
 		ConnectCount: count,
