@@ -11,7 +11,7 @@ import (
 )
 
 func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
-	//log.Printf("stun_svr: %s\n", addr)
+	//log.Printf("   stun_svr: %s\n", addr)
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -182,7 +182,7 @@ func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
 func getListenUDP() *net.UDPConn {
 	conn, err := net.ListenUDP("udp4", nil)
 	if err != nil {
-		log.Panic("net.ListenUDP: ", err)
+		log.Panic("   net.ListenUDP: ", err)
 	}
 	return conn
 }

@@ -102,7 +102,7 @@ func (c *TunnelServer) process_quic(remoteAddr *net.UDPAddr) {
 }
 
 func (c *TunnelServer) process2() {
-	//log.Printf("start_server_child: %v ==> %s\n", c.conn.LocalAddr(), c.tun_remote_addr)
+	//log.Printf("   start_server_child: %v ==> %s\n", c.conn.LocalAddr(), c.tun_remote_addr)
 
 	c.process_chain = make(chan quic.Connection, 1)
 	//c.send_conn_map = make(map[int]string)
@@ -193,7 +193,7 @@ func (c *TunnelServer) process1() quic.Connection {
 		case 0:
 			log.Printf("%d: 收到对端请求\n", redisJson.State)
 			if c.conn, err = net.ListenUDP("udp4", nil); err != nil {
-				log.Printf("net.ListenUDP: %v\n", err)
+				log.Printf("   net.ListenUDP: %v\n", err)
 				return nil
 			}
 			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(c.conn)
@@ -246,7 +246,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		DB:       radis_id,
 	})
 	if redisdb == nil {
-		log.Fatalln("Redis初始化失败")
+		log.Fatalln("   Redis初始化失败")
 		os.Exit(0)
 	}
 	defer redisdb.Close()
@@ -254,7 +254,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 	if tun_remote_addr == "" {
 		tun_remote_addr = tools.GetFreeLocalAddr()
 		if tun_remote_addr == "" {
-			log.Fatalln("获取本地端口失败")
+			log.Fatalln("   获取本地端口失败")
 			os.Exit(0)
 		}
 		go proxy.ListenSocks5(tun_remote_addr)

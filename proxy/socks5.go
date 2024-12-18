@@ -14,7 +14,7 @@ func ListenSocks5(addr string) {
 		panic(err)
 	}
 
-	log.Printf("ListenSocks5: %v\n", addr)
+	log.Printf("   ListenSocks5: %v\n", addr)
 
 	// Create SOCKS5 proxy on addr
 	if err := server.ListenAndServe("tcp", addr); err != nil {

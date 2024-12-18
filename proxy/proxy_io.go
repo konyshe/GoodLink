@@ -11,9 +11,9 @@ import (
 func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
 	for {
 		if n, err := io.Copy(tc, qc); n == 0 || err != nil {
-			log.Printf("stunT2QProcess1 tcp close: %v ==> %v\n", tc.RemoteAddr(), tc.LocalAddr())
+			log.Printf("   stunT2QProcess1 tcp close: %v ==> %v\n", tc.RemoteAddr(), tc.LocalAddr())
 			tc.Close()
-			log.Printf("stunT2QProcess1 quic stream close: %v, %v ==> %v\n", qc.StreamID(), stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
+			log.Printf("   stunT2QProcess1 quic stream close: %v, %v ==> %v\n", qc.StreamID(), stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
 			qc.Close()
 			break
 		}
@@ -23,9 +23,9 @@ func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection
 func stunQ2TProcess1(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
 	for {
 		if n, err := io.Copy(qc, tc); n == 0 || err != nil {
-			log.Printf("stunQ2TProcess1 tcp close: %v ==> %v\n", tc.RemoteAddr(), tc.LocalAddr())
+			log.Printf("   stunQ2TProcess1 tcp close: %v ==> %v\n", tc.RemoteAddr(), tc.LocalAddr())
 			tc.Close()
-			log.Printf("stunQ2TProcess1 quic stream close: %v, %v ==> %v\n", qc.StreamID(), stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
+			log.Printf("   stunQ2TProcess1 quic stream close: %v, %v ==> %v\n", qc.StreamID(), stun_quic_conn.RemoteAddr(), stun_quic_conn.LocalAddr())
 			qc.Close()
 			break
 		}

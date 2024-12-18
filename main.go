@@ -60,7 +60,7 @@ func main2() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 
-	log.Println("main2 end")
+	log.Println("   main2 end")
 }
 
 func main() {
@@ -69,7 +69,7 @@ func main() {
 	gogo.GuardStart(main2, func(err error) {
 		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
 		if err != nil {
-			gogo.Log().ErrorF("发现导致重启的错误: %v", err)
+			log.Printf("   发现导致重启的错误: %v", err)
 		}
 	})
 }
