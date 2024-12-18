@@ -36,7 +36,6 @@ type TunnelClient struct {
 func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	if c.stun_quic_conn != nil {
 		conn.Close()
-		delete(c.send_conn_map, conn.LocalAddr().String())
 		return
 	}
 
@@ -108,7 +107,6 @@ func (c *TunnelClient) process3() {
 			for addr, conn := range c.send_conn_map {
 				if addr != conn.LocalAddr().String() {
 					conn.Close()
-					delete(c.send_conn_map, addr)
 				}
 			}
 		}
@@ -211,9 +209,8 @@ func (c *TunnelClient) Release() {
 		c.stun_quic_conn = nil
 	}
 
-	for port, conn := range c.send_conn_map {
+	for _, conn := range c.send_conn_map {
 		conn.Close()
-		delete(c.send_conn_map, port)
 	}
 	c.send_conn_map = nil
 }

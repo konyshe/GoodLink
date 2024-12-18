@@ -207,10 +207,6 @@ func (c *TunnelServer) process1() quic.Connection {
 
 		case 2:
 			log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
-			localAddr, _ := net.ResolveUDPAddr("udp4", c.conn.LocalAddr().String())
-			c.conn.Close()
-			c.conn, err = net.ListenUDP("udp4", localAddr)
-			tools.AssertErrorToNilf("process net.ListenUDP: %v", err)
 			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
 			c.process2()
 			c.process_send_map()
