@@ -102,7 +102,7 @@ func (c *TunnelClient) process_send(time_out time.Duration) {
 	go func() {
 		//conn.SetDeadline(time.Now().Add(time_out))
 		for {
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(1500 * time.Millisecond)
 			c.process_lock.Lock()
 			if c.stun_quic_conn != nil {
 				c.process_lock.Unlock()
