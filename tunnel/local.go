@@ -31,9 +31,13 @@ type TunnelClient struct {
 	RecvData           []byte
 	conn_list          []*net.UDPConn
 	remote_addr        *net.UDPAddr
+	stun_quic_start    int
 }
 
 func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, time_out time.Duration) {
+	c.stun_quic_start = 1
+	log.Println("   标记停止发送报文")
+
 	if c.stun_quic_conn != nil {
 		return
 	}
@@ -67,11 +71,11 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 
 func (c *TunnelClient) process_send_map() {
 	for _, conn := range c.conn_list {
-		if conn != nil && c.stun_quic_conn == nil {
-			if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err != nil {
-				break
-			}
+		if c.stun_quic_start > 0 {
+			log.Println("   临时停止发送报文")
+			break
 		}
+		conn.WriteToUDP(c.SendData, c.remote_addr)
 	}
 }
 
@@ -150,6 +154,10 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			go func() {
 				for {
 					time.Sleep(1000 * time.Millisecond)
+					if c.stun_quic_start > 0 {
+						log.Println("   完全停止发送报文")
+						break
+					}
 					c.process_send_map()
 				}
 			}()
@@ -185,6 +193,8 @@ func (c *TunnelClient) Release() {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
 	}
+
+	c.stun_quic_start = 0
 }
 
 func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, tun_key string, retry bool) error {
