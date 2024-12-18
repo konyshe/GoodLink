@@ -159,7 +159,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 			c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort))
 
-			log.Printf("   发起连接: %d\n", redisJson.SendPortCount)
+			log.Println("   发起连接")
 			c.process2(redisJson.SendPortCount)
 			c.process_send_map()
 
