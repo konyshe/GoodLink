@@ -47,10 +47,7 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 	tools.AssertErrorToNilf("   process_quic quic.Listen: %v", err)
 
 	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
-	if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err != nil {
-		log.Printf("   process_quic conn.WriteToUDP: %v\n", err)
-		return
-	}
+	conn.WriteToUDP(c.SendData, c.remote_addr)
 
 	log.Printf("   process_server5 listener.Accept: %v\n", conn.LocalAddr())
 	new_quic_conn, err := listener.Accept(context.Background())
