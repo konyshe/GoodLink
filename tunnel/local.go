@@ -67,10 +67,13 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 }
 
 func (c *TunnelClient) process_send_map() {
+	log.Println("   发送报文开始")
+	defer log.Println("   发送报文结束")
+
 	for _, conn := range c.conn_list {
 		if c.stun_quic_start > 0 {
 			log.Println("   临时停止发送报文")
-			break
+			return
 		}
 		conn.WriteToUDP(c.SendData, c.remote_addr)
 	}
