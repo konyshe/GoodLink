@@ -143,21 +143,21 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			log.Println("   发起连接")
 			c.process2(redisJson.SendPortCount, redisJson.SocketTimeOut)
 			c.process_send_map()
-
+			/*
+				go func() {
+					for {
+						time.Sleep(1000 * time.Millisecond)
+						if c.stun_quic_start > 0 {
+							log.Println("   完全停止发送报文")
+							break
+						}
+						c.process_send_map()
+					}
+				}()
+			*/
 			redisJson.State = 2
 			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
-
-			go func() {
-				for {
-					time.Sleep(1000 * time.Millisecond)
-					if c.stun_quic_start > 0 {
-						log.Println("   完全停止发送报文")
-						break
-					}
-					c.process_send_map()
-				}
-			}()
 
 		case 3:
 			if c.stun_quic_conn == nil {
@@ -213,11 +213,12 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 	defer listener.Close()
 
 	tunnelClient := TunnelClient{
-		redisdb:     redisdb,
-		tun_key:     tun_key,
-		md5_tun_key: md5.Encode(tun_key),
-		SendData:    []byte(tools.RandomString(3)),
-		RecvData:    make([]byte, 1600),
+		redisdb:        redisdb,
+		tun_key:        tun_key,
+		md5_tun_key:    md5.Encode(tun_key),
+		SendData:       []byte(tools.RandomString(3)),
+		RecvData:       make([]byte, 1600),
+		stun_quic_conn: nil,
 	}
 
 	count := 0

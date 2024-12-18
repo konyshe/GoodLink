@@ -132,10 +132,12 @@ func (c *TunnelServer) Release() {
 
 	if c.stun_health_stream != nil {
 		c.stun_health_stream.Close()
+		c.stun_health_stream = nil
 	}
 
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
+		c.stun_quic_conn = nil
 	}
 }
 
@@ -244,6 +246,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 			RecvData:        make([]byte, 1600),
 			redis_time_out:  30 * time.Second,
 			socket_time_out: 6 * time.Second,
+			stun_quic_conn:  nil,
 		}
 
 		conn := tunnelServer.process1()
