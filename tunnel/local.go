@@ -44,7 +44,7 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	listener, err := quic.Listen(conn, tls2.GetServerTLSConfig(), nil)
 	tools.AssertErrorToNilf("process_quic quic.Listen: %v", err)
 
-	log.Printf("process_quic conn.WriteToUDP: %v==>%v\n", conn.LocalAddr(), c.remote_addr)
+	log.Printf("process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
 	if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err != nil {
 		log.Printf("process_quic conn.WriteToUDP: %v\n", err)
 		return
@@ -54,11 +54,11 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	new_quic_conn, err := listener.Accept(context.Background())
 	tools.AssertErrorToNilf("process_server5 listener.Accept: %v", err)
 
-	log.Printf("process_server5 quic.AcceptStream: %v==>%v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
+	log.Printf("process_server5 quic.AcceptStream: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
 	new_quic_stream, err := new_quic_conn.AcceptStream(context.Background())
 	tools.AssertErrorToNilf("process_server5 new_quic_conn.AcceptStream: %v", err)
 
-	log.Printf("process_quic new_quic_stream.Read: %v==>%v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
+	log.Printf("process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
 	//new_quic_stream.SetDeadline(time.Now().Add(30 * time.Second))
 	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
 		//new_quic_stream.SetDeadline(time.Time{})
