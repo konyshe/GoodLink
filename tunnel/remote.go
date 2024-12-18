@@ -183,19 +183,19 @@ func (c *TunnelServer) process1() quic.Connection {
 		}
 
 		if redisJson.State < last_state {
-			log.Println("   重启连接")
+			log.Println("   对端已重置连接")
 			return nil
 		}
 
 		if redisJson.State-last_state > 1 {
-			log.Println("   redisJson.State-last_state > 1")
+			log.Println("   状态异常")
 			c.redisdb.Del(c.md5_tun_key)
 			return nil
 		}
 
 		switch redisJson.State {
 		case 0:
-			log.Println("0: 收到对端请求")
+			log.Printf("%d: 收到对端请求\n", redisJson.State)
 			if c.conn, err = net.ListenUDP("udp4", nil); err != nil {
 				log.Printf("net.ListenUDP: %v\n", err)
 				return nil
@@ -206,11 +206,11 @@ func (c *TunnelServer) process1() quic.Connection {
 			redisJson.RedisTimeOut = c.redis_time_out
 			redisJson.State = 1
 			redisJson.SendPortCount = 0x100
-			log.Printf("   发送本端地址: %v\n", redisJson)
+			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 2:
-			log.Printf("2: 收到对端地址, 发起连接: %v\n", redisJson)
+			log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
 			localAddr, _ := net.ResolveUDPAddr("udp4", c.conn.LocalAddr().String())
 			c.conn.Close()
 			c.conn, err = net.ListenUDP("udp4", localAddr)
@@ -218,18 +218,16 @@ func (c *TunnelServer) process1() quic.Connection {
 			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
 			go c.process2()
 
-			log.Println("3: 通知对端等待连接")
-			redisJson.State = 3
-			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
-
-		case 4:
-			log.Println("4: 收到对端响应, 开始计算超时")
 			select {
 			case <-c.process_chain:
-				log.Println("   连接成功!")
+				redisJson.State = 3
+				log.Printf("%d: 通知对端, 连接成功\n", redisJson.State)
+				RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 				return c.stun_quic_conn
 			case <-time.After(redisJson.SocketTimeOut):
-				log.Println("   连接超时!")
+				redisJson.State = 4
+				log.Printf("%d: 通知对端, 连接超时\n", redisJson.State)
+				RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 				return nil
 			}
 		}

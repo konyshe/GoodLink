@@ -143,7 +143,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 
 		switch redisJson.State {
 		case 1:
-			log.Printf("1: 收到对端地址: %v\n", redisJson)
+			log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
 
 			redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 
@@ -157,24 +157,17 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 				c.process_send(redisJson.SocketTimeOut)
 			}
 
-			log.Printf("2: 发送本端地址: %v\n", redisJson)
 			redisJson.State = 2
+			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 3:
-			log.Println("3: 对端已发起连接, 本端开始计时, 通知对端开始计时")
-			redisJson.State = 4
-			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
+			log.Printf("%d: 连接成功\n", redisJson.State)
+			return c.stun_quic_conn
 
-			select {
-			case <-c.process_chain:
-				log.Println("   连接成功!")
-				return c.stun_quic_conn
-
-			case <-time.After(redisJson.SocketTimeOut):
-				log.Println("   连接超时!")
-				return nil
-			}
+		case 4:
+			log.Printf("%d: 连接超时\n", redisJson.State)
+			return nil
 		}
 	}
 }
