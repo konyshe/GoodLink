@@ -36,15 +36,16 @@ type TunnelServer struct {
 	redis_time_out     time.Duration
 	socket_time_out    time.Duration
 	conn               *net.UDPConn
+	stun_quic_start    int
 }
 
 func (c *TunnelServer) process_send_map() {
 	for _, remoteAddr := range c.remote_addr_list {
-		if c.conn != nil && c.stun_quic_conn == nil {
-			if _, err := c.conn.WriteToUDP(c.SendData, remoteAddr); err != nil {
-				return
-			}
+		if c.stun_quic_start > 0 {
+			log.Println("   临时停止发送报文")
+			break
 		}
+		c.conn.WriteToUDP(c.SendData, remoteAddr)
 	}
 }
 
@@ -62,6 +63,9 @@ func (c *TunnelServer) process_send_map() {
 	}
 */
 func (c *TunnelServer) process_quic(remoteAddr *net.UDPAddr) {
+	c.stun_quic_start = 1
+	log.Println("   标记停止发送报文")
+
 	if c.stun_quic_conn != nil {
 		return
 	}
@@ -128,12 +132,10 @@ func (c *TunnelServer) Release() {
 
 	if c.stun_health_stream != nil {
 		c.stun_health_stream.Close()
-		c.stun_health_stream = nil
 	}
 
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
-		c.stun_quic_conn = nil
 	}
 }
 
@@ -186,6 +188,10 @@ func (c *TunnelServer) process1() quic.Connection {
 			go func() {
 				for {
 					time.Sleep(1000 * time.Millisecond)
+					if c.stun_quic_start > 0 {
+						log.Println("   完全停止发送报文")
+						break
+					}
 					c.process_send_map()
 				}
 			}()
