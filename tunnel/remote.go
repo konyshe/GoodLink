@@ -39,14 +39,24 @@ type TunnelServer struct {
 	stun_quic_start    int
 }
 
-func (c *TunnelServer) process_send_map() {
+func (c *TunnelServer) process_send_map() int {
+	log.Println("   发送报文开始")
+	defer log.Println("   发送报文结束")
+
 	for _, remoteAddr := range c.remote_addr_list {
 		if c.stun_quic_start > 0 {
-			log.Println("   临时停止发送报文")
-			break
+			log.Println("   停止发送报文")
+			return -1
 		}
-		c.conn.WriteToUDP(c.SendData, remoteAddr)
+		if c.conn == nil {
+			return -1
+		}
+		if _, err := c.conn.WriteToUDP(c.SendData, remoteAddr); err != nil {
+			log.Printf("   process_send_map conn.WriteToUDP: %v\n", err)
+			return -1
+		}
 	}
+	return 0
 }
 
 /*
@@ -63,7 +73,7 @@ func (c *TunnelServer) process_send_map() {
 	}
 */
 func (c *TunnelServer) process_quic(remoteAddr *net.UDPAddr) {
-	c.stun_quic_start = 1
+	c.stun_quic_start = 2
 	log.Println("   标记停止发送报文")
 
 	if c.stun_quic_conn != nil {
@@ -115,7 +125,7 @@ func (c *TunnelServer) process2() {
 	clientIP := strings.Split(c.tun_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(c.tun_remote_addr, ":")[1])
 
-	for i := clientPort - 0x400; i > 0x400 && i < clientPort+0x2800 && c.stun_quic_conn == nil; i++ {
+	for i := clientPort - 0x400; i > 0x400 && i < clientPort+0x2800+0x2800 && c.stun_quic_conn == nil; i++ {
 		remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", clientIP, i))
 		c.remote_addr_list = append(c.remote_addr_list, remoteAddr)
 	}
@@ -138,6 +148,11 @@ func (c *TunnelServer) Release() {
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
+	}
+
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
 	}
 }
 
@@ -186,15 +201,12 @@ func (c *TunnelServer) process1() quic.Connection {
 			log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
 			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
 			c.process2()
-			c.process_send_map()
 			go func() {
 				for {
-					time.Sleep(1000 * time.Millisecond)
-					if c.stun_quic_start > 0 {
-						log.Println("   完全停止发送报文")
-						break
+					if c.process_send_map() < 0 {
+						return
 					}
-					c.process_send_map()
+					time.Sleep(1000 * time.Millisecond)
 				}
 			}()
 
