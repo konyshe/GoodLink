@@ -98,7 +98,7 @@ func (c *TunnelClient) process_send(time_out time.Duration) {
 	}()
 
 	go func() {
-		conn.SetDeadline(time.Now().Add(time_out))
+		//conn.SetDeadline(time.Now().Add(time_out))
 		for {
 			c.process_lock.Lock()
 			if c.stun_quic_conn == nil {
@@ -202,6 +202,8 @@ func (c *TunnelClient) GetQuicConn() quic.Connection {
 }
 
 func (c *TunnelClient) Release() {
+	log.Println("   清空缓存和连接")
+
 	c.process_lock.Lock()
 	defer c.process_lock.Unlock()
 
