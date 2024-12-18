@@ -188,6 +188,7 @@ func (c *TunnelServer) process1() quic.Connection {
 		}
 
 		if redisJson.State-last_state > 1 {
+			log.Println("   redisJson.State-last_state > 1")
 			c.redisdb.Del(c.md5_tun_key)
 			return nil
 		}
@@ -208,12 +209,6 @@ func (c *TunnelServer) process1() quic.Connection {
 			log.Printf("   发送本端地址: %v\n", redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
-		case 1:
-			if last_state != redisJson.State {
-				log.Println("1: 等待对端响应")
-				last_state = redisJson.State
-			}
-
 		case 2:
 			log.Printf("2: 收到对端地址, 发起连接: %v\n", redisJson)
 			localAddr, _ := net.ResolveUDPAddr("udp4", c.conn.LocalAddr().String())
@@ -221,17 +216,11 @@ func (c *TunnelServer) process1() quic.Connection {
 			c.conn, err = net.ListenUDP("udp4", localAddr)
 			tools.AssertErrorToNilf("process net.ListenUDP: %v", err)
 			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
-			c.process2()
+			go c.process2()
 
 			log.Println("3: 通知对端等待连接")
 			redisJson.State = 3
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
-
-		case 3:
-			if last_state != redisJson.State {
-				log.Println("3: 等待对端响应")
-				last_state = redisJson.State
-			}
 
 		case 4:
 			log.Println("4: 收到对端响应, 开始计算超时")
@@ -243,11 +232,9 @@ func (c *TunnelServer) process1() quic.Connection {
 				log.Println("   连接超时!")
 				return nil
 			}
-
-		default:
-			log.Printf("   发现异常状态: %d\n", redisJson.State)
-			return nil
 		}
+
+		last_state = redisJson.State
 	}
 }
 

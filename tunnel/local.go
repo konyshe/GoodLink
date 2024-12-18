@@ -123,8 +123,6 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 	log.Println("0: 通知对端连接")
 	RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, 30*time.Second, &redisJson)
 
-	last_state := redisJson.State
-
 	wan_ip_chain := make(chan string, 1)
 	wan_port_chain := make(chan int, 1)
 
@@ -144,12 +142,6 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 		}
 
 		switch redisJson.State {
-		case 0:
-			if last_state != redisJson.State {
-				log.Println("0: 等待对端响应")
-				last_state = redisJson.State
-			}
-
 		case 1:
 			log.Printf("1: 收到对端地址: %v\n", redisJson)
 
@@ -169,12 +161,6 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			redisJson.State = 2
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
-		case 2:
-			if last_state != redisJson.State {
-				log.Println("2: 等待对端响应")
-				last_state = redisJson.State
-			}
-
 		case 3:
 			log.Println("3: 对端已发起连接, 本端开始计时, 通知对端开始计时")
 			redisJson.State = 4
@@ -189,10 +175,6 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 				log.Println("   连接超时!")
 				return nil
 			}
-
-		default:
-			log.Printf("发现异常: %d\n", redisJson.State)
-			return nil
 		}
 	}
 }
