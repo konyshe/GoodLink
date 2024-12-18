@@ -123,7 +123,7 @@ func (c *TunnelServer) process2() {
 	clientIP := strings.Split(c.tun_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(c.tun_remote_addr, ":")[1])
 
-	for i := clientPort - 0x20; i > 1024 && i < clientPort+0x2800 && c.stun_quic_conn == nil; i++ {
+	for i := clientPort - 0x400; i > 0x400 && i < clientPort+0x2800 && c.stun_quic_conn == nil; i++ {
 		remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", clientIP, i))
 		c.remote_addr_list = append(c.remote_addr_list, remoteAddr)
 	}
@@ -274,15 +274,13 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 		conn := tunnelServer.process1()
 		if conn == nil {
 			tunnelServer.Release()
-
-		} else {
-			go func() {
-				go proxy.ProcessProxyServer(tun_remote_addr, conn)
-				process_health(tunnelServer.stun_health_stream, tunnelServer.SendData, tunnelServer.RecvData)
-				tunnelServer.Release()
-			}()
+			continue
 		}
 
-		time.Sleep(3 * time.Second)
+		go func(remote string, svr *TunnelServer, conn quic.Connection) {
+			defer svr.Release()
+			go proxy.ProcessProxyServer(remote, conn)
+			process_health(svr.stun_health_stream, svr.SendData, svr.RecvData)
+		}(tun_remote_addr, &tunnelServer, conn)
 	}
 }
