@@ -149,12 +149,12 @@ func init() {
 
 func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	log.Println("   获取本端地址")
+	defer conn.SetReadDeadline(time.Time{})
 
 	for {
 		stun_svr := m_stun_list[rand.Intn(len(m_stun_list))]
 		conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
-			conn.SetReadDeadline(time.Time{})
 			break
 		}
 	}
