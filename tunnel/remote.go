@@ -40,19 +40,10 @@ type TunnelServer struct {
 
 func (c *TunnelServer) process_send_map() {
 	for _, remoteAddr := range c.remote_addr_list {
-		c.process_lock.Lock()
-		if c.conn == nil {
-			c.process_lock.Unlock()
-			break
-		}
-		if c.stun_quic_conn != nil {
-			c.process_lock.Unlock()
-			break
-		}
-		_, err := c.conn.WriteToUDP(c.SendData, remoteAddr)
-		c.process_lock.Unlock()
-		if err != nil {
-			break
+		if c.conn != nil && c.stun_quic_conn == nil {
+			if _, err := c.conn.WriteToUDP(c.SendData, remoteAddr); err != nil {
+				return
+			}
 		}
 	}
 }
@@ -92,9 +83,7 @@ func (c *TunnelServer) process_quic(remoteAddr *net.UDPAddr) {
 	}
 
 	log.Printf("   process_quic new_quic_stream.Write: %v ==> %v\n", new_quic_conn.LocalAddr(), new_quic_conn.RemoteAddr())
-	new_quic_stream.SetDeadline(time.Now().Add(c.socket_time_out))
 	if n, err := new_quic_stream.Write(c.SendData); n > 0 && err == nil {
-		new_quic_stream.SetDeadline(time.Time{})
 		c.stun_quic_conn = new_quic_conn
 		c.stun_health_stream = new_quic_stream
 		c.process_chain <- new_quic_conn
@@ -105,18 +94,17 @@ func (c *TunnelServer) process2() {
 	//log.Printf("   start_server_child: %v ==> %s\n", c.conn.LocalAddr(), c.tun_remote_addr)
 
 	c.process_chain = make(chan quic.Connection, 1)
-	//c.send_conn_map = make(map[int]string)
 
-	//c.conn.SetDeadline(time.Now().Add(30 * time.Second))
+	c.conn.SetDeadline(time.Now().Add(c.socket_time_out))
 
 	go func() {
 		n, remoteAddr, err := c.conn.ReadFromUDP(c.RecvData) // 接收数据
 		if err == nil && n > 0 {
 			c.process_lock.Lock()
+			defer c.process_lock.Unlock()
+
 			log.Printf("   process udp local:%v remote:%v recv:%v... count:%v\n", c.conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 			c.process_quic(remoteAddr)
-			c.process_lock.Unlock()
-			return
 		}
 	}()
 
@@ -138,11 +126,6 @@ func (c *TunnelServer) GetQuicConn() quic.Connection {
 func (c *TunnelServer) Release() {
 	log.Println("   清空缓存和连接")
 
-	c.process_lock.Lock()
-	defer c.process_lock.Unlock()
-
-	c.process_chain = nil
-
 	if c.stun_health_stream != nil {
 		c.stun_health_stream.Close()
 		c.stun_health_stream = nil
@@ -151,11 +134,6 @@ func (c *TunnelServer) Release() {
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
-	}
-
-	if c.conn != nil {
-		c.conn.Close()
-		c.conn = nil
 	}
 }
 
