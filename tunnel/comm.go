@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"goodlink/aes"
+	"net"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -38,4 +40,15 @@ func RedisGet(redisdb *redis.Client, tun_key, md5_tun_key string, redisJson *Red
 	}
 
 	return nil
+}
+
+func process_send2(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data []byte, ck sync.Mutex) int {
+	ck.Lock()
+	defer ck.Unlock()
+
+	if conn != nil {
+		n, _ := conn.WriteToUDP(send_data, remoteAddr)
+		return n
+	}
+	return 0
 }

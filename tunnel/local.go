@@ -69,16 +69,35 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	}
 }
 
-func (c *TunnelClient) process_send(time_out time.Duration) {
+func (c *TunnelClient) process_send_map() {
+	for _, conn := range c.send_conn_map {
+		c.process_lock.Lock()
+		if conn == nil {
+			c.process_lock.Unlock()
+			break
+		}
+		if c.stun_quic_conn != nil {
+			c.process_lock.Unlock()
+			break
+		}
+		_, err := conn.WriteToUDP(c.SendData, c.remote_addr)
+		c.process_lock.Unlock()
+		if err != nil {
+			break
+		}
+	}
+}
+
+func (c *TunnelClient) process3() {
 	conn, err := net.ListenUDP("udp4", nil)
 	if err != nil {
-		log.Fatalf("   process_send net.ListenUDP: %v\n", err)
+		log.Fatalf("   process3 net.ListenUDP: %v\n", err)
 		return
 	}
 	c.send_conn_map[conn.LocalAddr().String()] = conn //这里不用加锁
 
 	go func() {
-		if n, remoteAddr, _ := conn.ReadFromUDP(c.RecvData); n > 0 {
+		if n, remoteAddr, err := conn.ReadFromUDP(c.RecvData); err == nil && n > 0 {
 			c.process_lock.Lock()
 			defer c.process_lock.Unlock()
 
@@ -92,29 +111,14 @@ func (c *TunnelClient) process_send(time_out time.Duration) {
 					delete(c.send_conn_map, addr)
 				}
 			}
-
-			return
 		}
 	}()
+}
 
-	conn.WriteToUDP(c.SendData, c.remote_addr)
-
-	go func() {
-		//conn.SetDeadline(time.Now().Add(time_out))
-		for {
-			time.Sleep(1500 * time.Millisecond)
-			c.process_lock.Lock()
-			if c.stun_quic_conn != nil {
-				c.process_lock.Unlock()
-				break
-			}
-			if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err != nil {
-				c.process_lock.Unlock()
-				break
-			}
-			c.process_lock.Unlock()
-		}
-	}()
+func (c *TunnelClient) process2(count int) {
+	for i := 0; i <= count; i++ {
+		c.process3()
+	}
 }
 
 func (c *TunnelClient) process1(count int) quic.Connection {
@@ -156,13 +160,19 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort))
 
 			log.Printf("   发起连接: %d\n", redisJson.SendPortCount)
-			for i := 0; i <= redisJson.SendPortCount; i++ {
-				c.process_send(redisJson.SocketTimeOut)
-			}
+			c.process2(redisJson.SendPortCount)
+			c.process_send_map()
 
 			redisJson.State = 2
 			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
+
+			go func() {
+				for {
+					time.Sleep(1000 * time.Millisecond)
+					c.process_send_map()
+				}
+			}()
 
 		case 3:
 			if c.stun_quic_conn == nil {

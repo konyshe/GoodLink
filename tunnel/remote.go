@@ -32,38 +32,29 @@ type TunnelServer struct {
 	md5_tun_key        string
 	SendData           []byte
 	RecvData           []byte
-	//send_conn_map      map[int]string
-	redis_time_out  time.Duration
-	socket_time_out time.Duration
-	conn            *net.UDPConn
+	remote_addr_list   []*net.UDPAddr
+	redis_time_out     time.Duration
+	socket_time_out    time.Duration
+	conn               *net.UDPConn
 }
 
-func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port int) {
-	if conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 65535 {
-		return
-	}
-	//c.send_conn_map[dst_port] = remoteAddr.String()
-
-	remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
-
-	conn.WriteToUDP(c.SendData, remoteAddr)
-
-	go func() {
-		//conn.SetDeadline(time.Now().Add(time_out))
-		for {
-			time.Sleep(1000 * time.Millisecond)
-			c.process_lock.Lock()
-			if c.stun_quic_conn != nil {
-				c.process_lock.Unlock()
-				break
-			}
-			if _, err := conn.WriteToUDP(c.SendData, remoteAddr); err != nil {
-				c.process_lock.Unlock()
-				break
-			}
+func (c *TunnelServer) process_send_map() {
+	for _, remoteAddr := range c.remote_addr_list {
+		c.process_lock.Lock()
+		if c.conn == nil {
 			c.process_lock.Unlock()
+			break
 		}
-	}()
+		if c.stun_quic_conn != nil {
+			c.process_lock.Unlock()
+			break
+		}
+		_, err := c.conn.WriteToUDP(c.SendData, remoteAddr)
+		c.process_lock.Unlock()
+		if err != nil {
+			break
+		}
+	}
 }
 
 /*
@@ -73,7 +64,7 @@ func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port i
 		for len(c.send_conn_map) <= count2 && c.stun_quic_conn == nil {
 			if port := 8196 + rand.Intn(65535); port < 65535 {
 				if _, ok := c.send_conn_map[port]; !ok {
-					c.process_send(conn, tun_remote_ip, port)
+					c.process_send_map(conn, tun_remote_ip, port)
 				}
 			}
 		}
@@ -132,8 +123,9 @@ func (c *TunnelServer) process2() {
 	clientIP := strings.Split(c.tun_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(c.tun_remote_addr, ":")[1])
 
-	for i := -0x20; clientPort+i < 0xFFFF && c.stun_quic_conn == nil; i++ {
-		c.process_send(c.conn, clientIP, clientPort+i)
+	for i := clientPort - 0x20; i > 1024 && i < clientPort+0x2800 && c.stun_quic_conn == nil; i++ {
+		remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", clientIP, i))
+		c.remote_addr_list = append(c.remote_addr_list, remoteAddr)
 	}
 
 	//c.process_rand(conn, clientIP)
@@ -220,7 +212,14 @@ func (c *TunnelServer) process1() quic.Connection {
 			c.conn, err = net.ListenUDP("udp4", localAddr)
 			tools.AssertErrorToNilf("process net.ListenUDP: %v", err)
 			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
-			go c.process2()
+			c.process2()
+			c.process_send_map()
+			go func() {
+				for {
+					time.Sleep(1000 * time.Millisecond)
+					c.process_send_map()
+				}
+			}()
 
 			select {
 			case <-c.process_chain:
