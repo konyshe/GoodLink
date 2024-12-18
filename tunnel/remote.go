@@ -102,7 +102,7 @@ func (c *TunnelServer) process_quic(remoteAddr *net.UDPAddr) {
 }
 
 func (c *TunnelServer) process2() {
-	log.Printf("start_server_child: %v ==> %s\n", c.conn.LocalAddr(), c.tun_remote_addr)
+	//log.Printf("start_server_child: %v ==> %s\n", c.conn.LocalAddr(), c.tun_remote_addr)
 
 	c.process_chain = make(chan quic.Connection, 1)
 	//c.send_conn_map = make(map[int]string)
