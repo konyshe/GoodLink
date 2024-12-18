@@ -140,27 +140,9 @@ var m_stun_list []string
 func init() {
 	m_stun_list = []string{
 		"stun.easyvoip.com:3478",
-		"stun.easyvoip.com:3478",
-		"s1.taraba.net:3478",
-		"s2.taraba.net:3478",
-		"s1.voipstation.jp:3478",
-		"s2.voipstation.jp:3478",
-		"stun.xten.com:3478",
-		"stun.voipbuster.com:3478",
-		"stun.sipgate.net:3478",
-		"stun.ekiga.net:3478",
-		"stun.ideasip.com:3478",
-		"stun.schlund.de:3478",
-		"stun.voiparound.com:3478",
 		"stun.voipbuster.com:3478",
 		"stun.voipstunt.com:3478",
-		"stun.counterpath.com:3478",
-		"stun.1und1.de:3478",
-		"stun.gmx.net:3478",
-		"stun.callwithus.com:3478",
-		"stun.counterpath.net:3478",
 		"stun.internetcalls.com:3478",
-		"numb.viagenie.ca:3478",
 		"124.223.50.150:13478",
 	}
 }
@@ -170,7 +152,7 @@ func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
 
 	for {
 		stun_svr := m_stun_list[rand.Intn(len(m_stun_list))]
-		conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
 			conn.SetReadDeadline(time.Time{})
 			break
@@ -197,10 +179,10 @@ func TestStun() {
 	conn := getListenUDP()
 
 	for _, stun_svr := range m_stun_list {
-		conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		if wan_ip, wan_port, _ := getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
 			conn.SetReadDeadline(time.Time{})
-			//fmt.Printf("stun_svr: %s, wan_ip: %s, wan_port: %d\n", stun_svr, wan_ip, wan_port)
+			fmt.Printf("stun_svr: %s, wan_ip: %s, wan_port: %d\n", stun_svr, wan_ip, wan_port)
 		} else {
 			fmt.Printf("stun_svr: %s, failed\n", stun_svr)
 		}
