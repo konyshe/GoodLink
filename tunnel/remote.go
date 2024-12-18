@@ -92,9 +92,9 @@ func (c *TunnelServer) process_quic(remoteAddr *net.UDPAddr) {
 	}
 
 	log.Printf("   process_quic new_quic_stream.Write: %v ==> %v\n", new_quic_conn.LocalAddr(), new_quic_conn.RemoteAddr())
-	//new_quic_stream.SetDeadline(time.Now().Add(30 * time.Second))
+	new_quic_stream.SetDeadline(time.Now().Add(c.socket_time_out))
 	if n, err := new_quic_stream.Write(c.SendData); n > 0 && err == nil {
-		//new_quic_stream.SetDeadline(time.Time{})
+		new_quic_stream.SetDeadline(time.Time{})
 		c.stun_quic_conn = new_quic_conn
 		c.stun_health_stream = new_quic_stream
 		c.process_chain <- new_quic_conn

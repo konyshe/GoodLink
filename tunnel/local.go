@@ -33,7 +33,7 @@ type TunnelClient struct {
 	remote_addr        *net.UDPAddr
 }
 
-func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
+func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, time_out time.Duration) {
 	if c.stun_quic_conn != nil {
 		conn.Close()
 		return
@@ -58,9 +58,9 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	tools.AssertErrorToNilf("   process_server5 new_quic_conn.AcceptStream: %v", err)
 
 	log.Printf("   process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
-	//new_quic_stream.SetDeadline(time.Now().Add(30 * time.Second))
+	new_quic_stream.SetDeadline(time.Now().Add(time_out))
 	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
-		//new_quic_stream.SetDeadline(time.Time{})
+		new_quic_stream.SetDeadline(time.Time{})
 		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 		c.stun_health_stream = new_quic_stream
 		c.stun_quic_conn = new_quic_conn
@@ -87,7 +87,7 @@ func (c *TunnelClient) process_send_map() {
 	}
 }
 
-func (c *TunnelClient) process3() {
+func (c *TunnelClient) process3(time_out time.Duration) {
 	conn, err := net.ListenUDP("udp4", nil)
 	if err != nil {
 		log.Fatalf("   process3 net.ListenUDP: %v\n", err)
@@ -101,7 +101,7 @@ func (c *TunnelClient) process3() {
 			defer c.process_lock.Unlock()
 
 			log.Printf("   锁定连接 local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
-			c.process_quic(conn, remoteAddr)
+			c.process_quic(conn, remoteAddr, time_out)
 
 			log.Println("   清空其他连接")
 			for addr, conn := range c.send_conn_map {
@@ -113,9 +113,9 @@ func (c *TunnelClient) process3() {
 	}()
 }
 
-func (c *TunnelClient) process2(count int) {
+func (c *TunnelClient) process2(count int, time_out time.Duration) {
 	for i := 0; i <= count; i++ {
-		c.process3()
+		c.process3(time_out)
 	}
 }
 
@@ -158,7 +158,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort))
 
 			log.Println("   发起连接")
-			c.process2(redisJson.SendPortCount)
+			c.process2(redisJson.SendPortCount, redisJson.SocketTimeOut)
 			c.process_send_map()
 
 			redisJson.State = 2
