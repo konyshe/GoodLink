@@ -57,7 +57,10 @@ func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port i
 				c.process_lock.Unlock()
 				break
 			}
-			conn.WriteToUDP(c.SendData, remoteAddr)
+			if _, err := conn.WriteToUDP(c.SendData, remoteAddr); err != nil {
+				c.process_lock.Unlock()
+				break
+			}
 			c.process_lock.Unlock()
 		}
 	}()

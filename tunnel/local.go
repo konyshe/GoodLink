@@ -108,7 +108,10 @@ func (c *TunnelClient) process_send(time_out time.Duration) {
 				c.process_lock.Unlock()
 				break
 			}
-			conn.WriteToUDP(c.SendData, c.remote_addr)
+			if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err != nil {
+				c.process_lock.Unlock()
+				break
+			}
 			c.process_lock.Unlock()
 		}
 	}()
