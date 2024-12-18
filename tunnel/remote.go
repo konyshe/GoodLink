@@ -152,12 +152,7 @@ func (c *TunnelServer) Release() {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
 	}
-	/*
-		for port, _ := range c.send_conn_map {
-			delete(c.send_conn_map, port)
-		}
-		c.send_conn_map = nil
-	*/
+
 	if c.conn != nil {
 		c.conn.Close()
 		c.conn = nil
