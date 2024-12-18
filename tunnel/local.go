@@ -40,29 +40,29 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 		return
 	}
 
-	log.Printf("quic.Listen: %v\n", conn.LocalAddr())
+	log.Printf("   quic.Listen: %v\n", conn.LocalAddr())
 	listener, err := quic.Listen(conn, tls2.GetServerTLSConfig(), nil)
-	tools.AssertErrorToNilf("process_quic quic.Listen: %v", err)
+	tools.AssertErrorToNilf("   process_quic quic.Listen: %v", err)
 
-	log.Printf("process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
+	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
 	if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err != nil {
-		log.Printf("process_quic conn.WriteToUDP: %v\n", err)
+		log.Printf("   process_quic conn.WriteToUDP: %v\n", err)
 		return
 	}
 
-	log.Printf("process_server5 listener.Accept: %v\n", conn.LocalAddr())
+	log.Printf("   process_server5 listener.Accept: %v\n", conn.LocalAddr())
 	new_quic_conn, err := listener.Accept(context.Background())
-	tools.AssertErrorToNilf("process_server5 listener.Accept: %v", err)
+	tools.AssertErrorToNilf("   process_server5 listener.Accept: %v", err)
 
-	log.Printf("process_server5 quic.AcceptStream: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
+	log.Printf("   process_server5 quic.AcceptStream: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
 	new_quic_stream, err := new_quic_conn.AcceptStream(context.Background())
-	tools.AssertErrorToNilf("process_server5 new_quic_conn.AcceptStream: %v", err)
+	tools.AssertErrorToNilf("   process_server5 new_quic_conn.AcceptStream: %v", err)
 
-	log.Printf("process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
+	log.Printf("   process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
 	//new_quic_stream.SetDeadline(time.Now().Add(30 * time.Second))
 	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
 		//new_quic_stream.SetDeadline(time.Time{})
-		log.Printf("process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
+		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 		c.stun_health_stream = new_quic_stream
 		c.stun_quic_conn = new_quic_conn
 		c.process_chain <- new_quic_conn
@@ -72,7 +72,7 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 func (c *TunnelClient) process_send(time_out time.Duration) {
 	conn, err := net.ListenUDP("udp4", nil)
 	if err != nil {
-		log.Fatalf("process_send net.ListenUDP: %v\n", err)
+		log.Fatalf("   process_send net.ListenUDP: %v\n", err)
 		return
 	}
 	c.send_conn_map[conn.LocalAddr().String()] = conn //这里不用加锁
@@ -97,15 +97,19 @@ func (c *TunnelClient) process_send(time_out time.Duration) {
 		}
 	}()
 
+	conn.WriteToUDP(c.SendData, c.remote_addr)
+
 	go func() {
 		//conn.SetDeadline(time.Now().Add(time_out))
 		for {
+			time.Sleep(1000 * time.Millisecond)
 			c.process_lock.Lock()
-			if c.stun_quic_conn == nil {
-				conn.WriteToUDP(c.SendData, c.remote_addr)
+			if c.stun_quic_conn != nil {
+				c.process_lock.Unlock()
+				break
 			}
+			conn.WriteToUDP(c.SendData, c.remote_addr)
 			c.process_lock.Unlock()
-			time.Sleep(200 * time.Millisecond)
 		}
 	}()
 }
@@ -146,13 +150,9 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
 
 			redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
+			c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort))
 
 			log.Printf("   发起连接: %d\n", redisJson.SendPortCount)
-			c.remote_addr, err = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort))
-			if err != nil {
-				log.Fatalf("process_send net.ResolveUDPAddr: %v\n", err)
-				return nil
-			}
 			for i := 0; i <= redisJson.SendPortCount; i++ {
 				c.process_send(redisJson.SocketTimeOut)
 			}
@@ -162,6 +162,10 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
 		case 3:
+			if c.stun_quic_conn == nil {
+				log.Println("   连接失败")
+				return nil
+			}
 			log.Printf("%d: 连接成功\n", redisJson.State)
 			return c.stun_quic_conn
 
@@ -246,7 +250,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			}()
 
 			process_health(tunnelClient.stun_health_stream, tunnelClient.SendData, tunnelClient.RecvData)
-			log.Println("连接已断开")
+			log.Println("   连接已断开")
 			tunnelClient.Release()
 
 			if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
@@ -259,7 +263,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		}
 
 		if !retry {
-			return fmt.Errorf("连接已断开")
+			return fmt.Errorf("   连接已断开")
 		}
 	}
 }
