@@ -23,7 +23,6 @@ import (
 )
 
 type TunnelServer struct {
-	tun_remote_addr    string
 	stun_quic_conn     quic.Connection
 	stun_health_stream quic.Stream
 	process_lock       sync.Mutex
@@ -42,10 +41,11 @@ func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port i
 		return
 	}
 
-	remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
-	//tools.AssertErrorToNilf("process_send net.ResolveUDPAddr: %v", err)
-
-	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
+	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
+	if err != nil {
+		log.Printf("   process_send net.ResolveUDPAddr: %v", err)
+		return
+	}
 
 	go func() {
 		for {
@@ -88,7 +88,7 @@ func (c *TunnelServer) process_server4(conn *net.UDPConn, tun_remote_ip string, 
 	}
 }
 
-func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr, recv_data []byte) {
+func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	c.process_lock.Lock()
 	defer c.process_lock.Unlock()
 
@@ -96,7 +96,7 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAdd
 		return
 	}
 
-	conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(c.socket_time_out))
 
 	time.Sleep(1000 * time.Millisecond)
 
@@ -144,11 +144,11 @@ func (c *TunnelServer) Release() {
 func (c *TunnelServer) ProcessServerChild(conn *net.UDPConn, tun_remote_addr string, send_data, recv_data []byte) {
 	go func() {
 		conn.SetReadDeadline(time.Now().Add(6 * time.Second))
-		n, conn_remote_addr, err := conn.ReadFromUDP(recv_data) // 接收数据
+		n, remote_addr, err := conn.ReadFromUDP(recv_data) // 接收数据
 		if err == nil && n > 0 {
 			conn.SetReadDeadline(time.Time{})
-			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), conn_remote_addr, string(recv_data[:10]), n)
-			c.process_server5(conn, conn_remote_addr, recv_data)
+			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remote_addr, string(recv_data[:10]), n)
+			c.process_server5(conn, remote_addr)
 			return
 		}
 		conn.Close()
