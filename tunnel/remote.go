@@ -42,6 +42,8 @@ func (c *TunnelServer) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 		return
 	}
 
+	conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+
 	time.Sleep(1000 * time.Millisecond)
 
 	log.Printf("   process_quic quic.Dial: %v ==> %v\n", conn.LocalAddr(), remoteAddr)
@@ -72,18 +74,20 @@ func (c *TunnelServer) SetTimeOut(conn *net.UDPConn) {
 		return
 	}
 
-	go func() {
-		conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-		n, remoteAddr, err := conn.ReadFromUDP(c.RecvData) // 接收数据
+	go func(conn2 *net.UDPConn) {
+		conn2.SetReadDeadline(time.Now().Add(3 * time.Second))
+		n, remoteAddr, err := conn2.ReadFromUDP(c.RecvData) // 接收数据
 		if err == nil && n > 0 && remoteAddr != nil {
-			conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+			log.Printf("   process udp local:%v remote:%v recv:%v... count:%v\n", conn2.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
+
+			conn2.SetReadDeadline(time.Now().Add(6 * time.Second))
+
 			c.process_lock.Lock()
 			defer c.process_lock.Unlock()
 
-			log.Printf("   process udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
-			c.process_quic(conn, remoteAddr)
+			c.process_quic(conn2, remoteAddr)
 		}
-	}()
+	}(conn)
 }
 
 func (c *TunnelServer) process_send(conn *net.UDPConn, ip string, port int) {
@@ -224,7 +228,7 @@ func (c *TunnelServer) process1() quic.Connection {
 	}
 }
 
-func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int, tun_key string, max_live int, time_out time.Duration) {
+func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int, tun_key string, time_out time.Duration) {
 	redisdb := redis.NewClient(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,

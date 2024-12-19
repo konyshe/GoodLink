@@ -36,6 +36,8 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 		return
 	}
 
+	conn.SetDeadline(time.Now().Add(time_out))
+
 	log.Printf("   quic.Listen: %v\n", conn.LocalAddr())
 	listener, err := quic.Listen(conn, tls2.GetServerTLSConfig(), nil)
 	if err != nil {
@@ -45,6 +47,12 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 
 	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
 	conn.WriteToUDP(c.SendData, c.remote_addr)
+	conn.WriteToUDP(c.SendData, c.remote_addr)
+	_, err = conn.WriteToUDP(c.SendData, c.remote_addr)
+	if err != nil {
+		log.Printf("   process_quic conn.WriteToUDP: %v\n", err)
+		return
+	}
 
 	log.Printf("   process_server5 listener.Accept: %v\n", conn.LocalAddr())
 	new_quic_conn, err := listener.Accept(context.Background())
@@ -61,9 +69,8 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 	}
 
 	log.Printf("   process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
-	conn.SetReadDeadline(time.Now().Add(time_out))
 	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
-		conn.SetReadDeadline(time.Time{})
+		conn.SetDeadline(time.Time{})
 		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 		c.stun_health_stream = new_quic_stream
 		c.stun_quic_conn = new_quic_conn
@@ -72,7 +79,7 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 
 func (c *TunnelClient) process3(time_out time.Duration) {
 	conn := tools.GetListenUDP()
-	conn.SetReadDeadline(time.Now().Add(time_out))
+	conn.SetDeadline(time.Now().Add(time_out))
 
 	go func() {
 		if n, remoteAddr, err := conn.ReadFromUDP(c.RecvData); err == nil && n > 0 {
