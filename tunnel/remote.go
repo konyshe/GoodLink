@@ -45,11 +45,9 @@ func (c *TunnelServer) process_send(dst_ip string, dst_port int) {
 	c.process_lock.Lock()
 	defer c.process_lock.Unlock()
 
-	if c.stun_quic_conn != nil {
-		return
+	if c.stun_quic_conn == nil {
+		c.conn.WriteToUDP(c.SendData, remoteAddr)
 	}
-
-	c.conn.WriteToUDP(c.SendData, remoteAddr)
 }
 
 func (c *TunnelServer) process_server2(remote_ip string, remote_port int) {
