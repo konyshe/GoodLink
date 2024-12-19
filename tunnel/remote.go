@@ -221,12 +221,16 @@ func (c *TunnelServer) process1() quic.Connection {
 				log.Printf("%d: 通知对端, 连接成功\n", redisJson.State)
 				RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 				return c.stun_quic_conn
+
 			case <-time.After(redisJson.SocketTimeOut):
 				redisJson.State = 4
 				log.Printf("%d: 通知对端, 连接超时\n", redisJson.State)
 				RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 				return nil
 			}
+
+		default:
+			log.Printf("%d: 等待对端状态\n", redisJson.State)
 		}
 
 		last_state = redisJson.State

@@ -181,6 +181,9 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 		case 4:
 			log.Printf("%d: 连接超时\n", redisJson.State)
 			return nil
+
+		default:
+			log.Printf("%d: 等待对端状态\n", redisJson.State)
 		}
 	}
 }
