@@ -56,10 +56,10 @@ func (c *TunnelServer) process_send_map() int {
 				continue
 			}
 		}
-		log.Printf("   发送报文结束(%d): %v\n", count, localAddr)
+		log.Printf("   发送报文异常结束(%d): %v\n", count, localAddr)
 		return -1
 	}
-	log.Printf("   发送报文结束(%d): %v\n", count, localAddr)
+	log.Printf("   发送报文正常结束(%d): %v\n", count, localAddr)
 	return 0
 }
 
@@ -265,8 +265,8 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 			md5_tun_key:     md5.Encode(tun_key),
 			SendData:        []byte(tools.RandomString(3)),
 			RecvData:        make([]byte, 1600),
-			redis_time_out:  30 * time.Second,
-			socket_time_out: 6 * time.Second,
+			redis_time_out:  180 * time.Second,
+			socket_time_out: 60 * time.Second,
 			stun_quic_conn:  nil,
 		}
 

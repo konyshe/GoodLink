@@ -88,10 +88,10 @@ func (c *TunnelClient) process_send_map() int {
 				continue
 			}
 		}
-		log.Printf("   发送报文结束(%d): %v\n", count, c.remote_addr)
+		log.Printf("   发送报文异常结束(%d): %v\n", count, c.remote_addr)
 		return -1
 	}
-	log.Printf("   发送报文结束(%d): %v\n", count, c.remote_addr)
+	log.Printf("   发送报文正常结束(%d): %v\n", count, c.remote_addr)
 	return 0
 }
 
@@ -162,19 +162,15 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 
 			log.Println("   发起连接")
 			c.process2(redisJson.SendPortCount, redisJson.SocketTimeOut)
-			c.process_send_map()
-			/*
-				go func() {
-					for {
-						time.Sleep(1000 * time.Millisecond)
-						if c.stun_quic_start > 0 {
-							log.Println("   完全停止发送报文")
-							break
-						}
-						c.process_send_map()
+			go func() {
+				for {
+					if c.process_send_map() < 0 {
+						return
 					}
-				}()
-			*/
+					time.Sleep(1000 * time.Millisecond)
+				}
+			}()
+
 			redisJson.State = 2
 			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
