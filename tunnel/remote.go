@@ -37,7 +37,61 @@ type TunnelServer struct {
 	socket_time_out    time.Duration
 }
 
-func (c *TunnelServer) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
+func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port int, send_data []byte) {
+	if conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 65535 {
+		return
+	}
+
+	remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
+	//tools.AssertErrorToNilf("process_send net.ResolveUDPAddr: %v", err)
+
+	//log.Printf("process_send send: %v => %v\n", conn.LocalAddr(), remoteAddr)
+
+	go func() {
+		for {
+			c.process_lock.Lock()
+			if c.stun_quic_conn != nil {
+				break
+			}
+
+			if _, err := conn.WriteToUDP(send_data, remoteAddr); err != nil {
+				break
+			}
+			c.process_lock.Unlock()
+			time.Sleep(1 * time.Second)
+		}
+		c.process_lock.Unlock()
+	}()
+}
+
+func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, tun_remote_port int, send_data []byte) {
+	if tun_remote_port <= 0 {
+		return
+	}
+
+	for i := 0; i <= 16; i++ {
+		c.process_send(conn, tun_remote_ip, tun_remote_port+i, send_data)
+	}
+}
+
+func (c *TunnelServer) process_server4(conn *net.UDPConn, tun_remote_ip string, send_data []byte) {
+	for i := 1; i <= 8; i++ {
+		for tun_remote_port_map := make(map[int]bool); len(tun_remote_port_map) <= 128; {
+			if tun_remote_port := rand.Intn(8196 * i); tun_remote_port > 8196*(i-1) && tun_remote_port <= 8196*i {
+				if _, ok := tun_remote_port_map[tun_remote_port]; !ok {
+					//log.Printf("rand port: %d\n", tun_remote_port)
+					tun_remote_port_map[tun_remote_port] = true
+					c.process_send(conn, tun_remote_ip, tun_remote_port, send_data)
+				}
+			}
+		}
+	}
+}
+
+func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAddr, recv_data []byte) {
+	c.process_lock.Lock()
+	defer c.process_lock.Unlock()
+
 	if c.stun_quic_conn != nil {
 		return
 	}
@@ -69,81 +123,6 @@ func (c *TunnelServer) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	}
 }
 
-func (c *TunnelServer) SetTimeOut(conn *net.UDPConn) {
-	if conn == nil {
-		return
-	}
-
-	go func(conn2 *net.UDPConn) {
-		conn2.SetReadDeadline(time.Now().Add(3 * time.Second))
-		n, remoteAddr, err := conn2.ReadFromUDP(c.RecvData) // 接收数据
-		if err == nil && n > 0 && remoteAddr != nil {
-			log.Printf("   process udp local:%v remote:%v recv:%v... count:%v\n", conn2.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
-
-			conn2.SetReadDeadline(time.Now().Add(6 * time.Second))
-
-			c.process_lock.Lock()
-			defer c.process_lock.Unlock()
-
-			c.process_quic(conn2, remoteAddr)
-		}
-	}(conn)
-}
-
-func (c *TunnelServer) process_send(conn *net.UDPConn, ip string, port int) {
-	if c.stun_quic_conn != nil {
-		return
-	}
-	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
-	conn.WriteToUDP(c.SendData, addr)
-	//log.Printf("   process_send: %v ==> %v\n", conn.LocalAddr(), addr)
-}
-
-func (c *TunnelServer) process3(conn *net.UDPConn, ip string, port int) {
-	if port < 1024 || port > 65534 {
-		return
-	}
-
-	for i := port - 16; i < port; i++ {
-		c.process_send(conn, ip, i)
-	}
-}
-
-func (c *TunnelServer) process2(conn *net.UDPConn) {
-	c.process_chain = make(chan quic.Connection, 1)
-
-	clientIP := strings.Split(c.tun_remote_addr, ":")[0]
-	clientPort, _ := strconv.Atoi(strings.Split(c.tun_remote_addr, ":")[1])
-
-	c.SetTimeOut(conn)
-	c.process3(conn, clientIP, clientPort-16)
-
-	for i := clientPort; i < clientPort+128; i += 2 {
-		conn2 := tools.GetListenUDP()
-		c.SetTimeOut(conn2)
-		c.process3(conn2, clientIP, i)
-	}
-
-	conn3 := tools.GetListenUDP()
-	c.SetTimeOut(conn3)
-
-	port_map := make(map[int]bool)
-	for i := 1; i <= 6; i++ {
-		for len(port_map) < 64*i {
-			if port := rand.Intn(0x2710) + i*0x2710; port > 0x400 && port <= 0xFFFF {
-				if _, ok := port_map[port]; !ok {
-					port_map[port] = true
-					c.process_send(conn, clientIP, port)
-				}
-			}
-		}
-	}
-
-	for i := 0x400; i < 0xFFFF; i += 2 {
-		c.process3(conn, clientIP, i)
-	}
-}
-
 func (c *TunnelServer) GetQuicConn() quic.Connection {
 	return c.stun_quic_conn
 }
@@ -159,6 +138,33 @@ func (c *TunnelServer) Release() {
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
+	}
+}
+
+func (c *TunnelServer) ProcessServerChild(conn *net.UDPConn, tun_remote_addr string, send_data, recv_data []byte) {
+	go func() {
+		conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+		n, conn_remote_addr, err := conn.ReadFromUDP(recv_data) // 接收数据
+		if err == nil && n > 0 {
+			conn.SetReadDeadline(time.Time{})
+			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), conn_remote_addr, string(recv_data[:10]), n)
+			c.process_server5(conn, conn_remote_addr, recv_data)
+			return
+		}
+		conn.Close()
+	}()
+
+	clientIP := strings.Split(tun_remote_addr, ":")[0]
+	clientPort, _ := strconv.Atoi(strings.Split(tun_remote_addr, ":")[1])
+
+	for i := -32; i >= 64 && c.stun_quic_conn == nil; i += 2 {
+		c.process_server2(conn, clientIP, clientPort+i, send_data)
+	}
+
+	time.Sleep(500 * time.Millisecond)
+
+	if c.stun_quic_conn == nil {
+		c.process_server4(conn, clientIP, send_data)
 	}
 }
 
@@ -203,8 +209,9 @@ func (c *TunnelServer) process1() quic.Connection {
 
 		case 2:
 			log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
-			c.tun_remote_addr = fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
-			go c.process2(conn)
+			tun_remote_addr := fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
+
+			go c.ProcessServerChild(conn, tun_remote_addr, c.SendData, c.RecvData)
 
 			select {
 			case <-c.process_chain:

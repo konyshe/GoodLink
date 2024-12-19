@@ -45,10 +45,9 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 		return
 	}
 
-	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
-	conn.WriteToUDP(c.SendData, c.remote_addr)
-	conn.WriteToUDP(c.SendData, c.remote_addr)
-	_, err = conn.WriteToUDP(c.SendData, c.remote_addr)
+	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), remoteAddr)
+	conn.WriteToUDP(c.SendData, remoteAddr)
+	_, err = conn.WriteToUDP(c.SendData, remoteAddr)
 	if err != nil {
 		log.Printf("   process_quic conn.WriteToUDP: %v\n", err)
 		return
@@ -81,15 +80,15 @@ func (c *TunnelClient) process3(time_out time.Duration) {
 	conn := tools.GetListenUDP()
 	conn.SetDeadline(time.Now().Add(time_out))
 
-	go func() {
-		if n, remoteAddr, err := conn.ReadFromUDP(c.RecvData); err == nil && n > 0 {
+	go func(conn2 *net.UDPConn) {
+		if n, remoteAddr, err := conn2.ReadFromUDP(c.RecvData); err == nil && n > 0 {
 			c.process_lock.Lock()
 			defer c.process_lock.Unlock()
 
-			log.Printf("   锁定连接 local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
-			c.process_quic(conn, remoteAddr, time_out)
+			log.Printf("   锁定连接 local:%v remote:%v recv:%v... count:%v\n", conn2.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
+			c.process_quic(conn2, remoteAddr, time_out)
 		}
-	}()
+	}(conn)
 
 	//log.Printf("   process_server5 conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
 

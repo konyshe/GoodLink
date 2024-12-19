@@ -41,7 +41,7 @@ func help() {
 	flag.StringVar(&m_cli_tun_local_addr, "local", "", "客户端监听的地址端口, 例如: 0.0.0.0:9022")
 	flag.StringVar(&m_cli_tun_remote_addr, "remote", "", "服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 127.0.0.1:22")
 	flag.StringVar(&m_cli_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
-	flag.IntVar(&m_cli_stun_timeout, "time_out", 12, "最大连接超时, 单位: 秒")
+	flag.IntVar(&m_cli_stun_timeout, "time_out", 15, "最大连接超时, 单位: 秒")
 
 	flag.Parse()
 
