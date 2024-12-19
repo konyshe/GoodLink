@@ -76,6 +76,7 @@ func (c *TunnelServer) SetTimeOut(conn *net.UDPConn) {
 		conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 		n, remoteAddr, err := conn.ReadFromUDP(c.RecvData) // 接收数据
 		if err == nil && n > 0 && remoteAddr != nil {
+			conn.SetReadDeadline(time.Now().Add(6 * time.Second))
 			c.process_lock.Lock()
 			defer c.process_lock.Unlock()
 
@@ -86,11 +87,12 @@ func (c *TunnelServer) SetTimeOut(conn *net.UDPConn) {
 }
 
 func (c *TunnelServer) process_send(conn *net.UDPConn, ip string, port int) {
-	c.process_lock.Lock()
-	defer c.process_lock.Unlock()
+	if c.stun_quic_conn != nil {
+		return
+	}
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
-	//log.Printf("   process_send: %v ==> %v\n", conn.LocalAddr(), addr)
 	conn.WriteToUDP(c.SendData, addr)
+	//log.Printf("   process_send: %v ==> %v\n", conn.LocalAddr(), addr)
 }
 
 func (c *TunnelServer) process3(conn *net.UDPConn, ip string, port int) {
