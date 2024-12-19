@@ -275,6 +275,7 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 			defer svr.Release()
 			go proxy.ProcessProxyServer(remote, conn)
 			process_health(svr.stun_health_stream, svr.SendData, svr.RecvData)
+			log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
 		}(tun_remote_addr, &tunnelServer, conn)
 	}
 }
