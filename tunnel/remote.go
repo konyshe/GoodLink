@@ -51,7 +51,7 @@ func (c *TunnelServer) process_send_map() int {
 	log.Printf("   发送报文开始(0): %v\n", localAddr)
 
 	for _, remoteAddr := range c.remote_addr_list {
-		if c.stun_state == 1 && c.conn != nil && c.stun_quic_conn == nil {
+		if c.stun_state == 1 && c.conn != nil && c.stun_quic_conn == nil && remoteAddr != nil {
 			if _, err := c.conn.WriteToUDP(c.SendData, remoteAddr); err == nil {
 				count++
 				continue

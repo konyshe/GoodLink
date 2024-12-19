@@ -12,7 +12,6 @@ GOBUILD=GO111MODULE=on \
 		-w -s -buildid='
 
 PLATFORM_LIST = \
-	linux-amd64 \
 	linux-arm64 \
 	windows-amd64
 
@@ -29,6 +28,6 @@ windows-amd64:
 
 strip:
 	upx $(BINDIR)/*
-	
+
 clean:
 	rm -rf $(BINDIR)

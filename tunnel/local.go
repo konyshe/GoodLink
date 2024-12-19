@@ -163,18 +163,12 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 
 			log.Println("   发起连接")
 			c.process2(redisJson.SendPortCount, redisJson.SocketTimeOut)
-			go func(d *TunnelClient) {
-				for {
-					if d.process_send_map() < 0 {
-						return
-					}
-					time.Sleep(3000 * time.Millisecond)
-				}
-			}(c)
+			c.process_send_map()
 
 			redisJson.State = 2
 			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
+			c.process_send_map()
 
 		case 3:
 			if c.stun_quic_conn == nil {
