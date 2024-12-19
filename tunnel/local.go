@@ -66,17 +66,23 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 	}
 }
 
-func (c *TunnelClient) process_send_map() {
-	log.Println("   发送报文开始")
-	defer log.Println("   发送报文结束")
+func (c *TunnelClient) process_send_map() int {
+	count := 0
+
+	log.Printf("   发送报文开始(0): %v\n", c.remote_addr)
 
 	for _, conn := range c.conn_list {
-		if c.stun_quic_start > 0 {
-			log.Println("   临时停止发送报文")
-			return
+		if c.stun_quic_start == 0 && conn != nil {
+			if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err == nil {
+				count++
+				continue
+			}
 		}
-		conn.WriteToUDP(c.SendData, c.remote_addr)
+		log.Printf("   发送报文结束(%d): %v\n", count, c.remote_addr)
+		return -1
 	}
+	log.Printf("   发送报文结束(%d): %v\n", count, c.remote_addr)
+	return 0
 }
 
 func (c *TunnelClient) process3(time_out time.Duration) {

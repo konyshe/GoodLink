@@ -40,22 +40,26 @@ type TunnelServer struct {
 }
 
 func (c *TunnelServer) process_send_map() int {
-	log.Println("   发送报文开始")
-	defer log.Println("   发送报文结束")
+	count := 0
+	var localAddr net.Addr
+
+	if c.conn == nil {
+		return -1
+	}
+	localAddr = c.conn.LocalAddr()
+	log.Printf("   发送报文开始(0): %v\n", localAddr)
 
 	for _, remoteAddr := range c.remote_addr_list {
-		if c.stun_quic_start > 0 {
-			log.Println("   停止发送报文")
-			return -1
+		if c.stun_quic_start == 0 && c.conn != nil {
+			if _, err := c.conn.WriteToUDP(c.SendData, remoteAddr); err == nil {
+				count++
+				continue
+			}
 		}
-		if c.conn == nil {
-			return -1
-		}
-		if _, err := c.conn.WriteToUDP(c.SendData, remoteAddr); err != nil {
-			log.Printf("   process_send_map conn.WriteToUDP: %v\n", err)
-			return -1
-		}
+		log.Printf("   发送报文结束(%d): %v\n", count, localAddr)
+		return -1
 	}
+	log.Printf("   发送报文结束(%d): %v\n", count, localAddr)
 	return 0
 }
 
@@ -125,7 +129,7 @@ func (c *TunnelServer) process2() {
 	clientIP := strings.Split(c.tun_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(c.tun_remote_addr, ":")[1])
 
-	for i := clientPort - 0x400; i > 0x400 && i < clientPort+0x2800+0x2800 && c.stun_quic_conn == nil; i++ {
+	for i := clientPort - 0x400; i > 0x400 && i < 0xFFFF && c.stun_quic_conn == nil; i++ {
 		remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", clientIP, i))
 		c.remote_addr_list = append(c.remote_addr_list, remoteAddr)
 	}
