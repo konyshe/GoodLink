@@ -4,15 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"io"
-	"log"
 	"net"
 )
-
-func AssertErrorToNilf(message string, err error) {
-	if err != nil {
-		log.Printf(message, err)
-	}
-}
 
 func RandomString(length int) string {
 	k := make([]byte, length)
