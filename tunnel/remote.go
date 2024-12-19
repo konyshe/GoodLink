@@ -34,10 +34,11 @@ type TunnelServer struct {
 	RecvData           []byte
 	redis_time_out     time.Duration
 	socket_time_out    time.Duration
+	conn               *net.UDPConn
 }
 
-func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port int) {
-	if conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 65535 {
+func (c *TunnelServer) process_send(dst_ip string, dst_port int) {
+	if c.conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 65535 {
 		return
 	}
 
@@ -54,7 +55,7 @@ func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port i
 		return
 	}
 
-	conn.WriteToUDP(c.SendData, remoteAddr)
+	c.conn.WriteToUDP(c.SendData, remoteAddr)
 }
 
 func (c *TunnelServer) process_server2(conn *net.UDPConn, remote_ip string, remote_port int) {
@@ -63,7 +64,7 @@ func (c *TunnelServer) process_server2(conn *net.UDPConn, remote_ip string, remo
 	}
 
 	for i := remote_port - 16; i <= remote_port; i++ {
-		c.process_send(conn, remote_ip, i)
+		c.process_send(remote_ip, i)
 	}
 }
 
@@ -74,7 +75,7 @@ func (c *TunnelServer) process_server4(conn *net.UDPConn, remote_ip string) {
 				if _, ok := remote_port_map[remote_port]; !ok {
 					//log.Printf("rand port: %d\n", tun_remote_port)
 					remote_port_map[remote_port] = true
-					c.process_send(conn, remote_ip, remote_port)
+					c.process_send(remote_ip, remote_port)
 				}
 			}
 		}
@@ -131,6 +132,11 @@ func (c *TunnelServer) Release() {
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
+	}
+
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
 	}
 }
 
@@ -215,7 +221,6 @@ func (c *TunnelServer) process1() quic.Connection {
 				redisJson.State = 4
 				log.Printf("%d: 通知对端, 连接超时\n", redisJson.State)
 				RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
-				conn.Close()
 				c.Release()
 				return nil
 			}
