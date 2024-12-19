@@ -12,8 +12,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -58,7 +56,7 @@ func (c *TunnelServer) process_send(dst_ip string, dst_port int) {
 	c.conn.WriteToUDP(c.SendData, remoteAddr)
 }
 
-func (c *TunnelServer) process_server2(conn *net.UDPConn, remote_ip string, remote_port int) {
+func (c *TunnelServer) process_server2(remote_ip string, remote_port int) {
 	if remote_port <= 0 {
 		return
 	}
@@ -68,7 +66,7 @@ func (c *TunnelServer) process_server2(conn *net.UDPConn, remote_ip string, remo
 	}
 }
 
-func (c *TunnelServer) process_server4(conn *net.UDPConn, remote_ip string) {
+func (c *TunnelServer) process_server4(remote_ip string) {
 	for i := 1; i <= 8; i++ {
 		for remote_port_map := make(map[int]bool); len(remote_port_map) <= 128; {
 			if remote_port := rand.Intn(8196 * i); remote_port > 8196*(i-1) && remote_port <= 8196*i {
@@ -140,28 +138,25 @@ func (c *TunnelServer) Release() {
 	}
 }
 
-func (c *TunnelServer) ProcessServerChild(conn *net.UDPConn, tun_remote_addr string, send_data, recv_data []byte) {
+func (c *TunnelServer) ProcessServerChild(ip string, port int) {
 	go func() {
 		//conn.SetReadDeadline(time.Now().Add(6 * time.Second))
-		n, remote_addr, err := conn.ReadFromUDP(recv_data) // 接收数据
+		n, remote_addr, err := c.conn.ReadFromUDP(c.RecvData) // 接收数据
 		if err == nil && n > 0 {
 			//conn.SetReadDeadline(time.Time{})
-			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remote_addr, string(recv_data[:10]), n)
-			c.process_server5(conn, remote_addr)
+			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", c.conn.LocalAddr(), remote_addr, string(c.RecvData[:10]), n)
+			c.process_server5(c.conn, remote_addr)
 			return
 		}
-		conn.Close()
+		c.conn.Close()
 	}()
 
-	clientIP := strings.Split(tun_remote_addr, ":")[0]
-	clientPort, _ := strconv.Atoi(strings.Split(tun_remote_addr, ":")[1])
-
 	for i := -32; i <= 64 && c.stun_quic_conn == nil; i += 2 {
-		c.process_server2(conn, clientIP, clientPort+i)
+		c.process_server2(ip, port+i)
 	}
 
 	if c.stun_quic_conn == nil {
-		c.process_server4(conn, clientIP)
+		c.process_server4(ip)
 	}
 }
 
@@ -170,8 +165,6 @@ func (c *TunnelServer) process1() quic.Connection {
 
 	redisJson := RedisJsonType{}
 	last_state := redisJson.State
-
-	var conn *net.UDPConn
 
 	for {
 		time.Sleep(1 * time.Second)
@@ -194,8 +187,8 @@ func (c *TunnelServer) process1() quic.Connection {
 		switch redisJson.State {
 		case 0:
 			log.Printf("%d: 收到对端请求\n", redisJson.State)
-			conn = tools.GetListenUDP()
-			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(conn)
+			c.conn = tools.GetListenUDP()
+			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(c.conn)
 
 			redisJson.SocketTimeOut = c.socket_time_out
 			redisJson.RedisTimeOut = c.redis_time_out
@@ -206,9 +199,8 @@ func (c *TunnelServer) process1() quic.Connection {
 
 		case 2:
 			log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
-			tun_remote_addr := fmt.Sprintf("%s:%d", redisJson.ClientIP, redisJson.ClientPort)
 
-			go c.ProcessServerChild(conn, tun_remote_addr, c.SendData, c.RecvData)
+			go c.ProcessServerChild(redisJson.ClientIP, redisJson.ClientPort)
 
 			select {
 			case <-c.process_chain:
@@ -233,7 +225,7 @@ func (c *TunnelServer) process1() quic.Connection {
 	}
 }
 
-func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int, tun_key string, time_out time.Duration) {
+func ProcessServer(remote_addr, redis_addr, redis_pass string, radis_id int, tun_key string, time_out time.Duration) {
 	redisdb := redis.NewClient(&redis.Options{
 		Addr:     redis_addr,
 		Password: redis_pass,
@@ -245,13 +237,13 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 	}
 	defer redisdb.Close()
 
-	if tun_remote_addr == "" {
-		tun_remote_addr = tools.GetFreeLocalAddr()
-		if tun_remote_addr == "" {
+	if remote_addr == "" {
+		remote_addr = tools.GetFreeLocalAddr()
+		if remote_addr == "" {
 			log.Panic("   获取本地端口失败")
 			os.Exit(0)
 		}
-		go proxy.ListenSocks5(tun_remote_addr)
+		go proxy.ListenSocks5(remote_addr)
 	}
 
 	for {
@@ -276,6 +268,6 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 			go proxy.ProcessProxyServer(remote, conn)
 			process_health(svr.stun_health_stream, svr.SendData, svr.RecvData)
 			log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
-		}(tun_remote_addr, &tunnelServer, conn)
+		}(remote_addr, &tunnelServer, conn)
 	}
 }
