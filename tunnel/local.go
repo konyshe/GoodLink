@@ -82,7 +82,7 @@ func (c *TunnelClient) process_send_map() int {
 	log.Printf("   发送报文开始(0): %v\n", c.remote_addr)
 
 	for _, conn := range c.conn_list {
-		if c.stun_state == 0 && conn != nil && c.stun_quic_conn == nil {
+		if c.stun_state == 1 && conn != nil && c.stun_quic_conn == nil {
 			if _, err := conn.WriteToUDP(c.SendData, c.remote_addr); err == nil {
 				count++
 				continue
