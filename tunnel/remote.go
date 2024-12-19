@@ -72,9 +72,8 @@ func (c *TunnelServer) SetTimeOut(conn *net.UDPConn) {
 		return
 	}
 
-	conn.SetReadDeadline(time.Now().Add(c.socket_time_out))
-
 	go func() {
+		conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 		n, remoteAddr, err := conn.ReadFromUDP(c.RecvData) // 接收数据
 		if err == nil && n > 0 && remoteAddr != nil {
 			c.process_lock.Lock()
@@ -86,15 +85,21 @@ func (c *TunnelServer) SetTimeOut(conn *net.UDPConn) {
 	}()
 }
 
+func (c *TunnelServer) process_send(conn *net.UDPConn, ip string, port int) {
+	c.process_lock.Lock()
+	defer c.process_lock.Unlock()
+	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
+	//log.Printf("   process_send: %v ==> %v\n", conn.LocalAddr(), addr)
+	conn.WriteToUDP(c.SendData, addr)
+}
+
 func (c *TunnelServer) process3(conn *net.UDPConn, ip string, port int) {
 	if port < 1024 || port > 65534 {
 		return
 	}
 
 	for i := port - 16; i < port; i++ {
-		addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, i))
-		//log.Printf("   process3: %v ==> %v\n", conn.LocalAddr(), addr)
-		conn.WriteToUDP(c.SendData, addr)
+		c.process_send(conn, ip, i)
 	}
 }
 
@@ -105,9 +110,9 @@ func (c *TunnelServer) process2(conn *net.UDPConn) {
 	clientPort, _ := strconv.Atoi(strings.Split(c.tun_remote_addr, ":")[1])
 
 	c.SetTimeOut(conn)
-	c.process3(conn, clientIP, clientPort-8)
+	c.process3(conn, clientIP, clientPort-16)
 
-	for i := clientPort; i < clientPort+8; i += 2 {
+	for i := clientPort; i < clientPort+128; i += 2 {
 		conn2 := tools.GetListenUDP()
 		c.SetTimeOut(conn2)
 		c.process3(conn2, clientIP, i)
@@ -118,16 +123,18 @@ func (c *TunnelServer) process2(conn *net.UDPConn) {
 
 	port_map := make(map[int]bool)
 	for i := 1; i <= 6; i++ {
-		for len(port_map) < 0x80*i {
+		for len(port_map) < 64*i {
 			if port := rand.Intn(0x2710) + i*0x2710; port > 0x400 && port <= 0xFFFF {
 				if _, ok := port_map[port]; !ok {
 					port_map[port] = true
-					addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", clientIP, port))
-					//log.Printf("   process3: %v ==> %v\n", conn3.LocalAddr(), addr)
-					conn3.WriteToUDP(c.SendData, addr)
+					c.process_send(conn, clientIP, port)
 				}
 			}
 		}
+	}
+
+	for i := 0x400; i < 0xFFFF; i += 2 {
+		c.process3(conn, clientIP, i)
 	}
 }
 
