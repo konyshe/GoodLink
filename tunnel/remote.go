@@ -40,11 +40,7 @@ func (c *TunnelServer) process_send(dst_ip string, dst_port int) {
 		return
 	}
 
-	remoteAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
-	if err != nil {
-		log.Printf("   process_send net.ResolveUDPAddr: %v", err)
-		return
-	}
+	remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
 
 	c.process_lock.Lock()
 	defer c.process_lock.Unlock()

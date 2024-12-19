@@ -13,7 +13,8 @@ GOBUILD=GO111MODULE=on \
 
 PLATFORM_LIST = \
 	linux-arm64 \
-	linux-amd64
+	linux-amd64 \
+	windows-amd64
 
 all: clean $(PLATFORM_LIST) strip
 
