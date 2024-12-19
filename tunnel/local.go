@@ -59,6 +59,7 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 
 	log.Printf("   process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
 	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
+		conn.SetReadDeadline(time.Time{})
 		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
 		c.stun_health_stream = new_quic_stream
 		c.stun_quic_conn = new_quic_conn
@@ -88,7 +89,7 @@ func (c *TunnelClient) process_send_map() int {
 func (c *TunnelClient) process3(time_out time.Duration) {
 	conn, err := net.ListenUDP("udp4", nil)
 	if err != nil {
-		log.Fatalf("   process3 net.ListenUDP: %v\n", err)
+		log.Printf("   process3 net.ListenUDP: %v\n", err)
 		return
 	}
 	c.conn_list = append(c.conn_list, conn) //这里不用加锁

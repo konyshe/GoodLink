@@ -10,7 +10,7 @@ import (
 
 func AssertErrorToNilf(message string, err error) {
 	if err != nil {
-		log.Fatalf(message, err)
+		log.Printf(message, err)
 	}
 }
 
