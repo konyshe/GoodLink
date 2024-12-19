@@ -96,7 +96,7 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAdd
 		return
 	}
 
-	conn.SetReadDeadline(time.Now().Add(c.socket_time_out))
+	//conn.SetReadDeadline(time.Now().Add(c.socket_time_out))
 
 	time.Sleep(1000 * time.Millisecond)
 
@@ -116,7 +116,7 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAdd
 
 	log.Printf("   process_quic new_quic_stream.Write: %v ==> %v\n", new_quic_conn.LocalAddr(), new_quic_conn.RemoteAddr())
 	if n, err := new_quic_stream.Write(c.SendData); n > 0 && err == nil {
-		conn.SetReadDeadline(time.Time{})
+		//conn.SetReadDeadline(time.Time{})
 		c.stun_quic_conn = new_quic_conn
 		c.stun_health_stream = new_quic_stream
 		c.process_chain <- new_quic_conn
@@ -143,10 +143,10 @@ func (c *TunnelServer) Release() {
 
 func (c *TunnelServer) ProcessServerChild(conn *net.UDPConn, tun_remote_addr string, send_data, recv_data []byte) {
 	go func() {
-		conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+		//conn.SetReadDeadline(time.Now().Add(6 * time.Second))
 		n, remote_addr, err := conn.ReadFromUDP(recv_data) // 接收数据
 		if err == nil && n > 0 {
-			conn.SetReadDeadline(time.Time{})
+			//conn.SetReadDeadline(time.Time{})
 			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", conn.LocalAddr(), remote_addr, string(recv_data[:10]), n)
 			c.process_server5(conn, remote_addr)
 			return
@@ -224,6 +224,7 @@ func (c *TunnelServer) process1() quic.Connection {
 				redisJson.State = 4
 				log.Printf("%d: 通知对端, 连接超时\n", redisJson.State)
 				RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
+				conn.Close()
 				return nil
 			}
 
