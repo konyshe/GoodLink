@@ -1,10 +1,18 @@
-# 特点介绍
+![GoodLink Logo](https://gitee.com/konyshe/goodlink/raw/master/logo.png "GoodLink")
 
-1. 一条命令搞定，无需安装、无需注册，无需公网IP，无需配置文件
+# 介绍
 
-2. 仅需公网Redis服务，默认使用作者提供的免费 Redis 服务
+1. 客户端和服务端之间直连！直连！直连！不经过第三方服务器，不用担心数据隐私泄露
 
-3. P2P通信走QUIC，高性能，已加密
+2. 一条命令搞定，无需安装、无需注册，无需公网IP，无需配置文件
+
+3. 建立连接前, 需用到Redis服务。默认使用作者提供的Redis服务。也可参考-h选项说明, 指定自己的Redis服务，完全私有化
+
+4. 连接基于QUIC，高性能，已加密
+
+5. 由于连接过程复杂，会出现反复重试，通常3分钟内成功。如果长时间无法连接，请[反馈我](https://gitee.com/konyshe/goodlink/issues)解决！
+
+注：1.1.6版本开始加强了通信安全，因此和老版本不兼容
 
 # 使用说明
 
@@ -12,15 +20,17 @@
 
 ### P2P代理模式
 
-	客户端需要指定本地监听端口，以提供Socks5代理服务
+    客户端需要指定本地监听端口，以提供Socks5代理服务
 
     该模式需要在系统或者软件中配置Socket5代理，可访问服务端所处网络中的所有主机
 
 ### P2P转发模式
 
-	服务端需要指定所处网络中的某一个主机端口，客户端也需要指定本地监听端口。
+    服务端需要指定所处网络中的某一个主机端口，客户端也需要指定本地监听端口。
 
-	该模式无需配置Socks5代理，直接访问客户端指定的本地监听端口，等于访问服务端指定的主机端口。其他主机端口不能访问
+    该模式无需配置Socks5代理，直接访问客户端指定的本地监听端口，等于访问服务端指定的主机端口。其他主机端口不能访问
+
+    注：P2P转发模式仅支持 TCP 协议，如果服务端需要转发多个 TCP端口，需同时执行多个命令或启动多个 Docker（--key不能重复）
 
 ## P2P代理模式 - 举例
 
@@ -44,7 +54,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --local=0.0.0.0:18080 --key=nas_202412140928
 ```
 
-注：服务端和客户端均支持命令行/ Docker 方式，以上仅作两种方式的举例。
+注：服务端和客户端均支持命令行 和 Docker 方式，以上仅作两种方式的举例。
 
 ## P2P转发模式 - 举例
 
@@ -68,36 +78,25 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --local=0.0.0.0:9999 --key=nas_202412140928
 ```
 
-注：服务端和客户端均支持命令行/ Docker 方式，以上仅作两种方式的举例。
-
 # 选项说明
 
 ```
 root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
 Usage of bin/goodlink-linux-amd64:
-  -gogo-background
-        后台执行
-  -gogo-restart-delay int
-        自动重启的延迟时间, 单位: 毫秒 (default 1000)
-  -key string
-        自定义, 请保证客户端和服务端一致。为避免冲突, 建议16-32个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
+  -remote string
+        服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
   -local string
         客户端监听的地址端口
-  -pprof_addr string
-        性能检测服务监听的地址端口, 例如: 0.0.0.0:6060
+  -key string
+        自定义, 客户端和服务端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
+
   -redis_addr string
         Redis服务地址端口, 例如: 1.2.3.4:6379
   -redis_id int
         Redis服务可使用的表ID, 例如: 15
   -redis_pass string
         Redis服务密码, 例如: 12345678
-  -remote string
-        服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
-  -v    show version info
-		查看版本信息
 ```
-
-注：P2P转发模式仅支持 TCP 协议，如果服务端需要转发多个 TCP端口，需同时执行多个命令或启动多个 Docker（--key不能重复）
 
 # 自己如何编译
 
