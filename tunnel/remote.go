@@ -53,10 +53,6 @@ func (c *TunnelServer) process_send(dst_ip string, dst_port int) {
 }
 
 func (c *TunnelServer) process_server2(remote_ip string, remote_port int) {
-	if remote_port <= 0 {
-		return
-	}
-
 	for i := remote_port - 16; i <= remote_port; i++ {
 		c.process_send(remote_ip, i)
 	}
