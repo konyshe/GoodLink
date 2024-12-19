@@ -36,7 +36,7 @@ type TunnelServer struct {
 	socket_time_out    time.Duration
 }
 
-func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port int, send_data []byte) {
+func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port int) {
 	if conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 65535 {
 		return
 	}
@@ -47,41 +47,34 @@ func (c *TunnelServer) process_send(conn *net.UDPConn, dst_ip string, dst_port i
 		return
 	}
 
-	go func() {
-		for {
-			c.process_lock.Lock()
-			if c.stun_quic_conn != nil {
-				break
-			}
+	c.process_lock.Lock()
+	defer c.process_lock.Unlock()
 
-			if _, err := conn.WriteToUDP(send_data, remoteAddr); err != nil {
-				break
-			}
-			c.process_lock.Unlock()
-			time.Sleep(1 * time.Second)
-		}
-		c.process_lock.Unlock()
-	}()
-}
-
-func (c *TunnelServer) process_server2(conn *net.UDPConn, tun_remote_ip string, tun_remote_port int, send_data []byte) {
-	if tun_remote_port <= 0 {
+	if c.stun_quic_conn != nil {
 		return
 	}
 
-	for i := 0; i <= 16; i++ {
-		c.process_send(conn, tun_remote_ip, tun_remote_port+i, send_data)
+	conn.WriteToUDP(c.SendData, remoteAddr)
+}
+
+func (c *TunnelServer) process_server2(conn *net.UDPConn, remote_ip string, remote_port int) {
+	if remote_port <= 0 {
+		return
+	}
+
+	for i := remote_port - 16; i <= remote_port; i++ {
+		c.process_send(conn, remote_ip, i)
 	}
 }
 
-func (c *TunnelServer) process_server4(conn *net.UDPConn, tun_remote_ip string, send_data []byte) {
+func (c *TunnelServer) process_server4(conn *net.UDPConn, remote_ip string) {
 	for i := 1; i <= 8; i++ {
-		for tun_remote_port_map := make(map[int]bool); len(tun_remote_port_map) <= 128; {
-			if tun_remote_port := rand.Intn(8196 * i); tun_remote_port > 8196*(i-1) && tun_remote_port <= 8196*i {
-				if _, ok := tun_remote_port_map[tun_remote_port]; !ok {
+		for remote_port_map := make(map[int]bool); len(remote_port_map) <= 128; {
+			if remote_port := rand.Intn(8196 * i); remote_port > 8196*(i-1) && remote_port <= 8196*i {
+				if _, ok := remote_port_map[remote_port]; !ok {
 					//log.Printf("rand port: %d\n", tun_remote_port)
-					tun_remote_port_map[tun_remote_port] = true
-					c.process_send(conn, tun_remote_ip, tun_remote_port, send_data)
+					remote_port_map[remote_port] = true
+					c.process_send(conn, remote_ip, remote_port)
 				}
 			}
 		}
@@ -157,14 +150,12 @@ func (c *TunnelServer) ProcessServerChild(conn *net.UDPConn, tun_remote_addr str
 	clientIP := strings.Split(tun_remote_addr, ":")[0]
 	clientPort, _ := strconv.Atoi(strings.Split(tun_remote_addr, ":")[1])
 
-	for i := -32; i >= 64 && c.stun_quic_conn == nil; i += 2 {
-		c.process_server2(conn, clientIP, clientPort+i, send_data)
+	for i := -32; i <= 64 && c.stun_quic_conn == nil; i += 2 {
+		c.process_server2(conn, clientIP, clientPort+i)
 	}
 
-	time.Sleep(500 * time.Millisecond)
-
 	if c.stun_quic_conn == nil {
-		c.process_server4(conn, clientIP, send_data)
+		c.process_server4(conn, clientIP)
 	}
 }
 
@@ -225,6 +216,7 @@ func (c *TunnelServer) process1() quic.Connection {
 				log.Printf("%d: 通知对端, 连接超时\n", redisJson.State)
 				RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 				conn.Close()
+				c.Release()
 				return nil
 			}
 
@@ -271,7 +263,6 @@ func ProcessServer(tun_remote_addr, redis_addr, redis_pass string, radis_id int,
 
 		conn := tunnelServer.process1()
 		if conn == nil {
-			tunnelServer.Release()
 			continue
 		}
 
