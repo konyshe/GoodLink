@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"goodlink/tools"
 	"log"
 	"math/rand"
 	"net"
@@ -161,22 +162,14 @@ func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	return
 }
 
-func getListenUDP() *net.UDPConn {
-	conn, err := net.ListenUDP("udp4", nil)
-	if err != nil {
-		log.Panic("   net.ListenUDP: ", err)
-	}
-	return conn
-}
-
 func GetWanIpPort() (wan_ip string, wan_port int) {
-	conn := getListenUDP()
+	conn := tools.GetListenUDP()
 	defer conn.Close()
 	return GetWanIpPort2(conn)
 }
 
 func TestStun() {
-	conn := getListenUDP()
+	conn := tools.GetListenUDP()
 
 	for {
 		for _, stun_svr := range m_stun_list {
