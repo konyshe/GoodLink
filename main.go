@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main2() {
@@ -53,7 +54,9 @@ func main2() {
 			m_cli_redis_addr,
 			m_cli_redis_pass,
 			m_cli_redis_id,
-			m_cli_tun_key)
+			m_cli_tun_key,
+			m_cli_stun_max_live,
+			time.Duration(m_cli_stun_timeout)*time.Second)
 	}
 
 	ch := make(chan os.Signal, 1)
