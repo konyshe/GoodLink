@@ -129,7 +129,6 @@ func (c *TunnelServer) process2(conn *net.UDPConn) {
 			}
 		}
 	}
-	log.Println("   conn end **********************************************************************")
 }
 
 func (c *TunnelServer) GetQuicConn() quic.Connection {
