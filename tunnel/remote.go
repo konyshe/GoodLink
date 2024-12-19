@@ -36,7 +36,7 @@ type TunnelServer struct {
 }
 
 func (c *TunnelServer) process_send(dst_ip string, dst_port int) {
-	if c.conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 65535 {
+	if c.conn == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 0xFFFF {
 		return
 	}
 
@@ -58,8 +58,8 @@ func (c *TunnelServer) process_server2(remote_ip string, remote_port int) {
 
 func (c *TunnelServer) process_server4(remote_ip string) {
 	for i := 1; i <= 8; i++ {
-		for remote_port_map := make(map[int]bool); len(remote_port_map) <= 128; {
-			if remote_port := rand.Intn(8196 * i); remote_port > 8196*(i-1) && remote_port <= 8196*i {
+		for remote_port_map := make(map[int]bool); len(remote_port_map) <= 0x80; {
+			if remote_port := rand.Intn(0x2004 * i); remote_port > 0x2004*(i-1) && remote_port <= 0x2004*i && remote_port > 0 && remote_port < 0xFFFF {
 				if _, ok := remote_port_map[remote_port]; !ok {
 					//log.Printf("rand port: %d\n", tun_remote_port)
 					remote_port_map[remote_port] = true
@@ -183,7 +183,7 @@ func (c *TunnelServer) process1() quic.Connection {
 			redisJson.SocketTimeOut = c.socket_time_out
 			redisJson.RedisTimeOut = c.redis_time_out
 			redisJson.State = 1
-			redisJson.SendPortCount = 0x100
+			redisJson.SendPortCount = 0x100 //0x400
 			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 			RedisSet(c.redisdb, c.tun_key, c.md5_tun_key, redisJson.RedisTimeOut, &redisJson)
 
