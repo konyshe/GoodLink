@@ -107,6 +107,7 @@ func (c *TunnelClient) process3(time_out time.Duration) {
 }
 
 func (c *TunnelClient) process2(count int, time_out time.Duration) {
+	c.conn_list = make([]*net.UDPConn, 0)
 	for i := 0; i <= count; i++ {
 		c.process3(time_out)
 	}
@@ -198,6 +199,10 @@ func (c *TunnelClient) Release() {
 	if c.stun_quic_conn != nil {
 		c.stun_quic_conn.CloseWithError(0, "0")
 		c.stun_quic_conn = nil
+	}
+
+	for _, conn := range c.conn_list {
+		conn.Close()
 	}
 
 	c.stun_quic_start = 0
