@@ -54,7 +54,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --local=0.0.0.0:18080 --key=nas_202412140928
 ```
 
-注：服务端和客户端均支持命令行 和 Docker 方式，以上仅作两种方式的举例。
+注：服务端和客户端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
 
 ## P2P转发模式 - 举例
 
