@@ -19,6 +19,9 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 	last_state := redisJson.State
 	conn_type := 0 //主动连接
 
+	var tun_active_chain chan quic.Connection
+	var tun_passive_chain chan quic.Connection
+
 	for {
 		time.Sleep(1 * time.Second)
 
@@ -52,6 +55,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 					ConnList:        make([]*net.UDPConn, 0),
 					ProcessChain:    make(chan quic.Connection, 1),
 				}
+				tun_active_chain = m_tun_active.ProcessChain
 
 				m_tun_active.Conn = tools.GetListenUDP()
 				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(m_tun_active.Conn)
@@ -76,7 +80,9 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 					TunHealthStream: nil,
 					TunState:        1,
 					ConnList:        make([]*net.UDPConn, 0),
+					ProcessChain:    make(chan quic.Connection, 1),
 				}
+				tun_passive_chain = m_tun_passive.ProcessChain
 
 				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort()
 				m_tun_passive.Process(redisJson.ClientIP, redisJson.ClientPort, 0x100)
@@ -107,11 +113,17 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			}
 
 			select {
-			case <-m_tun_active.ProcessChain:
+			case <-tun_active_chain:
 				redisJson.State = 3
 				log.Printf("%d: 通知对端, 连接成功\n", redisJson.State)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream
+
+			case <-tun_passive_chain:
+				redisJson.State = 3
+				log.Printf("%d: 通知对端, 连接成功\n", redisJson.State)
+				RedisSet(redisJson.RedisTimeOut, &redisJson)
+				return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream
 
 			case <-time.After(time_out):
 				redisJson.State = 4

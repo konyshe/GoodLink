@@ -108,6 +108,11 @@ func (c *TunActive) Release() {
 			conn.Close()
 		}
 	}
+
+	if c.ProcessChain != nil {
+		close(c.ProcessChain)
+		c.ProcessChain = nil
+	}
 }
 
 func (c *TunActive) process3(conn2 *net.UDPConn, ip string, port int) {

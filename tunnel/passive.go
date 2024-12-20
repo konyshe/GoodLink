@@ -18,6 +18,7 @@ type TunPassive struct {
 	remote_addr     *net.UDPAddr
 	ConnList        []*net.UDPConn
 	TunState        int
+	ProcessChain    chan quic.Connection
 }
 
 func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
@@ -62,6 +63,7 @@ func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 		c.TunHealthStream = new_quic_stream
 		c.TunQuicConn = new_quic_conn
+		c.ProcessChain <- new_quic_conn
 	}
 }
 
@@ -126,5 +128,10 @@ func (c *TunPassive) Release() {
 		if conn != nil {
 			conn.Close()
 		}
+	}
+
+	if c.ProcessChain != nil {
+		close(c.ProcessChain)
+		c.ProcessChain = nil
 	}
 }

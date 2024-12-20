@@ -66,6 +66,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 					TunHealthStream: nil,
 					TunState:        1,
 					ConnList:        make([]*net.UDPConn, 0),
+					ProcessChain:    make(chan quic.Connection, 1),
 				}
 
 				redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
