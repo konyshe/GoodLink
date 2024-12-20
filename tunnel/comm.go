@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"goodlink/aes"
 	"goodlink/tools"
-	"net"
 	"sync"
 	"time"
 
@@ -13,13 +12,16 @@ import (
 )
 
 var (
-	SendData []byte
-	RecvData []byte
+	m_send_data    []byte
+	m_recv_data    []byte
+	m_redisdb      *redis.Client
+	m_tun_key      string
+	m_md5_tun_key  string
+	m_process_lock sync.Mutex
 )
 
 type RedisJsonType struct {
 	State         int           `bson:"state" json:"state"`
-	SocketTimeOut time.Duration `bson:"time_out" json:"time_out"`
 	RedisTimeOut  time.Duration `bson:"redis_time_out" json:"redis_time_out"`
 	SendPortCount int           `bson:"send_port_count" json:"send_port_count"`
 	ConnectCount  int           `bson:"connect_count" json:"connect_count"`
@@ -29,37 +31,26 @@ type RedisJsonType struct {
 	ClientPort    int           `bson:"client_port" json:"client_port"`
 }
 
-func RedisSet(redisdb *redis.Client, tun_key, md5_tun_key string, time_out time.Duration, redisJson *RedisJsonType) {
+func RedisSet(time_out time.Duration, redisJson *RedisJsonType) {
 	if jsonByte, err := json.Marshal(*redisJson); err == nil {
-		redisdb.Set(md5_tun_key, aes.Encrypt(jsonByte, tun_key), time_out)
+		m_redisdb.Set(m_md5_tun_key, aes.Encrypt(jsonByte, m_tun_key), time_out)
 	}
 }
 
-func RedisGet(redisdb *redis.Client, tun_key, md5_tun_key string, redisJson *RedisJsonType) error {
-	aes_res, err := redisdb.Get(md5_tun_key).Bytes()
+func RedisGet(redisJson *RedisJsonType) error {
+	aes_res, err := m_redisdb.Get(m_md5_tun_key).Bytes()
 	if err != nil || aes_res == nil || len(aes_res) == 0 {
 		return fmt.Errorf("   获取信令数据失败: %v", err)
 	}
 
-	if err = json.Unmarshal(aes.Decrypt(aes_res, tun_key), redisJson); err != nil {
+	if err = json.Unmarshal(aes.Decrypt(aes_res, m_tun_key), redisJson); err != nil {
 		return fmt.Errorf("   解析信令数据失败: %v", err)
 	}
 
 	return nil
 }
 
-func process_send2(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data []byte, ck sync.Mutex) int {
-	ck.Lock()
-	defer ck.Unlock()
-
-	if conn != nil {
-		n, _ := conn.WriteToUDP(send_data, remoteAddr)
-		return n
-	}
-	return 0
-}
-
 func init() {
-	SendData = []byte(tools.RandomString(3))
-	RecvData = make([]byte, 128)
+	m_send_data = []byte(tools.RandomString(3))
+	m_recv_data = make([]byte, 128)
 }

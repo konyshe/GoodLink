@@ -3,6 +3,7 @@ package tools
 import (
 	"log"
 	"net"
+	"time"
 )
 
 func GetListenUDP() *net.UDPConn {
@@ -10,5 +11,6 @@ func GetListenUDP() *net.UDPConn {
 	if err != nil {
 		log.Panic("   net.ListenUDP: ", err)
 	}
+	conn.SetDeadline(time.Time{})
 	return conn
 }
