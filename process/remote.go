@@ -39,7 +39,6 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			log.Printf("%d: 收到对端请求\n", redisJson.State)
 			switch redisJson.ClientPort {
 			case 0:
-				log.Print("   对端未发来IP, 开始主动连接")
 				conn_type = 0
 
 				if m_tun_active != nil {
@@ -67,7 +66,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
-				log.Print("   对端有发来IP, 开始被动连接")
+				log.Print("   对端有发来IP")
 				conn_type = 1
 
 				if m_tun_passive != nil {

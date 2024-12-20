@@ -137,6 +137,8 @@ func (c *TunActive) SetReadFunc(conn2 *net.UDPConn) {
 }
 
 func (c *TunActive) ProcessServerChild(ip string, port int) {
+	log.Printf("   发起主动连接: %v:%v\n", ip, port)
+
 	for i := port; i < port+8; i += 2 {
 		conn2 := tools.GetListenUDP()
 		c.ConnList = append(c.ConnList, conn2)

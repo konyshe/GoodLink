@@ -105,6 +105,7 @@ func (c *TunPassive) process3() {
 }
 
 func (c *TunPassive) Process(ip string, port int, count int) {
+	log.Printf("   发起被动连接: %v:%v\n", ip, port)
 	c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
 	for i := 0; i <= count; i++ {
 		c.process3()
