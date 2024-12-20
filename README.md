@@ -67,7 +67,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=127.0.0.1:9999 --key=nas_202412140928
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
 ### 公司的电脑 (windows, 命令行)
