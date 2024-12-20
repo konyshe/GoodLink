@@ -19,7 +19,7 @@ func RunLocal(tun_local_addr string, tun_key string, retry bool) error {
 	count := 0
 
 	for {
-		tunnelClient := tunnel.TunPassive{
+		pro := tunnel.TunPassive{
 			TunQuicConn:     nil,
 			TunHealthStream: nil,
 			TunState:        1,
@@ -28,9 +28,9 @@ func RunLocal(tun_local_addr string, tun_key string, retry bool) error {
 
 		count++
 
-		conn := tunnelClient.GetQuicConn(count)
+		conn := pro.GetQuicConn(count)
 		if conn == nil {
-			tunnelClient.Release()
+			pro.Release()
 			continue
 		}
 
@@ -40,9 +40,9 @@ func RunLocal(tun_local_addr string, tun_key string, retry bool) error {
 			chain <- 1
 		}()
 
-		tunnel.ProcessHealth(tunnelClient.TunHealthStream)
+		tunnel.ProcessHealth(pro.TunHealthStream)
 		log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
-		tunnelClient.Release()
+		pro.Release()
 
 		if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
 			conn.Write([]byte("hello"))

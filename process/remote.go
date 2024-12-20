@@ -24,7 +24,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 	}
 
 	for {
-		tunnelServer := tunnel.TunnelServer{
+		pro := tunnel.TunnelServer{
 			RedisTimeOut:    time_out * 3,
 			SocketTimeOut:   time_out,
 			TunQuicConn:     nil,
@@ -33,9 +33,9 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 			ConnList:        make([]*net.UDPConn, 0),
 		}
 
-		conn := tunnelServer.GetQuicConn()
+		conn := pro.GetQuicConn()
 		if conn == nil {
-			tunnelServer.Release()
+			pro.Release()
 			continue
 		}
 
@@ -44,6 +44,6 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 			go proxy.ProcessProxyServer(remote, conn)
 			tunnel.ProcessHealth(svr.TunHealthStream)
 			log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
-		}(remote_addr, &tunnelServer, conn)
+		}(remote_addr, &pro, conn)
 	}
 }
