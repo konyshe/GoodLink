@@ -57,13 +57,12 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 					RedisTimeOut:    time_out * 3,
 					TunQuicConn:     nil,
 					TunHealthStream: nil,
-					Conn:            nil,
+					Conn:            tools.GetListenUDP(),
 					ConnList:        make([]*net.UDPConn, 0),
 					ProcessChain:    make(chan quic.Connection, 1),
 				}
 				tun_active_chain = m_tun_active.ProcessChain
 
-				m_tun_active.Conn = tools.GetListenUDP()
 				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(m_tun_active.Conn)
 
 				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)

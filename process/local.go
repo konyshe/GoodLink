@@ -24,8 +24,10 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 	wan_ip_chain := make(chan string, 1)
 	wan_port_chain := make(chan int, 1)
 
+	conn := tools.GetListenUDP()
+
 	go func() {
-		ClientIP, ClientPort := stun2.GetWanIpPort()
+		ClientIP, ClientPort := stun2.GetWanIpPort2(conn)
 		wan_ip_chain <- ClientIP
 		wan_port_chain <- ClientPort
 	}()
@@ -33,13 +35,13 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 	switch conn_type {
 	case 0:
 		log.Println("0: 请求连接对端")
-		RedisSet(30*time.Second, &redisJson)
+		RedisSet(15*time.Second, &redisJson)
 
 	default:
 		redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 		redisJson.State = 0
 		log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
-		RedisSet(30*time.Second, &redisJson)
+		RedisSet(15*time.Second, &redisJson)
 	}
 
 	for {
@@ -56,6 +58,10 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 			switch conn_type {
 			case 0:
 				log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
+
+				conn.Close()
+				conn = nil
+
 				if m_tun_passive != nil {
 					m_tun_passive.Release()
 				}
@@ -86,7 +92,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
-				log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
+				log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
 				if m_tun_active != nil {
 					m_tun_active.Release()
 				}
@@ -96,23 +102,30 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 					RedisTimeOut:    redisJson.RedisTimeOut,
 					TunQuicConn:     nil,
 					TunHealthStream: nil,
-					Conn:            nil,
+					Conn:            conn,
 					ConnList:        make([]*net.UDPConn, 0),
 					ProcessChain:    make(chan quic.Connection, 1),
 				}
-				m_tun_active.Conn = tools.GetListenUDP()
 				m_tun_active.ProcessServerChild(redisJson.ServerIP, redisJson.ServerPort)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
 
 		case 3:
-			if m_tun_passive.TunQuicConn == nil {
-				log.Println("   连接失败")
-				return nil, nil
+			if m_tun_passive != nil {
+				if m_tun_passive.TunQuicConn != nil {
+					log.Printf("%d: 连接成功\n", redisJson.State)
+					return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream
+				}
 			}
-			log.Printf("%d: 连接成功\n", redisJson.State)
-			return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream
+			if m_tun_active != nil {
+				if m_tun_active.TunQuicConn != nil {
+					log.Printf("%d: 连接成功\n", redisJson.State)
+					return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream
+				}
+			}
+			log.Println("   连接失败")
+			return nil, nil
 
 		case 4:
 			log.Printf("%d: 连接超时\n", redisJson.State)
