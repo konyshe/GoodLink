@@ -4,24 +4,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"goodlink/aes"
+	"goodlink/config"
+	"goodlink/md5"
 	"goodlink/tunnel"
+	"log"
+	"os"
 	"time"
 
 	"github.com/go-redis/redis"
 )
 
 var (
-	M_redis_db    *redis.Client
-	M_tun_key     string
-	M_md5_tun_key string
+	m_redis_db    *redis.Client
+	m_tun_key     string
+	m_md5_tun_key string
 	m_tun_active  *tunnel.TunActive
 	m_tun_passive *tunnel.TunPassive
 )
 
-func init() {
-	M_redis_db = nil
+func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int, tun_key string) {
+	if m_cli_redis_addr == "" {
+		config.Init()
+		m_cli_redis_addr = config.GetAddr()
+		m_cli_redis_pass = config.GetPasswd()
+		m_cli_redis_id = config.GetID()
+	}
+
+	m_redis_db = redis.NewClient(&redis.Options{
+		Addr:     m_cli_redis_addr,
+		Password: m_cli_redis_pass,
+		DB:       m_cli_redis_id,
+	})
+	if m_redis_db == nil {
+		log.Println("Redis初始化失败")
+		os.Exit(0)
+	}
 	m_tun_active = nil
 	m_tun_passive = nil
+
+	m_tun_key = tun_key
+	m_md5_tun_key = md5.Encode(tun_key)
 }
 
 func Release() {
@@ -48,17 +70,17 @@ type RedisJsonType struct {
 
 func RedisSet(time_out time.Duration, redisJson *RedisJsonType) {
 	if jsonByte, err := json.Marshal(*redisJson); err == nil {
-		M_redis_db.Set(M_md5_tun_key, aes.Encrypt(jsonByte, M_tun_key), time_out)
+		m_redis_db.Set(m_md5_tun_key, aes.Encrypt(jsonByte, m_tun_key), time_out)
 	}
 }
 
 func RedisGet(redisJson *RedisJsonType) error {
-	aes_res, err := M_redis_db.Get(M_md5_tun_key).Bytes()
+	aes_res, err := m_redis_db.Get(m_md5_tun_key).Bytes()
 	if err != nil || aes_res == nil || len(aes_res) == 0 {
 		return fmt.Errorf("   获取信令数据失败: %v", err)
 	}
 
-	if err = json.Unmarshal(aes.Decrypt(aes_res, M_tun_key), redisJson); err != nil {
+	if err = json.Unmarshal(aes.Decrypt(aes_res, m_tun_key), redisJson); err != nil {
 		return fmt.Errorf("   解析信令数据失败: %v", err)
 	}
 

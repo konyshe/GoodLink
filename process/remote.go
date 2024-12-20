@@ -32,7 +32,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 		if redisJson.State-last_state > 1 {
 			log.Println("   状态异常")
-			M_redis_db.Del(M_md5_tun_key)
+			m_redis_db.Del(m_md5_tun_key)
 			return nil, nil
 		}
 

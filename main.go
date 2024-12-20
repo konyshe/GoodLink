@@ -2,8 +2,6 @@ package main
 
 import (
 	"gogo"
-	"goodlink/config"
-	"goodlink/md5"
 	"goodlink/process"
 	_ "goodlink/process"
 	"goodlink/stun2"
@@ -14,8 +12,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/go-redis/redis"
 )
 
 func main2() {
@@ -33,26 +29,7 @@ func main2() {
 		os.Exit(0)
 	}
 
-	if m_cli_redis_addr == "" {
-		config.Init()
-		m_cli_redis_addr = config.GetAddr()
-		m_cli_redis_pass = config.GetPasswd()
-		m_cli_redis_id = config.GetID()
-	}
-
-	process.M_redis_db = redis.NewClient(&redis.Options{
-		Addr:     m_cli_redis_addr,
-		Password: m_cli_redis_pass,
-		DB:       m_cli_redis_id,
-	})
-	if process.M_redis_db == nil {
-		log.Println("Redis初始化失败")
-		os.Exit(0)
-	}
-	defer process.M_redis_db.Close()
-
-	process.M_tun_key = m_cli_tun_key
-	process.M_md5_tun_key = md5.Encode(m_cli_tun_key)
+	process.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
 
 	if m_cli_tun_local_addr != "" {
 		go func() {
