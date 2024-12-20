@@ -105,7 +105,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		case 2:
 			switch conn_type {
 			case 0:
-				log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
+				log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
 				m_tun_active.ProcessServerChild(redisJson.ClientIP, redisJson.ClientPort)
 
 			case 1:
