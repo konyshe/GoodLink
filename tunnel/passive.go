@@ -22,7 +22,7 @@ type TunPassive struct {
 
 func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	c.TunState = 0
-	log.Println("   标记停止发送报文")
+	log.Println("   请求停止发包")
 
 	if c.TunQuicConn != nil {
 		return
