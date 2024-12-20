@@ -26,8 +26,6 @@ type TunnelClient struct {
 	redisdb            *redis.Client
 	tun_key            string
 	md5_tun_key        string
-	SendData           []byte
-	RecvData           []byte
 	remote_addr        *net.UDPAddr
 }
 
@@ -46,8 +44,8 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 	}
 
 	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), remoteAddr)
-	conn.WriteToUDP(c.SendData, remoteAddr)
-	_, err = conn.WriteToUDP(c.SendData, remoteAddr)
+	conn.WriteToUDP(SendData, remoteAddr)
+	_, err = conn.WriteToUDP(SendData, remoteAddr)
 	if err != nil {
 		log.Printf("   process_quic conn.WriteToUDP: %v\n", err)
 		return
@@ -68,9 +66,9 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr, 
 	}
 
 	log.Printf("   process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
-	if n, err := new_quic_stream.Read(c.RecvData); err == nil && n > 0 {
+	if n, err := new_quic_stream.Read(RecvData); err == nil && n > 0 {
 		conn.SetDeadline(time.Time{})
-		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
+		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(RecvData[:10]), n)
 		c.stun_health_stream = new_quic_stream
 		c.stun_quic_conn = new_quic_conn
 	}
@@ -81,19 +79,19 @@ func (c *TunnelClient) process3(time_out time.Duration) {
 	conn.SetDeadline(time.Now().Add(time_out))
 
 	go func(conn2 *net.UDPConn) {
-		if n, remoteAddr, err := conn2.ReadFromUDP(c.RecvData); err == nil && n > 0 {
+		if n, remoteAddr, err := conn2.ReadFromUDP(RecvData); err == nil && n > 0 {
 			c.process_lock.Lock()
 			defer c.process_lock.Unlock()
 
-			log.Printf("   锁定连接 local:%v remote:%v recv:%v... count:%v\n", conn2.LocalAddr(), remoteAddr, string(c.RecvData[:10]), n)
+			log.Printf("   锁定连接 local:%v remote:%v recv:%v... count:%v\n", conn2.LocalAddr(), remoteAddr, string(RecvData[:10]), n)
 			c.process_quic(conn2, remoteAddr, time_out)
 		}
 	}(conn)
 
 	//log.Printf("   process_server5 conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
 
-	conn.WriteToUDP(c.SendData, c.remote_addr)
-	conn.WriteToUDP(c.SendData, c.remote_addr)
+	conn.WriteToUDP(SendData, c.remote_addr)
+	conn.WriteToUDP(SendData, c.remote_addr)
 }
 
 func (c *TunnelClient) process2(count int, time_out time.Duration) {
@@ -204,8 +202,6 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			redisdb:        redisdb,
 			tun_key:        tun_key,
 			md5_tun_key:    md5.Encode(tun_key),
-			SendData:       []byte(tools.RandomString(3)),
-			RecvData:       make([]byte, 128),
 			stun_quic_conn: nil,
 		}
 
@@ -229,7 +225,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 		tunnelClient.Release()
 
 		if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
-			conn.Write(tunnelClient.SendData)
+			conn.Write(SendData)
 			conn.Close() // 关闭连接
 		}
 
