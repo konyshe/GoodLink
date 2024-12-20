@@ -34,6 +34,12 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			return nil, nil
 		}
 
+		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
+			log.Println("   状态异常")
+			m_redis_db.Del(m_md5_tun_key)
+			return nil, nil
+		}
+
 		switch redisJson.State {
 		case 0:
 			log.Printf("%d: 收到对端请求: %v\n", redisJson.State, redisJson)
@@ -135,11 +141,6 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		case 3, 4:
 
 		default:
-			if redisJson.State-last_state > 1 {
-				log.Println("   状态异常")
-				m_redis_db.Del(m_md5_tun_key)
-				return nil, nil
-			}
 			log.Printf("%d: 等待对端状态\n", redisJson.State)
 		}
 
