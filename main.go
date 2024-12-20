@@ -5,9 +5,8 @@ import (
 	"goodlink/config"
 	"goodlink/md5"
 	"goodlink/process"
+	_ "goodlink/process"
 	"goodlink/stun2"
-	"goodlink/tunnel"
-	_ "goodlink/tunnel"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -41,19 +40,19 @@ func main2() {
 		m_cli_redis_id = config.GetID()
 	}
 
-	tunnel.M_redis_db = redis.NewClient(&redis.Options{
+	process.M_redis_db = redis.NewClient(&redis.Options{
 		Addr:     m_cli_redis_addr,
 		Password: m_cli_redis_pass,
 		DB:       m_cli_redis_id,
 	})
-	if tunnel.M_redis_db == nil {
+	if process.M_redis_db == nil {
 		log.Println("Redis初始化失败")
 		os.Exit(0)
 	}
-	defer tunnel.M_redis_db.Close()
+	defer process.M_redis_db.Close()
 
-	tunnel.M_tun_key = m_cli_tun_key
-	tunnel.M_md5_tun_key = md5.Encode(m_cli_tun_key)
+	process.M_tun_key = m_cli_tun_key
+	process.M_md5_tun_key = md5.Encode(m_cli_tun_key)
 
 	if m_cli_tun_local_addr != "" {
 		go func() {

@@ -3,13 +3,11 @@ package tunnel
 import (
 	"context"
 	"fmt"
-	"goodlink/stun2"
 	_ "goodlink/stun2"
 	"goodlink/tls2"
 	"goodlink/tools"
 	"log"
 	"net"
-	"time"
 
 	"github.com/quic-go/quic-go"
 )
@@ -67,7 +65,7 @@ func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	}
 }
 
-func (c *TunPassive) process_send_map() int {
+func (c *TunPassive) Send() int {
 	count := 0
 
 	log.Printf("   发包开始(0): %v\n", c.remote_addr)
@@ -104,77 +102,10 @@ func (c *TunPassive) process3() {
 	}(c, conn)
 }
 
-func (c *TunPassive) process2(count int) {
+func (c *TunPassive) Process(ip string, port int, count int) {
+	c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
 	for i := 0; i <= count; i++ {
 		c.process3()
-	}
-}
-
-func (c *TunPassive) GetQuicConn(count int) quic.Connection {
-	var err error
-
-	redisJson := RedisJsonType{
-		ConnectCount: count,
-	}
-
-	log.Println("0: 通知对端连接")
-	RedisSet(30*time.Second, &redisJson)
-
-	wan_ip_chain := make(chan string, 1)
-	wan_port_chain := make(chan int, 1)
-
-	go func() {
-		ClientIP, ClientPort := stun2.GetWanIpPort()
-		wan_ip_chain <- ClientIP
-		wan_port_chain <- ClientPort
-	}()
-
-	for {
-		time.Sleep(1 * time.Second)
-
-		err = RedisGet(&redisJson)
-		if err != nil {
-			log.Println(err)
-			return nil
-		}
-
-		switch redisJson.State {
-		case 1:
-			log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
-
-			redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
-			c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort))
-
-			c.process2(redisJson.SendPortCount)
-			c.process_send_map()
-			go func(d *TunPassive) {
-				for {
-					time.Sleep(3 * time.Second)
-					if d.process_send_map() < 0 {
-						return
-					}
-				}
-			}(c)
-
-			redisJson.State = 2
-			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
-			RedisSet(redisJson.RedisTimeOut, &redisJson)
-
-		case 3:
-			if c.TunQuicConn == nil {
-				log.Println("   连接失败")
-				return nil
-			}
-			log.Printf("%d: 连接成功\n", redisJson.State)
-			return c.TunQuicConn
-
-		case 4:
-			log.Printf("%d: 连接超时\n", redisJson.State)
-			return nil
-
-		default:
-			log.Printf("%d: 等待对端状态\n", redisJson.State)
-		}
 	}
 }
 
