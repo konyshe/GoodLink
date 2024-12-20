@@ -19,7 +19,6 @@ type TunActive struct {
 	TunHealthStream quic.Stream
 	ProcessChain    chan quic.Connection
 	RedisTimeOut    time.Duration
-	SocketTimeOut   time.Duration
 	Conn            *net.UDPConn
 	ConnList        []*net.UDPConn
 }

@@ -46,7 +46,6 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 				m_tun_active = &tunnel.TunActive{
 					RedisTimeOut:    time_out * 3,
-					SocketTimeOut:   time_out,
 					TunQuicConn:     nil,
 					TunHealthStream: nil,
 					Conn:            nil,
@@ -57,10 +56,10 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				m_tun_active.Conn = tools.GetListenUDP()
 				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(m_tun_active.Conn)
 
-				redisJson.RedisTimeOut = m_tun_active.RedisTimeOut
+				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 				redisJson.State = 1
 				redisJson.SendPortCount = 0x100
-				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
+				redisJson.RedisTimeOut = m_tun_active.RedisTimeOut
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
@@ -91,8 +90,9 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 					}
 				}(m_tun_passive)
 
-				redisJson.State = 1
 				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
+				redisJson.State = 1
+				redisJson.RedisTimeOut = time_out * 3
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
 
@@ -113,7 +113,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream
 
-			case <-time.After(m_tun_active.SocketTimeOut):
+			case <-time.After(time_out):
 				redisJson.State = 4
 				log.Printf("%d: 通知对端, 连接超时\n", redisJson.State)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)

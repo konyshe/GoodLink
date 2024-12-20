@@ -33,13 +33,19 @@ func main2() {
 
 	if m_cli_tun_local_addr != "" {
 		go func() {
-			if err := process.RunLocal(m_cli_tun_local_addr, m_cli_tun_key, true); err != nil {
+			if err := process.RunLocal(m_cli_conn_type,
+				m_cli_tun_local_addr,
+				m_cli_tun_key,
+				true); err != nil {
+
 				log.Println(err)
 				os.Exit(0)
 			}
 		}()
 	} else {
-		go process.RunRemote(m_cli_tun_remote_addr, m_cli_tun_key, time.Duration(m_cli_stun_timeout)*time.Second)
+		go process.RunRemote(m_cli_tun_remote_addr,
+			m_cli_tun_key,
+			time.Duration(m_cli_stun_timeout)*time.Second)
 	}
 
 	ch := make(chan os.Signal, 1)

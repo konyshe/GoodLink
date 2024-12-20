@@ -19,6 +19,7 @@ var (
 	m_cli_stun_svr_port   int
 	m_cli_stun_test       *bool
 	m_cli_stun_timeout    int
+	m_cli_conn_type       int
 )
 
 func help() {
@@ -42,6 +43,7 @@ func help() {
 	flag.StringVar(&m_cli_tun_remote_addr, "remote", "", "服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 127.0.0.1:22")
 	flag.StringVar(&m_cli_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
 	flag.IntVar(&m_cli_stun_timeout, "time_out", 3, "最大连接超时, 单位: 秒")
+	flag.IntVar(&m_cli_conn_type, "conn", 0, "若超过10分钟无法连接, 可尝试更换连接方式: 0: 主动; 1: 被动")
 
 	flag.Parse()
 
