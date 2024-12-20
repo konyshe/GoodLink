@@ -17,6 +17,7 @@ import (
 func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 	redisJson := RedisJsonType{}
 	last_state := redisJson.State
+	conn_type := 0 //主动连接
 
 	for {
 		time.Sleep(1 * time.Second)
@@ -32,30 +33,78 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 		switch redisJson.State {
 		case 0:
-			m_tun_active = &tunnel.TunActive{
-				RedisTimeOut:    time_out * 3,
-				SocketTimeOut:   time_out,
-				TunQuicConn:     nil,
-				TunHealthStream: nil,
-				Conn:            nil,
-				ConnList:        make([]*net.UDPConn, 0),
-				ProcessChain:    make(chan quic.Connection, 1),
+			log.Printf("%d: 收到对端请求\n", redisJson.State)
+			switch redisJson.ClientPort {
+			case 0:
+				log.Print("   对端未发来IP, 开始主动连接")
+				conn_type = 0
+
+				if m_tun_active != nil {
+					m_tun_active.Release()
+				}
+				m_tun_passive = nil
+
+				m_tun_active = &tunnel.TunActive{
+					RedisTimeOut:    time_out * 3,
+					SocketTimeOut:   time_out,
+					TunQuicConn:     nil,
+					TunHealthStream: nil,
+					Conn:            nil,
+					ConnList:        make([]*net.UDPConn, 0),
+					ProcessChain:    make(chan quic.Connection, 1),
+				}
+
+				m_tun_active.Conn = tools.GetListenUDP()
+				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(m_tun_active.Conn)
+
+				redisJson.RedisTimeOut = m_tun_active.RedisTimeOut
+				redisJson.State = 1
+				redisJson.SendPortCount = 0x100
+				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
+				RedisSet(redisJson.RedisTimeOut, &redisJson)
+
+			default:
+				log.Print("   对端有发来IP, 开始被动连接")
+				conn_type = 1
+
+				if m_tun_passive != nil {
+					m_tun_passive.Release()
+				}
+				m_tun_active = nil
+
+				m_tun_passive = &tunnel.TunPassive{
+					TunQuicConn:     nil,
+					TunHealthStream: nil,
+					TunState:        1,
+					ConnList:        make([]*net.UDPConn, 0),
+				}
+
+				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort()
+				m_tun_passive.Process(redisJson.ClientIP, redisJson.ClientPort, 0x100)
+				m_tun_passive.Send()
+				go func(d *tunnel.TunPassive) {
+					for {
+						time.Sleep(3 * time.Second)
+						if d.Send() < 0 {
+							return
+						}
+					}
+				}(m_tun_passive)
+
+				redisJson.State = 1
+				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
+				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
 
-			log.Printf("%d: 收到对端请求\n", redisJson.State)
-			m_tun_active.Conn = tools.GetListenUDP()
-			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(m_tun_active.Conn)
-
-			redisJson.RedisTimeOut = m_tun_active.RedisTimeOut
-			redisJson.State = 1
-			redisJson.SendPortCount = 0x100 //0x400
-			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
-			RedisSet(redisJson.RedisTimeOut, &redisJson)
-
 		case 2:
-			log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
+			switch conn_type {
+			case 0:
+				log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
+				m_tun_active.ProcessServerChild(redisJson.ClientIP, redisJson.ClientPort)
 
-			m_tun_active.ProcessServerChild(redisJson.ClientIP, redisJson.ClientPort)
+			case 1:
+				log.Printf("%d: 收到对端地址, 等待连接: %v\n", redisJson.State, redisJson)
+			}
 
 			select {
 			case <-m_tun_active.ProcessChain:
