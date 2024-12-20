@@ -23,9 +23,13 @@ type TunnelClient struct {
 	stun_health_stream quic.Stream
 	remote_addr        *net.UDPAddr
 	conn_list          []*net.UDPConn
+	stun_state         int
 }
 
 func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
+	c.stun_state = 0
+	log.Println("   标记停止发送报文")
+
 	if c.stun_quic_conn != nil {
 		return
 	}
@@ -67,10 +71,31 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	}
 }
 
+func (c *TunnelClient) process_send_map() int {
+	count := 0
+
+	log.Printf("   发送报文开始(0): %v\n", c.remote_addr)
+
+	for _, conn := range c.conn_list {
+		if c.stun_state == 1 && conn != nil && c.stun_quic_conn == nil {
+			_, err1 := conn.WriteToUDP(m_send_data, c.remote_addr)
+			_, err2 := conn.WriteToUDP(m_send_data, c.remote_addr)
+			if err1 == nil && err2 == nil {
+				count += 1
+				continue
+			}
+		}
+		log.Printf("   发送报文异常结束(%d): %v\n", count, c.remote_addr)
+		return -1
+	}
+	log.Printf("   发送报文正常结束(%d): %v\n", count, c.remote_addr)
+	return 0
+}
+
 func (c *TunnelClient) process3() {
 	conn := tools.GetListenUDP()
-	conn.SetDeadline(time.Time{})
-	c.conn_list = append(c.conn_list, conn)
+
+	c.conn_list = append(c.conn_list, conn) //这里不用加锁
 
 	go func(d *TunnelClient, conn2 *net.UDPConn) {
 		if n, remoteAddr, err := conn2.ReadFromUDP(m_recv_data); err == nil && n > 0 {
@@ -81,11 +106,6 @@ func (c *TunnelClient) process3() {
 			d.process_quic(conn2, remoteAddr)
 		}
 	}(c, conn)
-
-	//log.Printf("   process3 conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
-
-	conn.WriteToUDP(m_send_data, c.remote_addr)
-	conn.WriteToUDP(m_send_data, c.remote_addr)
 }
 
 func (c *TunnelClient) process2(count int) {
@@ -130,6 +150,15 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", redisJson.ServerIP, redisJson.ServerPort))
 
 			c.process2(redisJson.SendPortCount)
+			c.process_send_map()
+			go func(d *TunnelClient) {
+				for {
+					time.Sleep(3000 * time.Millisecond)
+					if d.process_send_map() < 0 {
+						return
+					}
+				}
+			}(c)
 
 			redisJson.State = 2
 			log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
@@ -205,6 +234,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			stun_quic_conn:     nil,
 			stun_health_stream: nil,
 			conn_list:          make([]*net.UDPConn, 0),
+			stun_state:         1,
 		}
 
 		count++

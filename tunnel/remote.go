@@ -131,7 +131,6 @@ func (c *TunnelServer) process3(conn2 *net.UDPConn, ip string, port int) {
 }
 
 func (c *TunnelServer) SetReadFunc(conn2 *net.UDPConn) {
-	conn2.SetDeadline(time.Time{})
 	go func(d *TunnelServer, conn3 *net.UDPConn) {
 		n, remote_addr, err := conn3.ReadFromUDP(m_recv_data) // 接收数据
 		if err == nil && n > 0 {
