@@ -5,6 +5,7 @@ import (
 	"goodlink/config"
 	"goodlink/stun2"
 	"goodlink/tunnel"
+	_ "goodlink/tunnel"
 	"log"
 	"net/http"
 	_ "net/http/pprof"

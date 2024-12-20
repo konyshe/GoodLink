@@ -28,8 +28,6 @@ type TunnelServer struct {
 	redisdb            *redis.Client
 	tun_key            string
 	md5_tun_key        string
-	SendData           []byte
-	RecvData           []byte
 	redis_time_out     time.Duration
 	socket_time_out    time.Duration
 	conn               *net.UDPConn
@@ -46,7 +44,7 @@ func (c *TunnelServer) process_send(dst_ip string, dst_port int) {
 	defer c.process_lock.Unlock()
 
 	if c.stun_quic_conn == nil {
-		c.conn.WriteToUDP(c.SendData, remoteAddr)
+		c.conn.WriteToUDP(SendData, remoteAddr)
 	}
 }
 
@@ -78,8 +76,6 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAdd
 		return
 	}
 
-	//conn.SetReadDeadline(time.Now().Add(c.socket_time_out))
-
 	time.Sleep(1000 * time.Millisecond)
 
 	log.Printf("   process_quic quic.Dial: %v ==> %v\n", conn.LocalAddr(), remoteAddr)
@@ -97,8 +93,7 @@ func (c *TunnelServer) process_server5(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	}
 
 	log.Printf("   process_quic new_quic_stream.Write: %v ==> %v\n", new_quic_conn.LocalAddr(), new_quic_conn.RemoteAddr())
-	if n, err := new_quic_stream.Write(c.SendData); n > 0 && err == nil {
-		//conn.SetReadDeadline(time.Time{})
+	if n, err := new_quic_stream.Write(SendData); n > 0 && err == nil {
 		c.stun_quic_conn = new_quic_conn
 		c.stun_health_stream = new_quic_stream
 		c.process_chain <- new_quic_conn
@@ -130,11 +125,9 @@ func (c *TunnelServer) Release() {
 
 func (c *TunnelServer) ProcessServerChild(ip string, port int) {
 	go func() {
-		//conn.SetReadDeadline(time.Now().Add(6 * time.Second))
-		n, remote_addr, err := c.conn.ReadFromUDP(c.RecvData) // 接收数据
+		n, remote_addr, err := c.conn.ReadFromUDP(RecvData) // 接收数据
 		if err == nil && n > 0 {
-			//conn.SetReadDeadline(time.Time{})
-			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", c.conn.LocalAddr(), remote_addr, string(c.RecvData[:10]), n)
+			log.Printf("process_server udp local:%v remote:%v recv:%v... count:%v\n", c.conn.LocalAddr(), remote_addr, string(RecvData[:10]), n)
 			c.process_server5(c.conn, remote_addr)
 			return
 		}
@@ -241,8 +234,6 @@ func ProcessServer(remote_addr, redis_addr, redis_pass string, radis_id int, tun
 			redisdb:         redisdb,
 			tun_key:         tun_key,
 			md5_tun_key:     md5.Encode(tun_key),
-			SendData:        []byte(tools.RandomString(3)),
-			RecvData:        make([]byte, 128),
 			redis_time_out:  time_out * 3,
 			socket_time_out: time_out,
 			stun_quic_conn:  nil,
@@ -256,7 +247,7 @@ func ProcessServer(remote_addr, redis_addr, redis_pass string, radis_id int, tun
 		go func(remote string, svr *TunnelServer, conn quic.Connection) {
 			defer svr.Release()
 			go proxy.ProcessProxyServer(remote, conn)
-			process_health(svr.stun_health_stream, svr.SendData, svr.RecvData)
+			process_health(svr.stun_health_stream)
 			log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
 		}(remote_addr, &tunnelServer, conn)
 	}

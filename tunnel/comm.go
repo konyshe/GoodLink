@@ -4,11 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"goodlink/aes"
+	"goodlink/tools"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
+)
+
+var (
+	SendData []byte
+	RecvData []byte
 )
 
 type RedisJsonType struct {
@@ -51,4 +57,9 @@ func process_send2(conn *net.UDPConn, remoteAddr *net.UDPAddr, send_data []byte,
 		return n
 	}
 	return 0
+}
+
+func init() {
+	SendData = []byte(tools.RandomString(3))
+	RecvData = make([]byte, 128)
 }

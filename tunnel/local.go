@@ -224,7 +224,7 @@ func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, 
 			chain <- 1
 		}()
 
-		process_health(tunnelClient.stun_health_stream, tunnelClient.SendData, tunnelClient.RecvData)
+		process_health(tunnelClient.stun_health_stream)
 		log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
 		tunnelClient.Release()
 
