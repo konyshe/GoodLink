@@ -36,10 +36,11 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 		switch redisJson.State {
 		case 0:
-			log.Printf("%d: 收到对端请求\n", redisJson.State)
+			log.Printf("%d: 收到对端请求: %v\n", redisJson.State, redisJson)
 			switch redisJson.ClientPort {
 			case 0:
 				conn_type = 0
+				log.Print("   对端未发来IP")
 
 				if m_tun_active != nil {
 					m_tun_active.Release()
