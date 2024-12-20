@@ -198,7 +198,7 @@ func (c *TunnelServer) process1() quic.Connection {
 		case 2:
 			log.Printf("%d: 收到对端地址, 发起连接: %v\n", redisJson.State, redisJson)
 
-			go c.ProcessServerChild(redisJson.ClientIP, redisJson.ClientPort)
+			c.ProcessServerChild(redisJson.ClientIP, redisJson.ClientPort)
 
 			select {
 			case <-c.process_chain:
