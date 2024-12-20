@@ -3,6 +3,8 @@ package main
 import (
 	"gogo"
 	"goodlink/config"
+	"goodlink/md5"
+	"goodlink/process"
 	"goodlink/stun2"
 	"goodlink/tunnel"
 	_ "goodlink/tunnel"
@@ -13,16 +15,18 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/go-redis/redis"
 )
 
 func main2() {
-	if m_cli_pprof_addr != "" {
-		go log.Println(http.ListenAndServe(m_cli_pprof_addr, nil))
-	}
-
 	if *m_cli_stun_test {
 		stun2.TestStun()
 		os.Exit(0)
+	}
+
+	if m_cli_pprof_addr != "" {
+		go log.Println(http.ListenAndServe(m_cli_pprof_addr, nil))
 	}
 
 	if m_cli_stun_svr_addr != "" {
@@ -37,26 +41,29 @@ func main2() {
 		m_cli_redis_id = config.GetID()
 	}
 
+	tunnel.M_redis_db = redis.NewClient(&redis.Options{
+		Addr:     m_cli_redis_addr,
+		Password: m_cli_redis_pass,
+		DB:       m_cli_redis_id,
+	})
+	if tunnel.M_redis_db == nil {
+		log.Println("Redis初始化失败")
+		os.Exit(0)
+	}
+	defer tunnel.M_redis_db.Close()
+
+	tunnel.M_tun_key = m_cli_tun_key
+	tunnel.M_md5_tun_key = md5.Encode(m_cli_tun_key)
+
 	if m_cli_tun_local_addr != "" {
 		go func() {
-			if err := tunnel.ProcessClient(m_cli_tun_local_addr,
-				m_cli_redis_addr,
-				m_cli_redis_pass,
-				m_cli_redis_id,
-				m_cli_tun_key,
-				true); err != nil {
-
+			if err := process.RunLocal(m_cli_tun_local_addr, m_cli_tun_key, true); err != nil {
 				log.Println(err)
 				os.Exit(0)
 			}
 		}()
 	} else {
-		go tunnel.ProcessServer(m_cli_tun_remote_addr,
-			m_cli_redis_addr,
-			m_cli_redis_pass,
-			m_cli_redis_id,
-			m_cli_tun_key,
-			time.Duration(m_cli_stun_timeout)*time.Second)
+		go process.RunRemote(m_cli_tun_remote_addr, m_cli_tun_key, time.Duration(m_cli_stun_timeout)*time.Second)
 	}
 
 	ch := make(chan os.Signal, 1)

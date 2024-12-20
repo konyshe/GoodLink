@@ -6,7 +6,7 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func process_health(health_stream quic.Stream) {
+func ProcessHealth(health_stream quic.Stream) {
 	go func() {
 		for health_stream != nil {
 			health_stream.SetWriteDeadline(time.Now().Add(1 * time.Second))

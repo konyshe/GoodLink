@@ -3,34 +3,30 @@ package tunnel
 import (
 	"context"
 	"fmt"
-	"goodlink/md5"
-	"goodlink/proxy"
 	"goodlink/stun2"
 	_ "goodlink/stun2"
 	"goodlink/tls2"
 	"goodlink/tools"
 	"log"
 	"net"
-	"os"
 	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/quic-go/quic-go"
 )
 
-type TunnelClient struct {
-	stun_quic_conn     quic.Connection
-	stun_health_stream quic.Stream
-	remote_addr        *net.UDPAddr
-	conn_list          []*net.UDPConn
-	stun_state         int
+type TunPassive struct {
+	TunQuicConn     quic.Connection
+	TunHealthStream quic.Stream
+	remote_addr     *net.UDPAddr
+	ConnList        []*net.UDPConn
+	TunState        int
 }
 
-func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
-	c.stun_state = 0
+func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
+	c.TunState = 0
 	log.Println("   标记停止发送报文")
 
-	if c.stun_quic_conn != nil {
+	if c.TunQuicConn != nil {
 		return
 	}
 
@@ -66,18 +62,18 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	log.Printf("   process_quic new_quic_stream.Read: %v ==> %v\n", new_quic_conn.RemoteAddr(), new_quic_conn.LocalAddr())
 	if n, err := new_quic_stream.Read(m_recv_data); err == nil && n > 0 {
 		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
-		c.stun_health_stream = new_quic_stream
-		c.stun_quic_conn = new_quic_conn
+		c.TunHealthStream = new_quic_stream
+		c.TunQuicConn = new_quic_conn
 	}
 }
 
-func (c *TunnelClient) process_send_map() int {
+func (c *TunPassive) process_send_map() int {
 	count := 0
 
-	log.Printf("   发送报文开始(0): %v\n", c.remote_addr)
+	log.Printf("   发包开始(0): %v\n", c.remote_addr)
 
-	for _, conn := range c.conn_list {
-		if c.stun_state == 1 && conn != nil && c.stun_quic_conn == nil {
+	for _, conn := range c.ConnList {
+		if c.TunState == 1 && conn != nil && c.TunQuicConn == nil {
 			_, err1 := conn.WriteToUDP(m_send_data, c.remote_addr)
 			_, err2 := conn.WriteToUDP(m_send_data, c.remote_addr)
 			if err1 == nil && err2 == nil {
@@ -85,19 +81,19 @@ func (c *TunnelClient) process_send_map() int {
 				continue
 			}
 		}
-		log.Printf("   发送报文异常结束(%d): %v\n", count, c.remote_addr)
+		log.Printf("   发包异常(%d): %v\n", count, c.remote_addr)
 		return -1
 	}
-	log.Printf("   发送报文正常结束(%d): %v\n", count, c.remote_addr)
+	log.Printf("   发包结束(%d): %v\n", count, c.remote_addr)
 	return 0
 }
 
-func (c *TunnelClient) process3() {
+func (c *TunPassive) process3() {
 	conn := tools.GetListenUDP()
 
-	c.conn_list = append(c.conn_list, conn) //这里不用加锁
+	c.ConnList = append(c.ConnList, conn) //这里不用加锁
 
-	go func(d *TunnelClient, conn2 *net.UDPConn) {
+	go func(d *TunPassive, conn2 *net.UDPConn) {
 		if n, remoteAddr, err := conn2.ReadFromUDP(m_recv_data); err == nil && n > 0 {
 			m_process_lock.Lock()
 			defer m_process_lock.Unlock()
@@ -108,13 +104,13 @@ func (c *TunnelClient) process3() {
 	}(c, conn)
 }
 
-func (c *TunnelClient) process2(count int) {
+func (c *TunPassive) process2(count int) {
 	for i := 0; i <= count; i++ {
 		c.process3()
 	}
 }
 
-func (c *TunnelClient) process1(count int) quic.Connection {
+func (c *TunPassive) GetQuicConn(count int) quic.Connection {
 	var err error
 
 	redisJson := RedisJsonType{
@@ -151,7 +147,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 
 			c.process2(redisJson.SendPortCount)
 			c.process_send_map()
-			go func(d *TunnelClient) {
+			go func(d *TunPassive) {
 				for {
 					time.Sleep(3 * time.Second)
 					if d.process_send_map() < 0 {
@@ -165,12 +161,12 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 		case 3:
-			if c.stun_quic_conn == nil {
+			if c.TunQuicConn == nil {
 				log.Println("   连接失败")
 				return nil
 			}
 			log.Printf("%d: 连接成功\n", redisJson.State)
-			return c.stun_quic_conn
+			return c.TunQuicConn
 
 		case 4:
 			log.Printf("%d: 连接超时\n", redisJson.State)
@@ -182,90 +178,22 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 	}
 }
 
-func (c *TunnelClient) GetQuicConn() quic.Connection {
-	return c.stun_quic_conn
-}
-
-func (c *TunnelClient) Release() {
+func (c *TunPassive) Release() {
 	log.Println("   清空缓存和连接")
 
-	if c.stun_health_stream != nil {
-		c.stun_health_stream.Close()
-		c.stun_health_stream = nil
+	if c.TunHealthStream != nil {
+		c.TunHealthStream.Close()
+		c.TunHealthStream = nil
 	}
 
-	if c.stun_quic_conn != nil {
-		c.stun_quic_conn.CloseWithError(0, "0")
-		c.stun_quic_conn = nil
+	if c.TunQuicConn != nil {
+		c.TunQuicConn.CloseWithError(0, "0")
+		c.TunQuicConn = nil
 	}
 
-	for _, conn := range c.conn_list {
+	for _, conn := range c.ConnList {
 		if conn != nil {
 			conn.Close()
-		}
-	}
-}
-
-func ProcessClient(tun_local_addr, redis_addr, redis_pass string, radis_id int, tun_key string, retry bool) error {
-	m_redisdb = redis.NewClient(&redis.Options{
-		Addr:     redis_addr,
-		Password: redis_pass,
-		DB:       radis_id,
-	})
-	if m_redisdb == nil {
-		log.Println("Redis初始化失败")
-		os.Exit(0)
-	}
-	defer m_redisdb.Close()
-
-	listener, err := net.Listen("tcp", tun_local_addr)
-	if listener == nil || err != nil {
-		return fmt.Errorf("地址监听失败: %v", tun_local_addr)
-	}
-	defer listener.Close()
-
-	m_tun_key = tun_key
-	m_md5_tun_key = md5.Encode(m_tun_key)
-
-	count := 0
-
-	for {
-		tunnelClient := TunnelClient{
-			stun_quic_conn:     nil,
-			stun_health_stream: nil,
-			conn_list:          make([]*net.UDPConn, 0),
-			stun_state:         1,
-		}
-
-		count++
-
-		conn := tunnelClient.process1(count)
-		if conn == nil {
-			tunnelClient.Release()
-			continue
-		}
-		m_redisdb.Del(m_md5_tun_key)
-
-		chain := make(chan int, 1)
-		go func() {
-			proxy.ProcessProxyClient(listener, conn)
-			chain <- 1
-		}()
-
-		process_health(tunnelClient.stun_health_stream)
-		log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
-		tunnelClient.Release()
-
-		if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
-			conn.Write(m_send_data)
-			conn.Close() // 关闭连接
-		}
-
-		<-chain
-		count = 0
-
-		if !retry {
-			return fmt.Errorf("   连接已断开")
 		}
 	}
 }
