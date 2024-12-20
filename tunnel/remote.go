@@ -134,7 +134,7 @@ func (c *TunnelServer) SetReadFunc(conn2 *net.UDPConn) {
 	go func(d *TunnelServer, conn3 *net.UDPConn) {
 		n, remote_addr, err := conn3.ReadFromUDP(m_recv_data) // 接收数据
 		if err == nil && n > 0 {
-			log.Printf("process_server1 udp local:%v remote:%v recv:%v... count:%v\n", conn3.LocalAddr(), remote_addr, string(m_recv_data[:10]), n)
+			log.Printf("   process_server1 udp local:%v remote:%v recv:%v... count:%v\n", conn3.LocalAddr(), remote_addr, string(m_recv_data[:10]), n)
 			d.process_quic(c.conn, remote_addr)
 			return
 		}

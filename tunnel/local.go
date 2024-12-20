@@ -153,7 +153,7 @@ func (c *TunnelClient) process1(count int) quic.Connection {
 			c.process_send_map()
 			go func(d *TunnelClient) {
 				for {
-					time.Sleep(3000 * time.Millisecond)
+					time.Sleep(3 * time.Second)
 					if d.process_send_map() < 0 {
 						return
 					}
