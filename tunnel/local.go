@@ -38,9 +38,9 @@ func (c *TunnelClient) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) 
 	}
 
 	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), remoteAddr)
-	conn.WriteToUDP(m_send_data, remoteAddr)
-	_, err = conn.WriteToUDP(m_send_data, remoteAddr)
-	if err != nil {
+	_, err1 := conn.WriteToUDP(m_send_data, remoteAddr)
+	_, err2 := conn.WriteToUDP(m_send_data, remoteAddr)
+	if err1 != nil && err2 != nil {
 		log.Printf("   process_quic conn.WriteToUDP: %v\n", err)
 		return
 	}
@@ -82,7 +82,7 @@ func (c *TunnelClient) process3() {
 		}
 	}(conn)
 
-	//log.Printf("   process_server5 conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
+	//log.Printf("   process3 conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
 
 	conn.WriteToUDP(m_send_data, c.remote_addr)
 	conn.WriteToUDP(m_send_data, c.remote_addr)
