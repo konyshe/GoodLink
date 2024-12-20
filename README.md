@@ -84,7 +84,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
 Usage of bin/goodlink-linux-amd64:
   -remote string
-        服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
+        服务端所处网络中, 需要被远程访问的主机地址端口。若不加这个选项就，就是代理模式
   -local string
         客户端监听的地址端口
   -key string
