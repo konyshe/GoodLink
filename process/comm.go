@@ -6,7 +6,7 @@ import (
 	"goodlink/aes"
 	"goodlink/config"
 	"goodlink/md5"
-	"goodlink/tunnel"
+	"goodlink/tun"
 	"log"
 	"os"
 	"time"
@@ -18,8 +18,8 @@ var (
 	m_redis_db    *redis.Client
 	m_tun_key     string
 	m_md5_tun_key string
-	m_tun_active  *tunnel.TunActive
-	m_tun_passive *tunnel.TunPassive
+	m_tun_active  *tun.TunActive
+	m_tun_passive *tun.TunPassive
 )
 
 func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int, tun_key string) {

@@ -4,8 +4,8 @@ import (
 	"goodlink/proxy"
 	"goodlink/stun2"
 	"goodlink/tools"
-	"goodlink/tunnel"
-	_ "goodlink/tunnel"
+	"goodlink/tun"
+	_ "goodlink/tun"
 	"log"
 	"net"
 	"os"
@@ -47,7 +47,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_passive = nil
 
-				m_tun_active = &tunnel.TunActive{
+				m_tun_active = &tun.TunActive{
 					RedisTimeOut:    time_out * 3,
 					TunQuicConn:     nil,
 					TunHealthStream: nil,
@@ -75,7 +75,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_active = nil
 
-				m_tun_passive = &tunnel.TunPassive{
+				m_tun_passive = &tun.TunPassive{
 					TunQuicConn:     nil,
 					TunHealthStream: nil,
 					TunState:        1,
@@ -87,7 +87,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort()
 				m_tun_passive.Process(redisJson.ClientIP, redisJson.ClientPort, 0x100)
 				m_tun_passive.Send()
-				go func(d *tunnel.TunPassive) {
+				go func(d *tun.TunPassive) {
 					for {
 						time.Sleep(3 * time.Second)
 						if d.Send() < 0 {
@@ -167,7 +167,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 		go func(remote string, conn quic.Connection) {
 			defer Release()
 			go proxy.ProcessProxyServer(remote, conn)
-			tunnel.ProcessHealth(health)
+			tun.ProcessHealth(health)
 			log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
 		}(remote_addr, conn)
 	}

@@ -5,8 +5,8 @@ import (
 	"goodlink/proxy"
 	"goodlink/stun2"
 	"goodlink/tools"
-	"goodlink/tunnel"
-	_ "goodlink/tunnel"
+	"goodlink/tun"
+	_ "goodlink/tun"
 	"log"
 	"net"
 	"time"
@@ -61,7 +61,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 				}
 				m_tun_active = nil
 
-				m_tun_passive = &tunnel.TunPassive{
+				m_tun_passive = &tun.TunPassive{
 					TunQuicConn:     nil,
 					TunHealthStream: nil,
 					TunState:        1,
@@ -72,7 +72,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 				redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 				m_tun_passive.Process(redisJson.ServerIP, redisJson.ServerPort, redisJson.SendPortCount)
 				m_tun_passive.Send()
-				go func(d *tunnel.TunPassive) {
+				go func(d *tun.TunPassive) {
 					for {
 						time.Sleep(3 * time.Second)
 						if d.Send() < 0 {
@@ -92,7 +92,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 				}
 				m_tun_passive = nil
 
-				m_tun_active = &tunnel.TunActive{
+				m_tun_active = &tun.TunActive{
 					RedisTimeOut:    redisJson.RedisTimeOut,
 					TunQuicConn:     nil,
 					TunHealthStream: nil,
@@ -149,7 +149,7 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string, retry bool) 
 			chain <- 1
 		}()
 
-		tunnel.ProcessHealth(health)
+		tun.ProcessHealth(health)
 		log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
 		Release()
 
