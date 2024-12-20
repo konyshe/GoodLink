@@ -72,15 +72,15 @@ func (c *TunnelClient) process3() {
 	conn.SetDeadline(time.Time{})
 	c.conn_list = append(c.conn_list, conn)
 
-	go func(conn2 *net.UDPConn) {
+	go func(d *TunnelClient, conn2 *net.UDPConn) {
 		if n, remoteAddr, err := conn2.ReadFromUDP(m_recv_data); err == nil && n > 0 {
 			m_process_lock.Lock()
 			defer m_process_lock.Unlock()
 
 			log.Printf("   锁定连接 local:%v remote:%v recv:%v... count:%v\n", conn2.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
-			c.process_quic(conn2, remoteAddr)
+			d.process_quic(conn2, remoteAddr)
 		}
-	}(conn)
+	}(c, conn)
 
 	//log.Printf("   process3 conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), c.remote_addr)
 
