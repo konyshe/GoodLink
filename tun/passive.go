@@ -74,7 +74,7 @@ func (c *TunPassive) Release() {
 
 func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	c.TunState = 0
-	log.Println("   请求停止发包")
+	//log.Println("   请求停止发包")
 
 	if c.TunQuicConn != nil {
 		return
@@ -116,21 +116,19 @@ func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 func (c *TunPassive) Send() int {
 	count := 0
 
-	log.Printf("   发包开始(0): %v\n", c.remote_addr)
+	//log.Printf("   发包开始(0): %v\n", c.remote_addr)
 
 	for _, conn := range c.ConnList {
 		if c.TunState == 1 && conn != nil && c.TunQuicConn == nil {
-			_, err1 := conn.WriteToUDP(m_send_data, c.remote_addr)
-			_, err2 := conn.WriteToUDP(m_send_data, c.remote_addr)
-			if err1 == nil && err2 == nil {
+			if _, err := conn.WriteToUDP(m_send_data, c.remote_addr); err == nil {
 				count += 1
 				continue
 			}
 		}
-		log.Printf("   发包异常(%d): %v\n", count, c.remote_addr)
+		//log.Printf("   发包异常(%d): %v\n", count, c.remote_addr)
 		return -1
 	}
-	log.Printf("   发包结束(%d): %v\n", count, c.remote_addr)
+	//log.Printf("   发包结束(%d): %v\n", count, c.remote_addr)
 	return 0
 }
 
