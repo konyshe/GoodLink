@@ -42,7 +42,7 @@
 
     注：转发模式仅支持TCP协议，如果remote端需要转发多个TCP端口，需执行多个命令或启动多个 Docker（--key不能重复）
 
-## P2P代理模式 - 举例
+## 代理模式 - 举例
 
 local端运行在公司的电脑，remote端运行在家里的NAS。
 
@@ -66,7 +66,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注：remote端和local端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
 
-## P2P转发模式 - 举例
+## 转发模式 - 举例
 
 local端运行在公司的电脑，remote端运行在家里的NAS。
 
