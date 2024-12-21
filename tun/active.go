@@ -21,6 +21,7 @@ type TunActive struct {
 	RedisTimeOut    time.Duration
 	Conn            *net.UDPConn
 	ConnList        []*net.UDPConn
+	port_map        map[int]bool
 	State           int
 }
 
@@ -32,6 +33,7 @@ func CreateTunActive(conn *net.UDPConn, time_out time.Duration) *TunActive {
 		State:           1,
 		Conn:            conn,
 		ConnList:        make([]*net.UDPConn, 0),
+		port_map:        make(map[int]bool),
 		process_chain:   make(chan quic.Connection, 1),
 	}
 }
@@ -64,38 +66,6 @@ func (c *TunActive) Release() {
 		close(c.process_chain)
 		c.process_chain = nil
 	}
-}
-
-func (c *TunActive) process_send(conn2 *net.UDPConn, dst_ip string, dst_port int) error {
-	if conn2 == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 0xFFFF {
-		return fmt.Errorf("   发包异常: %v:%v", dst_ip, dst_port)
-	}
-
-	if c.State != 1 {
-		return fmt.Errorf("   发包结束: %v:%v", dst_ip, dst_port)
-	}
-
-	remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
-
-	conn2.WriteToUDP(m_send_data, remoteAddr)
-
-	return nil
-}
-
-func (c *TunActive) process_server4(remote_ip string) error {
-	for i := 1; i <= 8; i++ {
-		for remote_port_map := make(map[int]bool); len(remote_port_map) <= 0x80; {
-			if remote_port := rand.Intn(0x2004 * i); remote_port > 0x2004*(i-1) && remote_port <= 0x2004*i && remote_port > 0 && remote_port < 0xFFFF {
-				if _, ok := remote_port_map[remote_port]; !ok {
-					if err := c.process_send(c.Conn, remote_ip, remote_port); err != nil {
-						return err
-					}
-					remote_port_map[remote_port] = true
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func (c *TunActive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
@@ -150,6 +120,47 @@ func (c *TunActive) SetReadFunc(conn *net.UDPConn) {
 	}(c, conn)
 }
 
+func (c *TunActive) process_send(conn2 *net.UDPConn, dst_ip string, dst_port int) int {
+	if conn2 == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 0xFFFF {
+		return 0
+	}
+
+	if c.State != 1 {
+		return -1
+	}
+
+	if _, ok := c.port_map[dst_port]; ok {
+		return 0
+	}
+	c.port_map[dst_port] = true
+
+	remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
+
+	conn2.WriteToUDP(m_send_data, remoteAddr)
+
+	return 1
+}
+
+func (c *TunActive) process_server4(remote_ip string) int {
+	for i1 := 0; i1 < 64; i1++ {
+		for i2 := 0; i2 < 16; {
+			remote_port := rand.Intn(0x400) + 0x400*i1
+			n := c.process_send(c.Conn, remote_ip, remote_port)
+			switch n {
+			case 0:
+				continue
+			case 1:
+				i2++
+				continue
+			default:
+				return -1
+			}
+		}
+	}
+	log.Printf("   当前已发送端口数: %d\n", len(c.port_map))
+	return 1
+}
+
 func (c *TunActive) Start(ip string, port int) {
 	log.Printf("   发起主动连接: %v:%v\n", ip, port)
 
@@ -168,16 +179,13 @@ func (c *TunActive) Start(ip string, port int) {
 
 	go func() {
 		for {
-			//log.Printf("   发包开始: %v:%v\n", ip, port)
 			c.process_send(c.Conn, ip, port)
 
-			if err := c.process_server4(ip); err != nil {
-				//log.Println(err)
+			if c.process_server4(ip) < 0 {
 				return
 			}
 
-			//log.Printf("   发包结束: %v:%v\n", ip, port)
-			time.Sleep(time.Second)
+			time.Sleep(2 * time.Second)
 		}
 	}()
 }

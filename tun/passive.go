@@ -116,8 +116,6 @@ func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 func (c *TunPassive) Send() int {
 	count := 0
 
-	//log.Printf("   发包开始(0): %v\n", c.remote_addr)
-
 	for _, conn := range c.ConnList {
 		if c.TunState == 1 && conn != nil && c.TunQuicConn == nil {
 			if _, err := conn.WriteToUDP(m_send_data, c.remote_addr); err == nil {
@@ -125,10 +123,8 @@ func (c *TunPassive) Send() int {
 				continue
 			}
 		}
-		//log.Printf("   发包异常(%d): %v\n", count, c.remote_addr)
 		return -1
 	}
-	//log.Printf("   发包结束(%d): %v\n", count, c.remote_addr)
 	return 0
 }
 
