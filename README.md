@@ -114,4 +114,4 @@ cd goodlink
 make clean; make
 ```
 
-# [详细使用说明](https://gitee.com/konyshe/goodlink/wikis)
+# [详细使用说明](https://gitee.com/konyshe/goodlink/issues?q=label%253A%E5%92%A8%E8%AF%A2)
