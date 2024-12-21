@@ -22,19 +22,9 @@
 
 5. 一个local端对应一个remote端，两端必须使用同一个--key
 
-6. 由于直连过程复杂，会出现反复重试，通常10分钟内成功。如果长时间无法连接，请[反馈我](https://gitee.com/konyshe/goodlink/issues)解决！
+6. 由于直连过程复杂，会出现反复重试，通常10分钟内成功。如果长时间无法连接，请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
 
 # 简单使用
-
-## 该要
-
-### local端
-
-    使用了--local选项的主机
-
-### remote端
-
-    使用了--remote选项的主机
 
 ## 工作模式 - 介绍
 
