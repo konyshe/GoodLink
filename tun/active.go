@@ -105,7 +105,7 @@ func (c *TunActive) process3(conn2 *net.UDPConn, ip string, port int) {
 	}
 
 	for i := port - 16; i < port; i++ {
-		c.process_send(conn2, ip, i)
+		c.send(conn2, ip, i)
 	}
 }
 
@@ -120,7 +120,7 @@ func (c *TunActive) SetReadFunc(conn *net.UDPConn) {
 	}(c, conn)
 }
 
-func (c *TunActive) process_send(conn2 *net.UDPConn, dst_ip string, dst_port int) int {
+func (c *TunActive) send(conn2 *net.UDPConn, dst_ip string, dst_port int) int {
 	if conn2 == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 0xFFFF {
 		return 0
 	}
@@ -145,7 +145,7 @@ func (c *TunActive) process_server4(ip string) int {
 	for i1 := 0; i1 < 0x40; i1++ {
 		for i2 := 0; i2 < 0x10; {
 			po := rand.Intn(0x400) + 0x400*i1
-			n := c.process_send(c.Conn, ip, po)
+			n := c.send(c.Conn, ip, po)
 			switch n {
 			case 0:
 				continue
@@ -173,12 +173,12 @@ func (c *TunActive) Start(ip string, port int) {
 	c.SetReadFunc(c.Conn)
 
 	for i := -32; i <= 64; i += 1 {
-		c.process_send(c.Conn, ip, port+i)
+		c.send(c.Conn, ip, port+i)
 	}
 
 	go func() {
 		for {
-			c.process_send(c.Conn, ip, port)
+			c.send(c.Conn, ip, port)
 
 			if c.process_server4(ip) < 0 {
 				return
