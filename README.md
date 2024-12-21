@@ -1,6 +1,6 @@
 ![GoodLink Logo](https://gitee.com/konyshe/goodlink/raw/master/logo.png "GoodLink")
 
-# 介绍
+# 特点
 
 1. 两台主机之间直连！直连！直连！不经过第三方服务器，不用担心数据隐私泄露
 
@@ -12,9 +12,19 @@
 
 注：1.1.6版本开始加强了通信安全，因此和老版本不兼容
 
-# 使用说明
+# 介绍
 
-## 术语说明
+1. 两台主机运行同一个程序, 一台主机使用--remote选项(以下称remote端), 另一台主机使用--local选项(以下称local端)。
+
+2. local端和remote端之间的连接是P2P点对点直连的，不需要第三方服务器
+
+3. 可以在local端访问remote端, 但是反过来不可以
+
+4. 如果需要反过来, 或者需要访问多个remote端, 就运行多个程序或启动多个 Docker（--key不能重复）
+
+# 简单使用
+
+## 该要
 
 ### local端
 
