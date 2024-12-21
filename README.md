@@ -105,3 +105,5 @@ git clone https://gitee.com/konyshe/goodlink.git
 cd goodlink
 make clean; make
 ```
+
+# [详细使用说明](https://gitee.com/konyshe/goodlink/wikis)
