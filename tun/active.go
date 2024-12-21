@@ -141,11 +141,11 @@ func (c *TunActive) process_send(conn2 *net.UDPConn, dst_ip string, dst_port int
 	return 1
 }
 
-func (c *TunActive) process_server4(remote_ip string) int {
-	for i1 := 0; i1 < 64; i1++ {
-		for i2 := 0; i2 < 16; {
-			remote_port := rand.Intn(0x400) + 0x400*i1
-			n := c.process_send(c.Conn, remote_ip, remote_port)
+func (c *TunActive) process_server4(ip string) int {
+	for i1 := 0; i1 < 0x40; i1++ {
+		for i2 := 0; i2 < 0x10; {
+			po := rand.Intn(0x400) + 0x400*i1
+			n := c.process_send(c.Conn, ip, po)
 			switch n {
 			case 0:
 				continue
