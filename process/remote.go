@@ -39,6 +39,8 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			return nil, nil
 		}
 
+		redisJson.RedisTimeOut = time_out * 3
+
 		switch redisJson.State {
 		case 0:
 			log.Printf("%d: 收到对端请求: %v\n", redisJson.State, redisJson)
@@ -59,10 +61,9 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				m_tun_active = tun.CreateTunActive(conn, time_out)
 				tun_active_chain = m_tun_active.ProcessChain
 
-				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 				redisJson.State = 1
 				redisJson.SendPortCount = 0x100
-				redisJson.RedisTimeOut = m_tun_active.RedisTimeOut
+				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
@@ -74,23 +75,13 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_active = nil
 
-				m_tun_passive = tun.CteateTunPassive(conn)
+				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ClientIP, redisJson.ClientPort, 0x100)
+				m_tun_passive.Start()
+
 				tun_passive_chain = m_tun_passive.ProcessChain
 
-				m_tun_passive.Process(redisJson.ClientIP, redisJson.ClientPort, 0x100)
-				m_tun_passive.Send()
-				go func(d *tun.TunPassive) {
-					for {
-						time.Sleep(3 * time.Second)
-						if d.Send() < 0 {
-							return
-						}
-					}
-				}(m_tun_passive)
-
-				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 				redisJson.State = 1
-				redisJson.RedisTimeOut = time_out * 3
+				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
 
@@ -98,7 +89,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			switch conn_type {
 			case 0:
 				log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
-				m_tun_active.ProcessServerChild(redisJson.ClientIP, redisJson.ClientPort)
+				m_tun_active.Start(redisJson.ClientIP, redisJson.ClientPort)
 
 			case 1:
 				log.Printf("%d: 收到对端地址, 等待连接: %v\n", redisJson.State, redisJson)

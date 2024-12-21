@@ -8,6 +8,7 @@ import (
 	"goodlink/tools"
 	"log"
 	"net"
+	"time"
 
 	"github.com/quic-go/quic-go"
 )
@@ -21,7 +22,7 @@ type TunPassive struct {
 	ProcessChain    chan quic.Connection
 }
 
-func CteateTunPassive(conn *net.UDPConn) *TunPassive {
+func CteateTunPassive(conn *net.UDPConn, ip string, port int, count int) *TunPassive {
 	c := &TunPassive{
 		TunQuicConn:     nil,
 		TunHealthStream: nil,
@@ -30,6 +31,7 @@ func CteateTunPassive(conn *net.UDPConn) *TunPassive {
 		ProcessChain:    make(chan quic.Connection, 1),
 	}
 	c.ConnList = append(c.ConnList, conn)
+	c.Process(ip, port, count)
 	return c
 }
 
@@ -123,6 +125,18 @@ func (c *TunPassive) Send() int {
 	}
 	log.Printf("   发包结束(%d): %v\n", count, c.remote_addr)
 	return 0
+}
+
+func (c *TunPassive) Start() {
+	c.Send()
+	go func(d *TunPassive) {
+		for {
+			time.Sleep(3 * time.Second)
+			if d.Send() < 0 {
+				return
+			}
+		}
+	}(c)
 }
 
 func (c *TunPassive) process3() {

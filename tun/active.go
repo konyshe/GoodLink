@@ -147,7 +147,7 @@ func (c *TunActive) SetReadFunc(conn2 *net.UDPConn) {
 	}(c, conn2)
 }
 
-func (c *TunActive) ProcessServerChild(ip string, port int) {
+func (c *TunActive) Start(ip string, port int) {
 	log.Printf("   发起主动连接: %v:%v\n", ip, port)
 
 	for i := port; i < port+8; i += 2 {
