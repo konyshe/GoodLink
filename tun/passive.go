@@ -19,7 +19,7 @@ type TunPassive struct {
 	remote_addr     *net.UDPAddr
 	ConnList        []*net.UDPConn
 	TunState        int
-	ProcessChain    chan quic.Connection
+	process_chain   chan quic.Connection
 }
 
 func CteateTunPassive(conn *net.UDPConn, ip string, port int, count int) *TunPassive {
@@ -28,10 +28,22 @@ func CteateTunPassive(conn *net.UDPConn, ip string, port int, count int) *TunPas
 		TunHealthStream: nil,
 		TunState:        1,
 		ConnList:        make([]*net.UDPConn, 0),
-		ProcessChain:    make(chan quic.Connection, 1),
+		process_chain:   make(chan quic.Connection, 1),
 	}
+
+	log.Printf("   发起被动连接: %v:%v\n", ip, port)
+
+	c.SetReadFunc(conn)
 	c.ConnList = append(c.ConnList, conn)
-	c.Process(ip, port, count)
+
+	for i := 0; i < count; i++ {
+		conn2 := tools.GetListenUDP()
+		c.SetReadFunc(conn2)
+		c.ConnList = append(c.ConnList, conn2) //这里不用加锁
+	}
+
+	c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
+
 	return c
 }
 
@@ -54,9 +66,9 @@ func (c *TunPassive) Release() {
 		}
 	}
 
-	if c.ProcessChain != nil {
-		close(c.ProcessChain)
-		c.ProcessChain = nil
+	if c.process_chain != nil {
+		close(c.process_chain)
+		c.process_chain = nil
 	}
 }
 
@@ -76,12 +88,7 @@ func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	}
 
 	log.Printf("   process_quic conn.WriteToUDP: %v ==> %v\n", conn.LocalAddr(), remoteAddr)
-	_, err1 := conn.WriteToUDP(m_send_data, remoteAddr)
-	_, err2 := conn.WriteToUDP(m_send_data, remoteAddr)
-	if err1 != nil && err2 != nil {
-		log.Printf("   process_quic conn.WriteToUDP: %v\n", err)
-		return
-	}
+	conn.WriteToUDP(m_send_data, remoteAddr)
 
 	log.Printf("   process_server5 listener.Accept: %v\n", conn.LocalAddr())
 	new_quic_conn, err := listener.Accept(context.Background())
@@ -102,7 +109,7 @@ func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 		log.Printf("   process_server5 quic local:%v remote:%v recv:%v... count:%v\n", new_quic_conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 		c.TunHealthStream = new_quic_stream
 		c.TunQuicConn = new_quic_conn
-		c.ProcessChain <- new_quic_conn
+		c.process_chain <- new_quic_conn
 	}
 }
 
@@ -139,11 +146,7 @@ func (c *TunPassive) Start() {
 	}(c)
 }
 
-func (c *TunPassive) process3() {
-	conn := tools.GetListenUDP()
-
-	c.ConnList = append(c.ConnList, conn) //这里不用加锁
-
+func (c *TunPassive) SetReadFunc(conn *net.UDPConn) {
 	go func(d *TunPassive, conn2 *net.UDPConn) {
 		if n, remoteAddr, err := conn2.ReadFromUDP(m_recv_data); err == nil && n > 0 {
 			m_process_lock.Lock()
@@ -155,10 +158,6 @@ func (c *TunPassive) process3() {
 	}(c, conn)
 }
 
-func (c *TunPassive) Process(ip string, port int, count int) {
-	log.Printf("   发起被动连接: %v:%v\n", ip, port)
-	c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
-	for i := 0; i <= count; i++ {
-		c.process3()
-	}
+func (c *TunPassive) GetChain() chan quic.Connection {
+	return c.process_chain
 }

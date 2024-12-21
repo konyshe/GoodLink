@@ -17,7 +17,7 @@ import (
 type TunActive struct {
 	TunQuicConn     quic.Connection
 	TunHealthStream quic.Stream
-	ProcessChain    chan quic.Connection
+	process_chain   chan quic.Connection
 	RedisTimeOut    time.Duration
 	Conn            *net.UDPConn
 	ConnList        []*net.UDPConn
@@ -30,7 +30,7 @@ func CreateTunActive(conn *net.UDPConn, time_out time.Duration) *TunActive {
 		TunHealthStream: nil,
 		Conn:            conn,
 		ConnList:        make([]*net.UDPConn, 0),
-		ProcessChain:    make(chan quic.Connection, 1),
+		process_chain:   make(chan quic.Connection, 1),
 	}
 }
 
@@ -58,9 +58,9 @@ func (c *TunActive) Release() {
 		}
 	}
 
-	if c.ProcessChain != nil {
-		close(c.ProcessChain)
-		c.ProcessChain = nil
+	if c.process_chain != nil {
+		close(c.process_chain)
+		c.process_chain = nil
 	}
 }
 
@@ -122,7 +122,7 @@ func (c *TunActive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	if n, err := new_quic_stream.Write(m_send_data); n > 0 && err == nil {
 		c.TunQuicConn = new_quic_conn
 		c.TunHealthStream = new_quic_stream
-		c.ProcessChain <- new_quic_conn
+		c.process_chain <- new_quic_conn
 	}
 }
 
@@ -164,4 +164,8 @@ func (c *TunActive) Start(ip string, port int) {
 	if c.TunQuicConn == nil {
 		c.process_server4(ip)
 	}
+}
+
+func (c *TunActive) GetChain() chan quic.Connection {
+	return c.process_chain
 }

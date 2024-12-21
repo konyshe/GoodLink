@@ -59,7 +59,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				m_tun_passive = nil
 
 				m_tun_active = tun.CreateTunActive(conn, time_out)
-				tun_active_chain = m_tun_active.ProcessChain
+				tun_active_chain = m_tun_active.GetChain()
 
 				redisJson.State = 1
 				redisJson.SendPortCount = 0x100
@@ -78,7 +78,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ClientIP, redisJson.ClientPort, 0x100)
 				m_tun_passive.Start()
 
-				tun_passive_chain = m_tun_passive.ProcessChain
+				tun_passive_chain = m_tun_passive.GetChain()
 
 				redisJson.State = 1
 				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
