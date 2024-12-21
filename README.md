@@ -2,7 +2,7 @@
 
 # 介绍
 
-1. 客户端和服务端之间直连！直连！直连！不经过第三方服务器，不用担心数据隐私泄露
+1. 两台主机之间直连！直连！直连！不经过第三方服务器，不用担心数据隐私泄露
 
 2. 一条命令搞定，无需安装、无需注册，无需公网IP，无需配置文件
 
@@ -10,7 +10,7 @@
 
 4. 连接基于QUIC，高性能，已加密
 
-5. 由于连接过程复杂，会出现反复重试，通常3分钟内成功。如果长时间无法连接，请[反馈我](https://gitee.com/konyshe/goodlink/issues)解决！
+5. 由于直连过程复杂，会出现反复重试，通常10分钟内成功。如果长时间无法连接，请[反馈我](https://gitee.com/konyshe/goodlink/issues)解决！
 
 注：1.1.6版本开始加强了通信安全，因此和老版本不兼容
 
@@ -20,17 +20,17 @@
 
 ### P2P代理模式
 
-    客户端需要指定本地监听端口，以提供Socks5代理服务
+    客户端需要指定本地端口，以提供Socks5代理服务
 
-    该模式需要在系统或者软件中配置Socket5代理，可访问服务端所处网络中的所有主机
+    客户端需要在系统或者软件中配置Socket5代理，便可访问服务端所处网络中的所有主机端口
 
 ### P2P转发模式
 
-    服务端需要指定所处网络中的某一个主机端口，客户端也需要指定本地监听端口。
+    服务端需要指定所处网络中的某一个主机端口，客户端也需要指定本地端口。
 
-    该模式无需配置Socks5代理，直接访问客户端指定的本地监听端口，等于访问服务端指定的主机端口。其他主机端口不能访问
+    客户端无需配置Socks5代理，直接访问指定的本地端口，就等于访问服务端指定的主机端口。但也只能访问这一个端口
 
-    注：P2P转发模式仅支持 TCP 协议，如果服务端需要转发多个 TCP端口，需同时执行多个命令或启动多个 Docker（--key不能重复）
+    注：P2P转发模式仅支持TCP协议，如果服务端需要转发多个TCP端口，需执行多个命令或启动多个 Docker（--key不能重复）
 
 ## P2P代理模式 - 举例
 
@@ -51,7 +51,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ```
-.\goodlink-windows-amd64.exe --local=0.0.0.0:18080 --key=nas_202412140928
+.\goodlink-windows-amd64.exe --local=127.0.0.1:18080 --key=nas_202412140928
 ```
 
 注：服务端和客户端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
@@ -67,7 +67,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=127.0.0.1:9999 --key=nas_202412140928
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
 ### 公司的电脑 (windows, 命令行)
@@ -75,7 +75,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ```
-.\goodlink-windows-amd64.exe --local=0.0.0.0:9999 --key=nas_202412140928
+.\goodlink-windows-amd64.exe --local=127.0.0.1:9999 --key=nas_202412140928
 ```
 
 # 选项说明
@@ -84,7 +84,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
 Usage of bin/goodlink-linux-amd64:
   -remote string
-        服务端所处网络中, 需要被远程访问的主机地址端口, 例如: 192.168.3.2:9999
+        服务端所处网络中, 需要被远程访问的主机地址端口。若不加这个选项就，就是代理模式
   -local string
         客户端监听的地址端口
   -key string
