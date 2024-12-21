@@ -122,7 +122,7 @@ func (s *Server) Serve(c net.PacketConn) error {
 	}
 }
 
-// ListenUDPAndServe listens on laddr and process incoming packets.
+// ListenUDPAndServe listens on laddr and pro incoming packets.
 func ListenUDPAndServe(serverNet, laddr string) error {
 	c, err := net.ListenPacket(serverNet, laddr)
 	if err != nil {

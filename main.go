@@ -2,8 +2,8 @@ package main
 
 import (
 	"gogo"
-	"goodlink/process"
-	_ "goodlink/process"
+	"goodlink/pro"
+	_ "goodlink/pro"
 	"goodlink/stun2"
 	"log"
 	"net/http"
@@ -29,11 +29,11 @@ func main2() {
 		os.Exit(0)
 	}
 
-	process.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
+	pro.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
 
 	if m_cli_tun_local_addr != "" {
 		go func() {
-			if err := process.RunLocal(m_cli_conn_type,
+			if err := pro.RunLocal(m_cli_conn_type,
 				m_cli_tun_local_addr,
 				m_cli_tun_key,
 				true); err != nil {
@@ -43,7 +43,7 @@ func main2() {
 			}
 		}()
 	} else {
-		go process.RunRemote(m_cli_tun_remote_addr,
+		go pro.RunRemote(m_cli_tun_remote_addr,
 			m_cli_tun_key,
 			time.Duration(m_cli_stun_timeout)*time.Second)
 	}

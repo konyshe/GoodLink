@@ -1,4 +1,4 @@
-package process
+package pro
 
 import (
 	"goodlink/proxy"
@@ -25,7 +25,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		time.Sleep(1 * time.Second)
 
 		for RedisGet(&redisJson) != nil {
-			time.Sleep(3 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 
 		if redisJson.State < last_state {
