@@ -157,7 +157,6 @@ func (c *TunActive) process_server4(ip string) int {
 			}
 		}
 	}
-	log.Printf("   当前已发送端口数: %d\n", len(c.port_map))
 	return 1
 }
 
