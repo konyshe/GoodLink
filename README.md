@@ -81,19 +81,14 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 ```
 root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
 Usage of bin/goodlink-linux-amd64:
-  -remote string
+  --remote string
         服务端所处网络中, 需要被远程访问的主机地址端口。若不加这个选项就，就是代理模式
-  -local string
+  --local string
         客户端监听的地址端口
-  -key string
+  --key string
         自定义, 客户端和服务端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
-
-  -redis_addr string
-        Redis服务地址端口, 例如: 1.2.3.4:6379
-  -redis_id int
-        Redis服务可使用的表ID, 例如: 15
-  -redis_pass string
-        Redis服务密码, 例如: 12345678
+  --conn int
+        由于remote和local两端默认使用的算法不一样，如果出现超过10分钟无法连接的情况，可能是其中一端和默认的算法不兼容，此时可在local端增加 "--conn=1" 选项，以调换两端的算法，就能连接了
 ```
 
 # 自己如何编译
