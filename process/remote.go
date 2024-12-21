@@ -7,7 +7,6 @@ import (
 	"goodlink/tun"
 	_ "goodlink/tun"
 	"log"
-	"net"
 	"os"
 	"time"
 
@@ -43,6 +42,10 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		switch redisJson.State {
 		case 0:
 			log.Printf("%d: 收到对端请求: %v\n", redisJson.State, redisJson)
+
+			conn := tools.GetListenUDP()
+			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(conn)
+
 			switch redisJson.ClientPort {
 			case 0:
 				conn_type = 0
@@ -53,17 +56,8 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_passive = nil
 
-				m_tun_active = &tun.TunActive{
-					RedisTimeOut:    time_out * 3,
-					TunQuicConn:     nil,
-					TunHealthStream: nil,
-					Conn:            tools.GetListenUDP(),
-					ConnList:        make([]*net.UDPConn, 0),
-					ProcessChain:    make(chan quic.Connection, 1),
-				}
+				m_tun_active = tun.CreateTunActive(conn, time_out)
 				tun_active_chain = m_tun_active.ProcessChain
-
-				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(m_tun_active.Conn)
 
 				log.Printf("%d: 发送本端地址: %v\n", redisJson.State, redisJson)
 				redisJson.State = 1
@@ -80,16 +74,9 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_active = nil
 
-				m_tun_passive = &tun.TunPassive{
-					TunQuicConn:     nil,
-					TunHealthStream: nil,
-					TunState:        1,
-					ConnList:        make([]*net.UDPConn, 0),
-					ProcessChain:    make(chan quic.Connection, 1),
-				}
+				m_tun_passive = tun.CteateTunPassive(conn)
 				tun_passive_chain = m_tun_passive.ProcessChain
 
-				redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort()
 				m_tun_passive.Process(redisJson.ClientIP, redisJson.ClientPort, 0x100)
 				m_tun_passive.Send()
 				go func(d *tun.TunPassive) {

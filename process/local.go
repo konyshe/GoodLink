@@ -59,21 +59,12 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 			case 0:
 				log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
 
-				conn.Close()
-				conn = nil
-
 				if m_tun_passive != nil {
 					m_tun_passive.Release()
 				}
 				m_tun_active = nil
 
-				m_tun_passive = &tun.TunPassive{
-					TunQuicConn:     nil,
-					TunHealthStream: nil,
-					TunState:        1,
-					ConnList:        make([]*net.UDPConn, 0),
-					ProcessChain:    make(chan quic.Connection, 1),
-				}
+				m_tun_passive = tun.CteateTunPassive(conn)
 
 				redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
 				m_tun_passive.Process(redisJson.ServerIP, redisJson.ServerPort, redisJson.SendPortCount)
@@ -98,14 +89,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 				}
 				m_tun_passive = nil
 
-				m_tun_active = &tun.TunActive{
-					RedisTimeOut:    redisJson.RedisTimeOut,
-					TunQuicConn:     nil,
-					TunHealthStream: nil,
-					Conn:            conn,
-					ConnList:        make([]*net.UDPConn, 0),
-					ProcessChain:    make(chan quic.Connection, 1),
-				}
+				m_tun_active = tun.CreateTunActive(conn, 15*time.Second)
 				m_tun_active.ProcessServerChild(redisJson.ServerIP, redisJson.ServerPort)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)

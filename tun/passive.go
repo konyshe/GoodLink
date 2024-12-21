@@ -21,6 +21,43 @@ type TunPassive struct {
 	ProcessChain    chan quic.Connection
 }
 
+func CteateTunPassive(conn *net.UDPConn) *TunPassive {
+	c := &TunPassive{
+		TunQuicConn:     nil,
+		TunHealthStream: nil,
+		TunState:        1,
+		ConnList:        make([]*net.UDPConn, 0),
+		ProcessChain:    make(chan quic.Connection, 1),
+	}
+	c.ConnList = append(c.ConnList, conn)
+	return c
+}
+
+func (c *TunPassive) Release() {
+	log.Println("   清空缓存和连接")
+
+	if c.TunHealthStream != nil {
+		c.TunHealthStream.Close()
+		c.TunHealthStream = nil
+	}
+
+	if c.TunQuicConn != nil {
+		c.TunQuicConn.CloseWithError(0, "0")
+		c.TunQuicConn = nil
+	}
+
+	for _, conn := range c.ConnList {
+		if conn != nil {
+			conn.Close()
+		}
+	}
+
+	if c.ProcessChain != nil {
+		close(c.ProcessChain)
+		c.ProcessChain = nil
+	}
+}
+
 func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	c.TunState = 0
 	log.Println("   请求停止发包")
@@ -109,30 +146,5 @@ func (c *TunPassive) Process(ip string, port int, count int) {
 	c.remote_addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
 	for i := 0; i <= count; i++ {
 		c.process3()
-	}
-}
-
-func (c *TunPassive) Release() {
-	log.Println("   清空缓存和连接")
-
-	if c.TunHealthStream != nil {
-		c.TunHealthStream.Close()
-		c.TunHealthStream = nil
-	}
-
-	if c.TunQuicConn != nil {
-		c.TunQuicConn.CloseWithError(0, "0")
-		c.TunQuicConn = nil
-	}
-
-	for _, conn := range c.ConnList {
-		if conn != nil {
-			conn.Close()
-		}
-	}
-
-	if c.ProcessChain != nil {
-		close(c.ProcessChain)
-		c.ProcessChain = nil
 	}
 }

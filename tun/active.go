@@ -23,6 +23,47 @@ type TunActive struct {
 	ConnList        []*net.UDPConn
 }
 
+func CreateTunActive(conn *net.UDPConn, time_out time.Duration) *TunActive {
+	return &TunActive{
+		RedisTimeOut:    time_out,
+		TunQuicConn:     nil,
+		TunHealthStream: nil,
+		Conn:            conn,
+		ConnList:        make([]*net.UDPConn, 0),
+		ProcessChain:    make(chan quic.Connection, 1),
+	}
+}
+
+func (c *TunActive) Release() {
+	log.Println("   清空缓存和连接")
+
+	if c.TunHealthStream != nil {
+		c.TunHealthStream.Close()
+		c.TunHealthStream = nil
+	}
+
+	if c.TunQuicConn != nil {
+		c.TunQuicConn.CloseWithError(0, "0")
+		c.TunQuicConn = nil
+	}
+
+	if c.Conn != nil {
+		c.Conn.Close()
+		c.Conn = nil
+	}
+
+	for _, conn := range c.ConnList {
+		if conn != nil {
+			conn.Close()
+		}
+	}
+
+	if c.ProcessChain != nil {
+		close(c.ProcessChain)
+		c.ProcessChain = nil
+	}
+}
+
 func (c *TunActive) process_send(conn2 *net.UDPConn, dst_ip string, dst_port int) {
 	if conn2 == nil || dst_ip == "" || dst_port <= 0 || dst_port >= 0xFFFF {
 		return
@@ -82,36 +123,6 @@ func (c *TunActive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 		c.TunQuicConn = new_quic_conn
 		c.TunHealthStream = new_quic_stream
 		c.ProcessChain <- new_quic_conn
-	}
-}
-
-func (c *TunActive) Release() {
-	log.Println("   清空缓存和连接")
-
-	if c.TunHealthStream != nil {
-		c.TunHealthStream.Close()
-		c.TunHealthStream = nil
-	}
-
-	if c.TunQuicConn != nil {
-		c.TunQuicConn.CloseWithError(0, "0")
-		c.TunQuicConn = nil
-	}
-
-	if c.Conn != nil {
-		c.Conn.Close()
-		c.Conn = nil
-	}
-
-	for _, conn := range c.ConnList {
-		if conn != nil {
-			conn.Close()
-		}
-	}
-
-	if c.ProcessChain != nil {
-		close(c.ProcessChain)
-		c.ProcessChain = nil
 	}
 }
 
