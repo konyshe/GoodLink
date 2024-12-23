@@ -12,7 +12,7 @@
 
 # 介绍
 
-1. 两台主机运行同一个程序, 一台主机加--remote选项(以下称remote端), 另一台主机加--local选项(以下称local端)。
+1. 两台主机运行同一个程序, 一台主机加--remote选项(以下称remote端), 另一台主机加--local选项(以下称local端)
 
 2. local端和remote端之间的连接是点对点直连的，不经过第三方服务器
 
@@ -20,7 +20,7 @@
 
 4. 如果需要反过来, 或者需要访问多个remote端, 就运行多个程序或启动多个 Docker
 
-5. 一个local端对应一个remote端，两端必须使用同一个--key
+5. 可以多个local端对应一个remote端，但一个local端不能对应多个remote端。通过使用相同的--key确认对应关系
 
 6. 由于直连过程复杂，会出现反复重试，通常10分钟内成功。如果长时间无法连接，请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
 
@@ -114,4 +114,4 @@ cd goodlink
 make clean; make
 ```
 
-# [详细使用说明](https://gitee.com/konyshe/goodlink/wikis)
+# [详细使用说明](https://gitee.com/konyshe/goodlink/issues?q=label%253A%E5%92%A8%E8%AF%A2)
