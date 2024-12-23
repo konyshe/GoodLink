@@ -14,7 +14,7 @@ func ProcessProxyServer(addr string, stun_quic_conn quic.Connection) {
 		return
 	}
 
-	log.Println("   您已可以访问remote端的主机 ...")
+	log.Println("   ProcessProxyServer start...")
 
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
