@@ -7,11 +7,13 @@ import (
 	"goodlink/tls2"
 	"goodlink/tools"
 	"log"
+	"math/big"
 	"net"
 	"time"
 
+	"crypto/rand"
+
 	"github.com/quic-go/quic-go"
-	"golang.org/x/exp/rand"
 )
 
 type TunActive struct {
@@ -142,10 +144,15 @@ func (c *TunActive) send(conn2 *net.UDPConn, dst_ip string, dst_port int) int {
 }
 
 func (c *TunActive) process_server4(ip string) int {
+	var r *big.Int
+	var po int
+	var n int
+
 	for i1 := 0; i1 < 0x40; i1++ {
 		for i2 := 0; i2 < 0x10; {
-			po := rand.Intn(0x400) + 0x400*i1
-			n := c.send(c.Conn, ip, po)
+			r, _ = rand.Int(rand.Reader, big.NewInt(0x400))
+			po = 0x400*i1 + int(r.Int64())
+			n = c.send(c.Conn, ip, po)
 			switch n {
 			case 0:
 				continue
