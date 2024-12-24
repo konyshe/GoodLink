@@ -81,7 +81,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 				m_tun_passive = nil
 
 				m_tun_active = tun.CreateTunActive(conn, 15*time.Second)
-				m_tun_active.Start(redisJson.ServerIP, redisJson.ServerPort)
+				m_tun_active.Start(redisJson.ServerIP, redisJson.ServerPort, redisJson.SocketTimeOut)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}

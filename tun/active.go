@@ -43,6 +43,11 @@ func CreateTunActive(conn *net.UDPConn, time_out time.Duration) *TunActive {
 func (c *TunActive) Release() {
 	log.Println("   清空缓存和连接")
 
+	if c.process_chain != nil {
+		close(c.process_chain)
+		c.process_chain = nil
+	}
+
 	if c.TunHealthStream != nil {
 		c.TunHealthStream.Close()
 		c.TunHealthStream = nil
@@ -53,21 +58,18 @@ func (c *TunActive) Release() {
 		c.TunQuicConn = nil
 	}
 
-	if c.Conn != nil {
-		c.Conn.Close()
-		c.Conn = nil
-	}
-
 	for _, conn := range c.ConnList {
 		if conn != nil {
 			conn.Close()
 		}
 	}
 
-	if c.process_chain != nil {
-		close(c.process_chain)
-		c.process_chain = nil
-	}
+	/*
+		if c.Conn != nil {
+			c.Conn.Close()
+			c.Conn = nil
+		}
+	*/
 }
 
 func (c *TunActive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
@@ -95,6 +97,7 @@ func (c *TunActive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 
 	log.Printf("   process_quic new_quic_stream.Write: %v ==> %v\n", new_quic_conn.LocalAddr(), new_quic_conn.RemoteAddr())
 	if n, err := new_quic_stream.Write(m_send_data); n > 0 && err == nil {
+		conn.SetDeadline(time.Time{})
 		c.TunQuicConn = new_quic_conn
 		c.TunHealthStream = new_quic_stream
 		c.process_chain <- new_quic_conn
@@ -138,7 +141,9 @@ func (c *TunActive) send(conn2 *net.UDPConn, dst_ip string, dst_port int) int {
 
 	remoteAddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", dst_ip, dst_port))
 
-	conn2.WriteToUDP(m_send_data, remoteAddr)
+	if n, err := conn2.WriteToUDP(m_send_data, remoteAddr); n == 0 || err != nil {
+		return -1
+	}
 
 	return 1
 }
@@ -167,7 +172,7 @@ func (c *TunActive) process_server4(ip string) int {
 	return 1
 }
 
-func (c *TunActive) Start(ip string, port int) {
+func (c *TunActive) Start(ip string, port int, time_out time.Duration) {
 	log.Printf("   发起主动连接: %v:%v\n", ip, port)
 
 	for i := port; i < port+8; i += 2 {
@@ -175,13 +180,14 @@ func (c *TunActive) Start(ip string, port int) {
 		c.ConnList = append(c.ConnList, conn2)
 		c.SetReadFunc(conn2)
 		c.process3(conn2, ip, i)
+		c.Conn.SetDeadline(time.Now().Add(3000 * time.Millisecond))
 	}
 
 	c.SetReadFunc(c.Conn)
-
 	for i := -32; i <= 64; i += 1 {
 		c.send(c.Conn, ip, port+i)
 	}
+	c.Conn.SetDeadline(time.Now().Add(time_out))
 
 	go func() {
 		for {

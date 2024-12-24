@@ -59,6 +59,7 @@ func Release() {
 
 type RedisJsonType struct {
 	State         int           `bson:"state" json:"state"`
+	SocketTimeOut time.Duration `bson:"SocketTimeOut" json:"SocketTimeOut"`
 	RedisTimeOut  time.Duration `bson:"RedisTimeOut" json:"RedisTimeOut"`
 	SendPortCount int           `bson:"send_port_count" json:"send_port_count"`
 	ConnectCount  int           `bson:"connect_count" json:"connect_count"`

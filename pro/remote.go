@@ -39,7 +39,8 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			return nil, nil
 		}
 
-		redisJson.RedisTimeOut = time_out * 3
+		redisJson.SocketTimeOut = time_out
+		redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 
 		switch redisJson.State {
 		case 0:
@@ -89,7 +90,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			switch conn_type {
 			case 0:
 				log.Printf("%d: 收到对端地址: %v\n", redisJson.State, redisJson)
-				m_tun_active.Start(redisJson.ClientIP, redisJson.ClientPort)
+				m_tun_active.Start(redisJson.ClientIP, redisJson.ClientPort, redisJson.SocketTimeOut)
 
 			case 1:
 				log.Printf("%d: 收到对端地址, 等待连接: %v\n", redisJson.State, redisJson)
