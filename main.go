@@ -20,9 +20,11 @@ func main2() {
 		os.Exit(0)
 	}
 
-	if m_cli_pprof_addr != "" {
-		go log.Println(http.ListenAndServe(m_cli_pprof_addr, nil))
-	}
+	go func() {
+		if m_cli_pprof_addr != "" {
+			log.Println(http.ListenAndServe(m_cli_pprof_addr, nil))
+		}
+	}()
 
 	if m_cli_stun_svr_addr != "" {
 		stun2.StartSvr(m_cli_stun_svr_addr, m_cli_stun_svr_port)
