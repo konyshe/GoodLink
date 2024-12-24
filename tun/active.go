@@ -101,6 +101,18 @@ func (c *TunActive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 		c.TunQuicConn = new_quic_conn
 		c.TunHealthStream = new_quic_stream
 		c.process_chain <- new_quic_conn
+
+		connList := make([]*net.UDPConn, 0)
+		for _, conn2 := range c.ConnList {
+			if conn2 != nil {
+				if conn.LocalAddr() != conn2.LocalAddr() {
+					conn2.Close()
+					continue
+				}
+				connList = append(connList, conn2)
+			}
+		}
+		c.ConnList = connList
 	}
 }
 
@@ -192,12 +204,10 @@ func (c *TunActive) Start(ip string, port int, time_out time.Duration) {
 	go func() {
 		for {
 			c.send(c.Conn, ip, port)
-
 			if c.process_server4(ip) < 0 {
 				return
 			}
-
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 }
