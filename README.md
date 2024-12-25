@@ -26,7 +26,9 @@
 
 7. 本程序即支持命令行方式，也支持docker方式，以下举例仅作参考，实际可随意切换
 
-8. windows自带杀毒软件，会统一将所有go语言写的程序都认为是病毒。由于本程序已开源，随时监督，因此可放心食用
+8. windows自带杀毒软件，会将所有go语言写的程序都认为是病毒。本程序已开源，可放心食用
+
+![原理图](https://gitee.com/konyshe/goodlink/raw/master/prototype_cn.gif "原理图")
 
 # 简单使用
 
