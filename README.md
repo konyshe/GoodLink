@@ -10,6 +10,8 @@
 
 注：1.1.6版本开始加强了通信安全，因此和老版本不兼容
 
+![原理图](https://gitee.com/konyshe/goodlink/raw/master/prototype_cn.gif "原理图")
+
 # 介绍
 
 1. 两台主机运行同一个程序, 一台主机加--remote选项(以下称remote端), 另一台主机加--local选项(以下称local端)
@@ -26,7 +28,7 @@
 
 7. 本程序即支持命令行方式，也支持docker方式，以下举例仅作参考，实际可随意切换
 
-8. windows自带杀毒软件，会统一将所有go语言写的程序都认为是病毒。由于本程序已开源，随时监督，因此可放心食用
+8. windows自带杀毒软件，会将所有go语言写的程序都认为是病毒。本程序已开源，可放心食用
 
 # 简单使用
 
@@ -102,7 +104,7 @@ Usage of bin/goodlink-linux-amd64:
   --local string
         local端监听的地址端口
   --key string
-        自定义, local端和remote端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
+        自己随便定义, 但local端和remote端必须一致。建议16-24个字节长度，防止冲突: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
   --conn int
         由于remote和local两端默认使用的算法不一样，如果出现超过10分钟无法连接的情况，可能是其中一端和默认的算法不兼容，
         此时可在local端增加 "--conn=1" 选项，以调换两端的算法，就能连接了
