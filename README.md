@@ -10,6 +10,8 @@
 
 注：1.1.6版本开始加强了通信安全，因此和老版本不兼容
 
+![原理图](https://gitee.com/konyshe/goodlink/raw/master/prototype_cn.gif "原理图")
+
 # 介绍
 
 1. 两台主机运行同一个程序, 一台主机加--remote选项(以下称remote端), 另一台主机加--local选项(以下称local端)
@@ -27,8 +29,6 @@
 7. 本程序即支持命令行方式，也支持docker方式，以下举例仅作参考，实际可随意切换
 
 8. windows自带杀毒软件，会将所有go语言写的程序都认为是病毒。本程序已开源，可放心食用
-
-![原理图](https://gitee.com/konyshe/goodlink/raw/master/prototype_cn.gif "原理图")
 
 # 简单使用
 
