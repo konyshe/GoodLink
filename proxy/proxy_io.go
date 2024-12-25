@@ -11,7 +11,7 @@ import (
 
 func check(err error) bool {
 	if err != nil {
-		if !strings.Contains(err.Error(), "time out") && !strings.Contains(err.Error(), "closed") {
+		if !strings.Contains(err.Error(), "timeout") && !strings.Contains(err.Error(), "closed") {
 			return true
 		}
 	}
