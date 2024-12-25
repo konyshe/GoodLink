@@ -24,6 +24,10 @@
 
 6. 由于直连过程复杂，会出现反复重试，通常10分钟内成功。如果长时间无法连接，请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
 
+7. 本程序即支持命令行方式，也支持docker方式，以下举例仅作参考，实际可随意切换
+
+8. windows自带杀毒软件，会统一将所有go语言写的程序都认为是病毒。由于本程序已开源，随时监督，因此可放心食用
+
 # 简单使用
 
 ## 工作模式 - 介绍
@@ -40,7 +44,7 @@
 
     local端无需配置Socks5代理，直接访问指定的本地端口，就等于访问remote端指定的主机端口。但也只能访问这一个端口
 
-    注：转发模式仅支持TCP协议，如果remote端需要转发多个TCP端口，需执行多个命令或启动多个 Docker（--key不能重复）
+    注：转发模式仅支持TCP协议，一个remote端只能转发一个端口，可运行多个remote端
 
 ## 代理模式 - 举例
 
@@ -94,7 +98,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
 Usage of bin/goodlink-linux-amd64:
   --remote string
-        remote端所处网络中, 需要被远程访问的主机地址端口。若不加这个选项就，就是代理模式
+        remote端所处网络中, 需要被远程访问的主机地址端口。若不加这个选项，就是代理模式
   --local string
         local端监听的地址端口
   --key string
@@ -114,4 +118,4 @@ cd goodlink
 make clean; make
 ```
 
-# [详细使用说明](https://gitee.com/konyshe/goodlink/issues?q=label%253A%E5%92%A8%E8%AF%A2)
+# [问题解答](https://gitee.com/konyshe/goodlink/issues)
