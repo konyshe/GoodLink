@@ -34,7 +34,7 @@ func help() {
 	flag.IntVar(&m_cli_stun_svr_port, "stun_port", 3478, "stun svr listen port")
 	m_cli_stun_test = flag.Bool("stun_test", false, "后台执行")
 
-	flag.StringVar(&m_cli_pprof_addr, "pprof_addr", "", "性能检测服务监听的地址端口, 例如: 0.0.0.0:6060")
+	flag.StringVar(&m_cli_pprof_addr, "pprof_addr", "", "性能监测服务监听的地址端口, 例如: 0.0.0.0:6060")
 	flag.StringVar(&m_cli_redis_addr, "redis_addr", "", "Redis服务地址端口, 例如: 1.2.3.4:6379")
 	flag.StringVar(&m_cli_redis_pass, "redis_pass", "", "Redis服务密码, 例如: 123456")
 	flag.IntVar(&m_cli_redis_id, "redis_id", 15, "Redis服务可使用的表ID")
