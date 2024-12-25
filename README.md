@@ -102,7 +102,7 @@ Usage of bin/goodlink-linux-amd64:
   --local string
         local端监听的地址端口
   --key string
-        自定义, local端和remote端必须一致。16-24个字节长度: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
+        自己随便定义, 但local端和remote端必须一致。建议16-24个字节长度，防止冲突: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
   --conn int
         由于remote和local两端默认使用的算法不一样，如果出现超过10分钟无法连接的情况，可能是其中一端和默认的算法不兼容，
         此时可在local端增加 "--conn=1" 选项，以调换两端的算法，就能连接了
