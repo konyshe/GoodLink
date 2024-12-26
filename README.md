@@ -110,14 +110,4 @@ Usage of bin/goodlink-linux-amd64:
         此时可在local端增加 "--conn=1" 选项，以调换两端的算法，就能连接了
 ```
 
-# 自己如何编译
-
-```
-cd /root/go/src
-git clone -b main https://gitee.com/konyshe/gogo.git
-git clone https://gitee.com/konyshe/goodlink.git
-cd goodlink
-make clean; make
-```
-
 # [问题解答](https://gitee.com/konyshe/goodlink/issues)
