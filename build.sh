@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-#set -x
+set -x
 
-rm -rf gogo
+rm -rf gogo goodlink2
 cp -r ../gogo .
+cp -r ../goodlink2 .
 
 if [ -e "/usr/bin/upx" ]; then
     cp /usr/bin/upx .
@@ -25,7 +26,7 @@ docker pull tonistiigi/xx:golang
 
 docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
 
-rm -rf gogo upx
+rm -rf gogo goodlink2 upx
 
 sed -i "/$BUILD_TIME/s/$BUILD_TIME/111111111111/g" Dockerfile
 
