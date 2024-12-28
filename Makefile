@@ -14,7 +14,7 @@ GOBUILD=GO111MODULE=on \
 PLATFORM_LIST = \
 	linux-arm64 \
 	linux-amd64 \
-	windows-amd64
+	windows-amd64-app
 
 all: clean $(PLATFORM_LIST) strip
 
@@ -27,8 +27,13 @@ linux-arm64:
 windows-amd64:
 	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
+windows-amd64-app:
+#	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 fyne package -os windows -icon theme/favicon.ico
+#	go build -ldflags -H=windowsgui
+	fyne package; mv *.exe bin/
+
 strip:
 	upx $(BINDIR)/*
 
 clean:
-	rm -rf $(BINDIR)
+	rm -rf $(BINDIR) *.exe

@@ -1,0 +1,8 @@
+Website = "https://goodlink.kony.vip"
+
+[Details]
+  Icon = "theme/favicon.png"
+  Name = "GoodLink"
+  ID = "goodlink.kony.vip"
+  Version = "1.13.17"
+  Build = 13
