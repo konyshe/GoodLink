@@ -1,4 +1,4 @@
-package ui
+package ui2
 
 import (
 	"fyne.io/fyne/driver/mobile"

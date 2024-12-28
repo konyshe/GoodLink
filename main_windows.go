@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"goodlink/theme"
-	"goodlink/ui"
+	"goodlink/ui2"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -23,6 +23,8 @@ import (
 var (
 	m_local_ip    string
 	m_remote_addr string
+	key_box       *fyne.Container
+	keyValidated  *ui2.StringEntry
 )
 
 const (
@@ -44,34 +46,36 @@ func LogInit(log_view *widget.Label) {
 }
 
 func RemoteUI() *fyne.Container {
-	entryValidated := ui.NewIpPortEntry("127.0.0.1:22")
-	remote_ipport_box := container.NewVBox(
-		widget.NewForm(
-			widget.NewFormItem("转发目标地址: ", entryValidated)),
-	)
+	entryValidated := ui2.NewIpPortEntry("127.0.0.1:22")
 
 	radio := widget.NewRadioGroup([]string{"代理模式", "转发模式"}, nil)
 	radio.OnChanged = func(value string) {
 		switch value {
 		case "代理模式":
-			remote_ipport_box.Hide()
+			entryValidated.SetText("")
+			entryValidated.Disabled()
 		case "转发模式":
-			remote_ipport_box.Show()
+			entryValidated.Enable()
 		default:
 			radio.SetSelected("代理模式")
 		}
 	}
 	radio.SetSelected("代理模式")
 	radio.Horizontal = true
-	fixed := container.NewVBox(
+
+	return container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("连接密钥: ", keyValidated)),
 		widget.NewForm(
 			widget.NewFormItem("工作模式: ", radio)),
+		widget.NewForm(
+			widget.NewFormItem("转发目标地址: ", entryValidated)),
 	)
-
-	return container.NewVBox(fixed, remote_ipport_box)
 }
 
 func LocalUI() *fyne.Container {
+	entryValidated := ui2.NewPortEntry()
+
 	radio := widget.NewRadioGroup([]string{"只允许本机", "允许局域网"}, nil)
 	radio.OnChanged = func(value string) {
 		switch value {
@@ -85,18 +89,15 @@ func LocalUI() *fyne.Container {
 	}
 	radio.SetSelected("只允许本机")
 	radio.Horizontal = true
-	fixed := container.NewVBox(
+
+	return container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("连接密钥: ", keyValidated)),
 		widget.NewForm(
 			widget.NewFormItem("访问权限: ", radio)),
-	)
-
-	entryValidated := ui.NewPortEntry()
-	local_port_box := container.NewVBox(
 		widget.NewForm(
 			widget.NewFormItem("监听端口: ", entryValidated)),
 	)
-
-	return container.NewVBox(fixed, local_port_box)
 }
 
 func main() {
@@ -113,6 +114,8 @@ func main() {
 			}))
 		desk.SetSystemTrayMenu(m)
 	}
+
+	keyValidated = ui2.NewStringEntry("请自定义16-32长度字符串")
 
 	localUI := LocalUI()
 	remoteUI := RemoteUI()
@@ -141,12 +144,6 @@ func main() {
 			widget.NewFormItem("请选择工作端: ", radio)),
 	)
 
-	entryValidated := ui.NewStringEntry("请自定义16-32长度字符串")
-	key_box := container.NewVBox(
-		widget.NewForm(
-			widget.NewFormItem("连接密钥: ", entryValidated)),
-	)
-
 	log_view := widget.NewLabel("等待启动")
 	LogInit(log_view)
 
@@ -154,7 +151,7 @@ func main() {
 		log_view.SetText("正在启动...")
 	})
 
-	myWindow.SetContent(container.New(layout.NewGridLayout(1), fixed, key_box, localUI, remoteUI, log_view, start_button))
+	myWindow.SetContent(container.New(layout.NewGridLayout(1), fixed, localUI, remoteUI, log_view, start_button))
 	myWindow.Resize(fyne.NewSize(200, 100))
 	myWindow.FixedSize()
 
