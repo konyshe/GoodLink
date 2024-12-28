@@ -50,7 +50,7 @@ func LogInit(log_view *widget.Label) {
 }
 
 func RemoteUI() *fyne.Container {
-	remote_addr_box := ui2.NewIpPortEntry("127.0.0.1:22")
+	remote_addr_box := ui2.NewIpPortEntry("127.0.0.1:3389")
 	remote_addr_box2 := container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("转发目标地址: "), remote_addr_box)
 
 	radio := widget.NewRadioGroup([]string{"代理模式", "转发模式"}, nil)
