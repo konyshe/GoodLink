@@ -64,12 +64,9 @@ func RemoteUI() *fyne.Container {
 	radio.Horizontal = true
 
 	return container.NewVBox(
-		widget.NewForm(
-			widget.NewFormItem("连接密钥: ", keyValidated)),
-		widget.NewForm(
-			widget.NewFormItem("工作模式: ", radio)),
-		widget.NewForm(
-			widget.NewFormItem("转发目标地址: ", entryValidated)),
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("工作模式: "), radio),
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("转发目标地址: "), entryValidated),
 	)
 }
 
@@ -91,12 +88,9 @@ func LocalUI() *fyne.Container {
 	radio.Horizontal = true
 
 	return container.NewVBox(
-		widget.NewForm(
-			widget.NewFormItem("连接密钥: ", keyValidated)),
-		widget.NewForm(
-			widget.NewFormItem("访问权限: ", radio)),
-		widget.NewForm(
-			widget.NewFormItem("监听端口: ", entryValidated)),
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("访问权限: "), radio),
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("监听端口: "), entryValidated),
 	)
 }
 
@@ -146,13 +140,14 @@ func main() {
 
 	log_view := widget.NewLabel("等待启动")
 	LogInit(log_view)
+	log_view2 := container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("状态: "), log_view)
 
 	start_button := widget.NewButton("点击启动", func() {
 		log_view.SetText("正在启动...")
 	})
 
-	myWindow.SetContent(container.New(layout.NewGridLayout(1), fixed, localUI, remoteUI, log_view, start_button))
-	myWindow.Resize(fyne.NewSize(200, 100))
+	myWindow.SetContent(container.New(layout.NewVBoxLayout(), fixed, localUI, remoteUI, log_view2, start_button))
+	//myWindow.Resize(fyne.NewSize(200, 100))
 	myWindow.FixedSize()
 
 	myWindow.SetCloseIntercept(func() {
