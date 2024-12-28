@@ -5,9 +5,9 @@ package main
 import (
 	"gogo"
 	"log"
-	"time"
 
 	"goodlink/theme"
+	"goodlink/ui"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -21,11 +21,8 @@ import (
 )
 
 var (
-	m_run_state float64
-)
-
-const (
-	M_USE_LOCAL_HTTP_SVR = true
+	m_local_ip    string
+	m_remote_addr string
 )
 
 const (
@@ -46,27 +43,60 @@ func LogInit(log_view *widget.Label) {
 	})
 }
 
-func main2() {
-	m_run_state = 0.1
+func RemoteUI() *fyne.Container {
+	entryValidated := ui.NewIpPortEntry("127.0.0.1:22")
+	remote_ipport_box := container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("转发目标地址: ", entryValidated)),
+	)
 
-	if M_USE_LOCAL_HTTP_SVR {
-		gogo.Log().Info("正在初始化端口1...")
+	radio := widget.NewRadioGroup([]string{"代理模式", "转发模式"}, nil)
+	radio.OnChanged = func(value string) {
+		switch value {
+		case "代理模式":
+			remote_ipport_box.Hide()
+		case "转发模式":
+			remote_ipport_box.Show()
+		default:
+			radio.SetSelected("代理模式")
+		}
 	}
-	m_run_state = 0.3
+	radio.SetSelected("代理模式")
+	radio.Horizontal = true
+	fixed := container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("工作模式: ", radio)),
+	)
 
-	m_run_state = 0.4
+	return container.NewVBox(fixed, remote_ipport_box)
+}
 
-	gogo.Utils().TimeSleepSecond(1)
+func LocalUI() *fyne.Container {
+	radio := widget.NewRadioGroup([]string{"只允许本机", "允许局域网"}, nil)
+	radio.OnChanged = func(value string) {
+		switch value {
+		case "只允许本机":
+			m_local_ip = "127.0.0.1"
+		case "允许局域网":
+			m_local_ip = "0.0.0.0"
+		default:
+			radio.SetSelected("只允许本机")
+		}
+	}
+	radio.SetSelected("只允许本机")
+	radio.Horizontal = true
+	fixed := container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("访问权限: ", radio)),
+	)
 
-	gogo.Log().Info("正在建立加密隧道...")
+	entryValidated := ui.NewPortEntry()
+	local_port_box := container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("监听端口: ", entryValidated)),
+	)
 
-	m_run_state = 0.8
-
-	gogo.Log().Info("正在创建服务...")
-
-	m_run_state = 1
-
-	gogo.Log().Info("访问地址：%s")
+	return container.NewVBox(fixed, local_port_box)
 }
 
 func main() {
@@ -84,44 +114,49 @@ func main() {
 		desk.SetSystemTrayMenu(m)
 	}
 
-	log_view := widget.NewLabel("等待启动")
-	LogInit(log_view)
-
-	copy_view := widget.NewButton("点击启动", func() {
-		log_view.SetText("正在启动...")
-	})
-
-	progress := widget.NewProgressBar()
-	infinite := widget.NewProgressBarInfinite()
-
-	go func() {
-		for {
-			time.Sleep(time.Millisecond * 250)
-			progress.SetValue(m_run_state)
-			if m_run_state >= 1 {
-				copy_view.Enable()
-			}
-		}
-	}()
-	progress_view := container.NewVBox(progress, infinite)
+	localUI := LocalUI()
+	remoteUI := RemoteUI()
 
 	radio := widget.NewRadioGroup([]string{"Remote", "Local"}, func(value string) {
 		log.Println("Radio set to", value)
 	})
-	radio.SetSelected("Local")
 	radio.OnChanged = func(value string) {
-		log.Println("Radio set to", value)
-	}
-	radio.Horizontal = true
+		switch value {
+		case "Remote":
+			localUI.Hide()
+			remoteUI.Show()
 
+		case "Local":
+			remoteUI.Hide()
+			localUI.Show()
+
+		default:
+			radio.SetSelected("Local")
+		}
+	}
+	radio.SetSelected("Local")
+	radio.Horizontal = true
 	fixed := container.NewVBox(
 		widget.NewForm(
-			widget.NewFormItem("请选择工作端", radio)),
+			widget.NewFormItem("请选择工作端: ", radio)),
 	)
 
-	grid := container.New(layout.NewGridLayout(1), fixed, log_view, progress_view, copy_view)
-	myWindow.SetContent(grid)
-	myWindow.Resize(fyne.NewSize(400, 100))
+	entryValidated := ui.NewStringEntry("请自定义16-32长度字符串")
+	key_box := container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("连接密钥: ", entryValidated)),
+	)
+
+	log_view := widget.NewLabel("等待启动")
+	LogInit(log_view)
+
+	start_button := widget.NewButton("点击启动", func() {
+		log_view.SetText("正在启动...")
+	})
+
+	myWindow.SetContent(container.New(layout.NewGridLayout(1), fixed, key_box, localUI, remoteUI, log_view, start_button))
+	myWindow.Resize(fyne.NewSize(200, 100))
+	myWindow.FixedSize()
 
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Hide()
