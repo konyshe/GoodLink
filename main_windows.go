@@ -49,33 +49,6 @@ func LogInit(log_view *widget.Label) {
 	})
 }
 
-func RemoteUI() *fyne.Container {
-	remote_addr_box := ui2.NewIpPortEntry("例如: 127.0.0.1:3389")
-
-	radio := widget.NewRadioGroup([]string{"代理模式", "转发模式"}, nil)
-	radio.OnChanged = func(value string) {
-		switch value {
-		case "代理模式":
-			m_remote_addr = remote_addr_box.Text
-			remote_addr_box.SetText("不需要设置")
-			remote_addr_box.Disable()
-		case "转发模式":
-			remote_addr_box.Enable()
-			remote_addr_box.SetText(m_remote_addr)
-		default:
-			radio.SetSelected("代理模式")
-		}
-		myWindow.Resize(myWindow.Content().MinSize())
-	}
-	radio.SetSelected("代理模式")
-	radio.Horizontal = true
-
-	return container.NewVBox(
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作模式: "), radio),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标地址: "), remote_addr_box),
-	)
-}
-
 func main() {
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
@@ -96,16 +69,18 @@ func main() {
 
 	localUI := ui2.NewLocalUI(&myWindow)
 	localUI_Container := localUI.GetContainer()
-	remoteUI := RemoteUI()
+
+	remoteUI := ui2.NewRemoteUI(&myWindow)
+	remoteUI_Container := remoteUI.GetContainer()
 
 	radio := widget.NewRadioGroup([]string{"Remote", "Local"}, nil)
 	radio.OnChanged = func(value string) {
 		switch value {
 		case "Remote":
 			localUI_Container.Hide()
-			remoteUI.Show()
+			remoteUI_Container.Show()
 		case "Local":
-			remoteUI.Hide()
+			remoteUI_Container.Hide()
 			localUI_Container.Show()
 		default:
 			radio.SetSelected("Local")
@@ -146,9 +121,9 @@ func main() {
 	start_button.Importance = widget.HighImportance
 
 	myWindow.SetContent(container.New(layout.NewVBoxLayout(),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("请选择工作端: "), radio),
+		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("选择工作端: "), radio),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
-		localUI_Container, remoteUI,
+		localUI_Container, remoteUI_Container,
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("状态: "), log_view),
 		container.NewStack(start_button, a2)))
 
