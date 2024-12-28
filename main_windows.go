@@ -25,6 +25,7 @@ var (
 	m_remote_addr string
 	key_box       *fyne.Container
 	keyValidated  *ui2.StringEntry
+	myWindow      fyne.Window
 )
 
 const (
@@ -35,38 +36,42 @@ func LogInit(log_view *widget.Label) {
 	gogo.Log().RegistInfo(func(content string) {
 		log_view.SetText(content)
 		log.Println(content)
+		myWindow.Resize(myWindow.Content().MinSize())
 	})
 	gogo.Log().RegistDebug(func(content string) {
 		log.Println(content)
+		myWindow.Resize(myWindow.Content().MinSize())
 	})
 	gogo.Log().RegistError(func(content string) {
 		log_view.SetText(content)
 		log.Println(content)
+		myWindow.Resize(myWindow.Content().MinSize())
 	})
 }
 
 func RemoteUI() *fyne.Container {
-	entryValidated := ui2.NewIpPortEntry("127.0.0.1:22")
+	remote_addr_box := ui2.NewIpPortEntry("127.0.0.1:22")
+	remote_addr_box2 := container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("转发目标地址: "), remote_addr_box)
 
 	radio := widget.NewRadioGroup([]string{"代理模式", "转发模式"}, nil)
 	radio.OnChanged = func(value string) {
 		switch value {
 		case "代理模式":
-			entryValidated.SetText("")
-			entryValidated.Disabled()
+			remote_addr_box2.Hide()
 		case "转发模式":
-			entryValidated.Enable()
+			remote_addr_box2.Show()
 		default:
 			radio.SetSelected("代理模式")
 		}
+		myWindow.Resize(myWindow.Content().MinSize())
 	}
 	radio.SetSelected("代理模式")
 	radio.Horizontal = true
 
 	return container.NewVBox(
-		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
+		container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
 		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("工作模式: "), radio),
-		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("转发目标地址: "), entryValidated),
+		remote_addr_box2,
 	)
 }
 
@@ -83,14 +88,15 @@ func LocalUI() *fyne.Container {
 		default:
 			radio.SetSelected("只允许本机")
 		}
+		myWindow.Resize(myWindow.Content().MinSize())
 	}
 	radio.SetSelected("只允许本机")
 	radio.Horizontal = true
 
 	return container.NewVBox(
-		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
+		container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
 		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("访问权限: "), radio),
-		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("监听端口: "), entryValidated),
+		container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("监听端口: "), entryValidated),
 	)
 }
 
@@ -99,7 +105,7 @@ func main() {
 	myApp.Settings().SetTheme(&theme.MyTheme{})
 	icon, _ := fyne.LoadResourceFromPath("./theme/favicon.png")
 	myApp.SetIcon(icon)
-	myWindow := myApp.NewWindow(M_APP_TITLE)
+	myWindow = myApp.NewWindow(M_APP_TITLE)
 
 	if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu(M_APP_TITLE,
@@ -110,33 +116,31 @@ func main() {
 	}
 
 	keyValidated = ui2.NewStringEntry("请自定义16-32长度字符串")
+	keyValidated.CreateRenderer().Layout(keyValidated.Size())
 
 	localUI := LocalUI()
 	remoteUI := RemoteUI()
 
 	radio := widget.NewRadioGroup([]string{"Remote", "Local"}, func(value string) {
 		log.Println("Radio set to", value)
+		myWindow.Resize(myWindow.Content().MinSize())
 	})
 	radio.OnChanged = func(value string) {
 		switch value {
 		case "Remote":
 			localUI.Hide()
 			remoteUI.Show()
-
 		case "Local":
 			remoteUI.Hide()
 			localUI.Show()
-
 		default:
 			radio.SetSelected("Local")
 		}
+		myWindow.Resize(myWindow.Content().MinSize())
 	}
 	radio.SetSelected("Local")
 	radio.Horizontal = true
-	fixed := container.NewVBox(
-		widget.NewForm(
-			widget.NewFormItem("请选择工作端: ", radio)),
-	)
+	fixed := container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("请选择工作端: "), radio)
 
 	log_view := widget.NewLabel("等待启动")
 	LogInit(log_view)
@@ -144,15 +148,13 @@ func main() {
 
 	start_button := widget.NewButton("点击启动", func() {
 		log_view.SetText("正在启动...")
+		myWindow.Resize(myWindow.Content().MinSize())
 	})
 
 	myWindow.SetContent(container.New(layout.NewVBoxLayout(), fixed, localUI, remoteUI, log_view2, start_button))
-	//myWindow.Resize(fyne.NewSize(200, 100))
-	myWindow.FixedSize()
-
 	myWindow.SetCloseIntercept(func() {
+		myWindow.Resize(myWindow.Content().MinSize())
 		myWindow.Hide()
 	})
-
 	myWindow.ShowAndRun()
 }
