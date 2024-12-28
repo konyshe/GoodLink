@@ -24,7 +24,7 @@ var (
 	m_local_ip    string
 	m_remote_addr string
 	key_box       *fyne.Container
-	keyValidated  *ui2.StringEntry
+	keyValidated  *widget.Entry
 	myWindow      fyne.Window
 )
 
@@ -57,9 +57,12 @@ func RemoteUI() *fyne.Container {
 	radio.OnChanged = func(value string) {
 		switch value {
 		case "代理模式":
-			remote_addr_box2.Hide()
+			m_remote_addr = remote_addr_box.Text
+			remote_addr_box.SetText("不需要设置")
+			remote_addr_box.Disable()
 		case "转发模式":
-			remote_addr_box2.Show()
+			remote_addr_box.Enable()
+			remote_addr_box.SetText(m_remote_addr)
 		default:
 			radio.SetSelected("代理模式")
 		}
@@ -69,7 +72,6 @@ func RemoteUI() *fyne.Container {
 	radio.Horizontal = true
 
 	return container.NewVBox(
-		container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
 		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("工作模式: "), radio),
 		remote_addr_box2,
 	)
@@ -94,7 +96,6 @@ func LocalUI() *fyne.Container {
 	radio.Horizontal = true
 
 	return container.NewVBox(
-		container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
 		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("访问权限: "), radio),
 		container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("监听端口: "), entryValidated),
 	)
@@ -115,16 +116,13 @@ func main() {
 		desk.SetSystemTrayMenu(m)
 	}
 
-	keyValidated = ui2.NewStringEntry("请自定义16-32长度字符串")
-	keyValidated.CreateRenderer().Layout(keyValidated.Size())
+	keyValidated = widget.NewEntry()
+	keyValidated.SetPlaceHolder("请自定义16-32长度字符串")
 
 	localUI := LocalUI()
 	remoteUI := RemoteUI()
 
-	radio := widget.NewRadioGroup([]string{"Remote", "Local"}, func(value string) {
-		log.Println("Radio set to", value)
-		myWindow.Resize(myWindow.Content().MinSize())
-	})
+	radio := widget.NewRadioGroup([]string{"Remote", "Local"}, nil)
 	radio.OnChanged = func(value string) {
 		switch value {
 		case "Remote":
@@ -140,18 +138,23 @@ func main() {
 	}
 	radio.SetSelected("Local")
 	radio.Horizontal = true
-	fixed := container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("请选择工作端: "), radio)
 
 	log_view := widget.NewLabel("等待启动")
 	LogInit(log_view)
-	log_view2 := container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("状态: "), log_view)
 
 	start_button := widget.NewButton("点击启动", func() {
 		log_view.SetText("正在启动...")
 		myWindow.Resize(myWindow.Content().MinSize())
 	})
+	start_button.Importance = widget.HighImportance
 
-	myWindow.SetContent(container.New(layout.NewVBoxLayout(), fixed, localUI, remoteUI, log_view2, start_button))
+	myWindow.SetContent(container.New(layout.NewVBoxLayout(),
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("请选择工作端: "), radio),
+		container.New(layout.NewVBoxLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
+		localUI, remoteUI,
+		container.New(layout.NewHBoxLayout(), widget.NewRichTextWithText("状态: "), log_view),
+		start_button))
+
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Resize(myWindow.Content().MinSize())
 		myWindow.Hide()
