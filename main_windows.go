@@ -70,7 +70,7 @@ func main() {
 	keyValidated.SetPlaceHolder("自定义16-32字节长度")
 
 	key_create_button := widget.NewButton("生成密钥", func() {
-		keyValidated.SetText(tools.RandomString(16))
+		keyValidated.SetText(tools.RandomString(27))
 	})
 	key_copy_button := widget.NewButton("复制密钥", func() {
 		clipboard.WriteAll(keyValidated.Text)
