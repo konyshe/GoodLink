@@ -26,7 +26,7 @@ func (c *LocalUI) Enable() {
 func (c *LocalUI) GetContainer() *fyne.Container {
 	return container.NewVBox(
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("访问权限: "), c.radio),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("监听端口: "), c.port_box),
+		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("访问端口: "), c.port_box),
 	)
 }
 
@@ -45,7 +45,6 @@ func NewLocalUI(myWindow *fyne.Window) *LocalUI {
 		default:
 			c.radio.SetSelected("只允许本机")
 		}
-		(*myWindow).Resize((*myWindow).Content().MinSize())
 	}
 	c.radio.SetSelected("只允许本机")
 	c.radio.Horizontal = true

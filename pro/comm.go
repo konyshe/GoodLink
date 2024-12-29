@@ -40,6 +40,11 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int, tun_key
 		log.Println("Redis初始化失败")
 		os.Exit(0)
 	}
+	if _, err := m_redis_db.Ping().Result(); err != nil { //心跳
+		log.Printf("Redis连接错误: %s", err)
+		os.Exit(0)
+	}
+
 	m_tun_active = nil
 	m_tun_passive = nil
 

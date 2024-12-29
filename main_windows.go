@@ -3,9 +3,12 @@
 package main
 
 import (
+	"errors"
 	"gogo"
 	"log"
 
+	"goodlink/pro"
+	_ "goodlink/pro"
 	"goodlink/theme"
 	"goodlink/tools"
 	"goodlink/ui2"
@@ -38,16 +41,13 @@ func LogInit(log_view *widget.Label) {
 	gogo.Log().RegistInfo(func(content string) {
 		log_view.SetText(content)
 		log.Println(content)
-		myWindow.Resize(myWindow.Content().MinSize())
 	})
 	gogo.Log().RegistDebug(func(content string) {
 		log.Println(content)
-		myWindow.Resize(myWindow.Content().MinSize())
 	})
 	gogo.Log().RegistError(func(content string) {
 		log_view.SetText(content)
-		log.Println(content)
-		myWindow.Resize(myWindow.Content().MinSize())
+		fyne.LogError("error: ", errors.New(content))
 	})
 }
 
@@ -99,7 +99,6 @@ func main() {
 		default:
 			radio.SetSelected("Local")
 		}
-		myWindow.Resize(myWindow.Content().MinSize())
 	}
 	radio.SetSelected("Local")
 	radio.Horizontal = true
@@ -132,9 +131,14 @@ func main() {
 			log_view.SetText("正在停止...")
 			start_button_stats = 0
 		}
-		myWindow.Resize(myWindow.Content().MinSize())
 	})
 	start_button.Importance = widget.HighImportance
+	start_button.Resize(fyne.NewSize(100, 40))
+	start_button.Disable()
+	go func() {
+		pro.Init("", "", 0, "")
+		start_button.Enable()
+	}()
 
 	myWindow.SetContent(container.New(layout.NewVBoxLayout(),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("选择工作端: "), radio),
@@ -145,7 +149,6 @@ func main() {
 		container.NewStack(start_button, start_button_activity)))
 
 	myWindow.SetCloseIntercept(func() {
-		myWindow.Resize(myWindow.Content().MinSize())
 		myWindow.Hide()
 	})
 	myWindow.ShowAndRun()

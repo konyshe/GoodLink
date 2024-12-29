@@ -40,15 +40,16 @@ func NewRemoteUI(myWindow *fyne.Window) *RemoteUI {
 		switch value {
 		case "代理模式":
 			c.remote_addr = c.remote_addr_box.Text
-			c.remote_addr_box.SetText("不需要设置")
+			c.remote_addr_box.SetPlaceHolder("不需要设置")
+			c.remote_addr_box.SetText("")
 			c.remote_addr_box.Disable()
 		case "转发模式":
 			c.remote_addr_box.Enable()
+			c.remote_addr_box.SetPlaceHolder("例如: 127.0.0.1:3389")
 			c.remote_addr_box.SetText(c.remote_addr)
 		default:
 			c.radio.SetSelected("代理模式")
 		}
-		(*myWindow).Resize((*myWindow).Content().MinSize())
 	}
 	c.radio.SetSelected("代理模式")
 	c.radio.Horizontal = true
