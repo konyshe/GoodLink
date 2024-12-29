@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"goodlink/theme"
+	"goodlink/tools"
 	"goodlink/ui2"
 
 	_ "embed"
@@ -18,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/atotto/clipboard"
 )
 
 var (
@@ -65,13 +67,18 @@ func main() {
 	}
 
 	keyValidated = widget.NewEntry()
-	keyValidated.SetPlaceHolder("请自定义16-32长度字符串")
+	keyValidated.SetPlaceHolder("自定义16-32字节长度")
 
 	key_create_button := widget.NewButton("生成密钥", func() {
+		keyValidated.SetText(tools.RandomString(16))
 	})
 	key_copy_button := widget.NewButton("复制密钥", func() {
+		clipboard.WriteAll(keyValidated.Text)
 	})
 	key_paste_button := widget.NewButton("粘贴密钥", func() {
+		if s, err := clipboard.ReadAll(); err == nil {
+			keyValidated.SetText(s)
+		}
 	})
 
 	localUI := ui2.NewLocalUI(&myWindow)

@@ -2,18 +2,22 @@ package tools
 
 import (
 	"crypto/rand"
-	"encoding/base64"
-	"io"
+	"math/big"
 	"net"
 )
 
 func RandomString(length int) string {
-	k := make([]byte, length)
-	_, err := io.ReadFull(rand.Reader, k)
-	if err != nil {
-		panic(err.Error())
+	bytes := make([]byte, length)
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	for i := 0; i < length; {
+		bint, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return ""
+		}
+		bytes[i] = charset[bint.Int64()]
+		i++
 	}
-	return base64.StdEncoding.EncodeToString(k)
+	return string(bytes)
 }
 
 // 检测未使用的端口
