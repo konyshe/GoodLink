@@ -2,6 +2,7 @@ package pro
 
 import (
 	"fmt"
+	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/stun2"
 	"goodlink/tools"
@@ -14,6 +15,10 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
+var (
+	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
+)
+
 func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 	var err error
 
@@ -23,6 +28,10 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 
 	wan_ip_chain := make(chan string, 1)
 	wan_port_chain := make(chan int, 1)
+	defer func() {
+		close(wan_ip_chain)
+		close(wan_port_chain)
+	}()
 
 	conn := tools.GetListenUDP()
 
@@ -44,7 +53,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 		RedisSet(15*time.Second, &redisJson)
 	}
 
-	for {
+	for m_local_state == 1 {
 		time.Sleep(1 * time.Second)
 
 		err = RedisGet(&redisJson)
@@ -110,18 +119,40 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 			log.Printf("%d: 等待对端状态\n", redisJson.State)
 		}
 	}
+
+	return nil, nil
 }
 
-func RunLocal(conn_type int, tun_local_addr string, tun_key string, retry bool) error {
+func GetLocalStats() int {
+	return m_local_state
+}
+
+func StopLocal() error {
+	m_local_state = 0
+	Release()
+	return nil
+}
+
+func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
+	m_local_state = 1
+
+	chain := make(chan int, 1)
+
 	listener, err := net.Listen("tcp", tun_local_addr)
 	if listener == nil || err != nil {
 		return fmt.Errorf("地址监听失败: %v", tun_local_addr)
 	}
-	defer listener.Close()
+	defer func() {
+		listener.Close()
+		close(chain)
+	}()
+
+	m_tun_key = tun_key
+	m_md5_tun_key = md5.Encode(tun_key)
 
 	count := 0
 
-	for {
+	for m_local_state == 1 {
 
 		count++
 
@@ -131,13 +162,14 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string, retry bool) 
 			continue
 		}
 
-		chain := make(chan int, 1)
 		go func() {
 			proxy.ProcessProxyClient(listener, conn)
 			chain <- 1
 		}()
 
+		m_local_state = 2
 		tun.ProcessHealth(health)
+		m_local_state = 1
 		log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
 		Release()
 
@@ -148,9 +180,7 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string, retry bool) 
 
 		<-chain
 		count = 0
-
-		if !retry {
-			return fmt.Errorf("   连接已断开")
-		}
 	}
+
+	return nil
 }

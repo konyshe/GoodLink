@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"goodlink/aes"
 	"goodlink/config"
-	"goodlink/md5"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
 	"log"
@@ -23,7 +22,7 @@ var (
 	m_tun_passive *tun.TunPassive
 )
 
-func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int, tun_key string) {
+func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) {
 	if m_cli_redis_addr == "" {
 		config.Init()
 		m_cli_redis_addr = config.GetAddr()
@@ -47,9 +46,6 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int, tun_key
 
 	m_tun_active = nil
 	m_tun_passive = nil
-
-	m_tun_key = tun_key
-	m_md5_tun_key = md5.Encode(tun_key)
 }
 
 func Release() {

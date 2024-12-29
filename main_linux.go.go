@@ -35,7 +35,7 @@ func main2() {
 
 	// 第三方集成, 关注以下代码即可
 	go func() {
-		pro.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id, m_cli_tun_key)
+		pro.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id)
 
 		switch len(m_cli_tun_local_addr) {
 		case 0:
@@ -46,8 +46,7 @@ func main2() {
 		default:
 			if err := pro.RunLocal(m_cli_conn_type,
 				m_cli_tun_local_addr,
-				m_cli_tun_key,
-				true); err != nil {
+				m_cli_tun_key); err != nil {
 
 				log.Println(err)
 				os.Exit(0)

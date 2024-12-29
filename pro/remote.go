@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/stun2"
 	"goodlink/tools"
@@ -135,6 +136,9 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 		}
 		go proxy.ListenSocks5(remote_addr)
 	}
+
+	m_tun_key = tun_key
+	m_md5_tun_key = md5.Encode(tun_key)
 
 	for {
 		conn, health := GetRemoteQuicConn(time_out)

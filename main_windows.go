@@ -6,6 +6,8 @@ import (
 	"errors"
 	"gogo"
 	"log"
+	"sync"
+	"time"
 
 	"goodlink/pro"
 	_ "goodlink/pro"
@@ -31,22 +33,24 @@ var (
 	key_box       *fyne.Container
 	keyValidated  *widget.Entry
 	myWindow      fyne.Window
+	m_start_mg    sync.WaitGroup
+	m_start_lock  sync.Mutex
 )
 
 const (
 	M_APP_TITLE = "GoodLink"
 )
 
-func LogInit(log_view *widget.Label) {
+func LogInit(log_view *ui2.LogLabel) {
 	gogo.Log().RegistInfo(func(content string) {
-		log_view.SetText(content)
+		ui2.SetLogLabel(content)
 		log.Println(content)
 	})
 	gogo.Log().RegistDebug(func(content string) {
-		log.Println(content)
+		ui2.SetLogLabel(content)
 	})
 	gogo.Log().RegistError(func(content string) {
-		log_view.SetText(content)
+		ui2.SetLogLabel(content)
 		fyne.LogError("error: ", errors.New(content))
 	})
 }
@@ -67,10 +71,10 @@ func main() {
 	}
 
 	keyValidated = widget.NewEntry()
-	keyValidated.SetPlaceHolder("自定义16-32字节长度")
+	keyValidated.SetPlaceHolder("自定义16-24字节长度")
 
 	key_create_button := widget.NewButton("生成密钥", func() {
-		keyValidated.SetText(tools.RandomString(27))
+		keyValidated.SetText(tools.RandomString(24))
 	})
 	key_copy_button := widget.NewButton("复制密钥", func() {
 		clipboard.WriteAll(keyValidated.Text)
@@ -103,14 +107,19 @@ func main() {
 	radio.SetSelected("Local")
 	radio.Horizontal = true
 
-	log_view := widget.NewLabel("等待启动")
+	log_view := ui2.NewLogLabel("等待启动")
 	LogInit(log_view)
 
 	start_button_stats := 0
 	start_button_activity := widget.NewActivity()
-	start_button := widget.NewButton("点击启动", func() {
+	start_button := widget.NewButton("点击启动", nil)
+	start_button.OnTapped = func() {
+		m_start_lock.Lock()
+		defer m_start_lock.Unlock()
+
 		switch start_button_stats {
 		case 0:
+			start_button.Disable()
 			radio.Disable()
 			keyValidated.Disable()
 			localUI.Disable()
@@ -120,23 +129,60 @@ func main() {
 			start_button_activity.Show()
 			log_view.SetText("正在启动...")
 			start_button_stats = 1
+
+			go func() {
+				time.Sleep(time.Second * 1)
+				start_button.Enable()
+
+				for start_button_stats == 1 {
+					if pro.GetLocalStats() == 2 {
+						log_view.SetText("连接成功")
+						break
+					}
+					time.Sleep(time.Millisecond * 200)
+				}
+			}()
+
+			switch radio.Selected {
+			case "Local":
+				m_start_mg.Add(1)
+				go func() {
+					defer m_start_mg.Done() // Goroutine 完成时调用 Done()
+					if err := pro.RunLocal(0, localUI.LocalIP+":"+localUI.PortBox.Text, keyValidated.Text); err != nil {
+						ui2.SetLogLabel(err.Error())
+						start_button_stats = 0
+						return
+					}
+				}()
+			}
+
 		case 1:
-			radio.Enable()
-			keyValidated.Enable()
-			localUI.Enable()
-			key_create_button.Enable()
-			key_paste_button.Enable()
-			start_button_activity.Stop()
-			start_button_activity.Hide()
+			start_button.Disable()
 			log_view.SetText("正在停止...")
 			start_button_stats = 0
+
+			switch radio.Selected {
+			case "Local":
+				go func() {
+					pro.StopLocal()
+
+					radio.Enable()
+					keyValidated.Enable()
+					localUI.Enable()
+					key_create_button.Enable()
+					key_paste_button.Enable()
+					start_button_activity.Stop()
+					start_button_activity.Hide()
+					log_view.SetText("正在启动...")
+				}()
+			}
 		}
-	})
+	}
 	start_button.Importance = widget.HighImportance
 	start_button.Resize(fyne.NewSize(100, 40))
 	start_button.Disable()
 	go func() {
-		pro.Init("", "", 0, "")
+		pro.Init("", "", 0)
 		start_button.Enable()
 	}()
 
@@ -145,7 +191,7 @@ func main() {
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
 		container.NewGridWithColumns(3, key_create_button, key_copy_button, key_paste_button),
 		localUI_Container, remoteUI_Container,
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("状态: "), log_view),
+		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("当前状态: "), log_view),
 		container.NewStack(start_button, start_button_activity)))
 
 	myWindow.SetCloseIntercept(func() {
