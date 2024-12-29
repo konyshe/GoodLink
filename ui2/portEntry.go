@@ -17,7 +17,7 @@ func (n *portEntry) Keyboard() mobile.KeyboardType {
 }
 
 func NewPortEntry() *portEntry {
-	content := "请输入1024-65535范围的数字"
+	content := "范围: 1024-65535"
 	e := &portEntry{}
 	e.ExtendBaseWidget(e)
 	e.Validator = func(value string) error {

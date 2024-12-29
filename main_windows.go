@@ -67,6 +67,13 @@ func main() {
 	keyValidated = widget.NewEntry()
 	keyValidated.SetPlaceHolder("请自定义16-32长度字符串")
 
+	key_create_button := widget.NewButton("生成密钥", func() {
+	})
+	key_copy_button := widget.NewButton("复制密钥", func() {
+	})
+	key_paste_button := widget.NewButton("粘贴密钥", func() {
+	})
+
 	localUI := ui2.NewLocalUI(&myWindow)
 	localUI_Container := localUI.GetContainer()
 
@@ -93,28 +100,30 @@ func main() {
 	log_view := widget.NewLabel("等待启动")
 	LogInit(log_view)
 
-	a2 := widget.NewActivity()
-
-	ret := 0
-
+	start_button_stats := 0
+	start_button_activity := widget.NewActivity()
 	start_button := widget.NewButton("点击启动", func() {
-		switch ret {
+		switch start_button_stats {
 		case 0:
 			radio.Disable()
 			keyValidated.Disable()
 			localUI.Disable()
-			a2.Start()
-			a2.Show()
+			key_create_button.Disable()
+			key_paste_button.Disable()
+			start_button_activity.Start()
+			start_button_activity.Show()
 			log_view.SetText("正在启动...")
-			ret = 1
+			start_button_stats = 1
 		case 1:
 			radio.Enable()
 			keyValidated.Enable()
 			localUI.Enable()
-			a2.Stop()
-			a2.Hide()
+			key_create_button.Enable()
+			key_paste_button.Enable()
+			start_button_activity.Stop()
+			start_button_activity.Hide()
 			log_view.SetText("正在停止...")
-			ret = 0
+			start_button_stats = 0
 		}
 		myWindow.Resize(myWindow.Content().MinSize())
 	})
@@ -123,9 +132,10 @@ func main() {
 	myWindow.SetContent(container.New(layout.NewVBoxLayout(),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("选择工作端: "), radio),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
+		container.NewGridWithColumns(3, key_create_button, key_copy_button, key_paste_button),
 		localUI_Container, remoteUI_Container,
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("状态: "), log_view),
-		container.NewStack(start_button, a2)))
+		container.NewStack(start_button, start_button_activity)))
 
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Resize(myWindow.Content().MinSize())
