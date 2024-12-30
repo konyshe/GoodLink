@@ -100,12 +100,15 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		case "Remote":
 			localUI_Container.Hide()
 			remoteUI_Container.Show()
-		case "Local":
+			(*myWindow).Resize((*myWindow).Content().MinSize())
+		default:
 			remoteUI_Container.Hide()
 			localUI_Container.Show()
-		default:
-			m_radio_work_type.SetSelected("Local")
+			(*myWindow).Resize((*myWindow).Content().MinSize())
 		}
+	}
+	if configInfo.WorkType == "" {
+		configInfo.WorkType = "Local"
 	}
 	m_radio_work_type.SetSelected(configInfo.WorkType)
 

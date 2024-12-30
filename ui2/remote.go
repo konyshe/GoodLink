@@ -71,14 +71,6 @@ func NewRemoteUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *RemoteUI
 	c.radio.Horizontal = true
 	c.radio.OnChanged = func(value string) {
 		switch value {
-		case "代理模式":
-			c.box_remote_ip.Disable()
-			c.remote_ip2 = c.box_remote_ip.Text
-			c.box_remote_ip.SetText("不需要设置")
-
-			c.box_remote_port.Disable()
-			c.remote_port2 = c.box_remote_port.Text
-			c.box_remote_port.SetText("不需要设置")
 		case "转发模式":
 			c.box_remote_ip.SetText(c.remote_ip2)
 			c.box_remote_ip.Enable()
@@ -86,7 +78,13 @@ func NewRemoteUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *RemoteUI
 			c.box_remote_port.SetText(c.remote_port2)
 			c.box_remote_port.Enable()
 		default:
-			c.radio.SetSelected("代理模式")
+			c.box_remote_ip.Disable()
+			c.remote_ip2 = c.box_remote_ip.Text
+			c.box_remote_ip.SetText("不需要设置")
+
+			c.box_remote_port.Disable()
+			c.remote_port2 = c.box_remote_port.Text
+			c.box_remote_port.SetText("不需要设置")
 		}
 	}
 

@@ -69,12 +69,10 @@ func NewLocalUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *LocalUI {
 	c.radio1.Horizontal = true
 	c.radio1.OnChanged = func(value string) {
 		switch value {
-		case "只允许本机":
-			c.localIP = "127.0.0.1"
 		case "允许局域网":
 			c.localIP = "0.0.0.0"
 		default:
-			c.radio1.SetSelected("只允许本机")
+			c.localIP = "127.0.0.1"
 		}
 	}
 	if configInfo.LocalIP == "0.0.0.0" {
@@ -88,11 +86,12 @@ func NewLocalUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *LocalUI {
 		switch value {
 		case "主动连接":
 			c.connType = 1
-		case "被动连接":
-			c.connType = 0
 		default:
-			c.radio_conn_type.SetSelected("被动连接")
+			c.connType = 0
 		}
+	}
+	if configInfo.ConnType == "" {
+		configInfo.ConnType = "被动连接"
 	}
 	c.radio_conn_type.SetSelected(configInfo.ConnType)
 
