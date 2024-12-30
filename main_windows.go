@@ -34,9 +34,7 @@ func main() {
 		desk.SetSystemTrayMenu(m)
 	}
 
-	main_ui := ui2.GetMainUI(&myWindow)
-
-	myWindow.SetContent(main_ui)
+	myWindow.SetContent(ui2.GetMainUI(&myWindow))
 
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Hide()
