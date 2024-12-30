@@ -12,22 +12,22 @@ type LocalUI struct {
 	box_local_port  *portEntry
 	radio1          *widget.RadioGroup
 	radio_conn_type *widget.RadioGroup
-	ConnType        int
+	connType        int
 }
 
 func (c *LocalUI) GetConnType() int {
-	return c.ConnType
+	return c.connType
 }
 
 func (c *LocalUI) Disable() {
-	c.box_local_port.Disable()
 	c.radio1.Disable()
+	c.box_local_port.Disable()
 	c.radio_conn_type.Disable()
 }
 
 func (c *LocalUI) Enable() {
-	c.box_local_port.Enable()
 	c.radio1.Enable()
+	c.box_local_port.Enable()
 	c.radio_conn_type.Enable()
 }
 
@@ -66,9 +66,9 @@ func NewLocalUI(myWindow *fyne.Window) *LocalUI {
 	c.radio_conn_type.OnChanged = func(value string) {
 		switch value {
 		case "主动连接":
-			c.ConnType = 1
+			c.connType = 1
 		case "被动连接":
-			c.ConnType = 0
+			c.connType = 0
 		default:
 			c.radio_conn_type.SetSelected("被动连接")
 		}
