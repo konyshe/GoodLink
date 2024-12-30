@@ -94,11 +94,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 			m_radio.SetSelected("Local")
 		}
 	}
-	if len(configInfo.WorkType) > 0 {
-		m_radio.SetSelected(configInfo.WorkType)
-	} else {
-		m_radio.SetSelected("Local")
-	}
+	m_radio.SetSelected(configInfo.WorkType)
 
 	m_log_view = NewLogLabel("等待启动")
 	LogInit(m_log_view)

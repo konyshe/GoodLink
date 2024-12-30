@@ -94,11 +94,7 @@ func NewLocalUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *LocalUI {
 			c.radio_conn_type.SetSelected("被动连接")
 		}
 	}
-	if len(configInfo.ConnType) > 0 {
-		c.radio_conn_type.SetSelected(configInfo.ConnType)
-	} else {
-		c.radio_conn_type.SetSelected("被动连接")
-	}
+	c.radio_conn_type.SetSelected(configInfo.ConnType)
 
 	return c
 }
