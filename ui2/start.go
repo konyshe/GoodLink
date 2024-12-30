@@ -126,10 +126,6 @@ func start_button_click() {
 				}
 				m_activity_start_button.Stop()
 				m_activity_start_button.Hide()
-
-				if m_stats_start_button == 0 {
-					enable_other()
-				}
 			}()
 
 			m_mg_start.Add(1)
@@ -141,6 +137,7 @@ func start_button_click() {
 				m_stats_start_button = 0
 				m_button_start.Importance = widget.HighImportance
 				m_button_start.SetText("点击启动")
+				enable_other()
 			}()
 
 		case "Remote":
@@ -148,15 +145,12 @@ func start_button_click() {
 			go func() {
 				defer m_mg_start.Done()
 				time.Sleep(time.Second * 1)
-				m_log_label.SetText("启动成功, 停止需退出程序")
+				m_log_label.SetText("启动成功")
 				m_button_start.Importance = widget.SuccessImportance
-				m_button_start.SetText("停止需退出程序")
+				m_button_start.SetText("点击停止")
 				m_activity_start_button.Stop()
 				m_activity_start_button.Hide()
-
-				if m_stats_start_button == 0 {
-					enable_other()
-				}
+				m_button_start.Enable()
 			}()
 
 			m_mg_start.Add(1)
@@ -168,6 +162,7 @@ func start_button_click() {
 				m_stats_start_button = 0
 				m_button_start.Importance = widget.HighImportance
 				m_button_start.SetText("点击启动")
+				enable_other()
 			}()
 		}
 
@@ -180,14 +175,19 @@ func start_button_click() {
 		case "Local":
 			go func() {
 				pro.StopLocal()
-				m_mg_start.Wait()
-				enable_other()
-				m_view_log.SetText("等待连接")
-				m_button_start.SetText("点击连接")
-				m_button_start.Importance = widget.HighImportance
-				m_button_start.Refresh()
-				m_button_start.Enable()
+			}()
+
+		case "Remote":
+			go func() {
+				pro.StopRemote()
 			}()
 		}
+
+		m_mg_start.Wait()
+		enable_other()
+		m_view_log.SetText("等待启动")
+		m_button_start.Importance = widget.HighImportance
+		m_button_start.SetText("点击启动")
+		m_button_start.Enable()
 	}
 }

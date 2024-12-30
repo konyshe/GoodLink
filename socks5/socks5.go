@@ -14,10 +14,6 @@ const (
 	socks5Version = uint8(5)
 )
 
-var (
-	m_svr_socket net.Listener
-)
-
 // Config is used to setup and configure a Server
 type Config struct {
 	// AuthMethods can be provided to implement custom authentication
@@ -59,6 +55,7 @@ type Config struct {
 type Server struct {
 	config      *Config
 	authMethods map[uint8]Authenticator
+	svr_socket  net.Listener
 }
 
 // New creates a new Server and potentially returns an error
@@ -100,15 +97,22 @@ func New(conf *Config) (*Server, error) {
 	return server, nil
 }
 
+func (s *Server) StopSocks5() {
+	if s.svr_socket != nil {
+		s.svr_socket.Close()
+		s.svr_socket = nil
+	}
+}
+
 // ListenAndServe is used to create a listener and serve on it
 func (s *Server) ListenAndServe(network, addr string) error {
 	var err error
-	m_svr_socket, err = net.Listen(network, addr)
+	s.svr_socket, err = net.Listen(network, addr)
 	if err != nil {
-		m_svr_socket = nil
+		s.svr_socket = nil
 		return err
 	}
-	return s.Serve(m_svr_socket)
+	return s.Serve(s.svr_socket)
 }
 
 // Serve is used to serve connections from a listener

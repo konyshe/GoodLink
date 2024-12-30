@@ -9,11 +9,16 @@ import (
 	"goodlink2/tun"
 	_ "goodlink2/tun"
 	"log"
+	"sync"
 	"time"
 
 	"gogo"
 
 	"github.com/quic-go/quic-go"
+)
+
+var (
+	m_remote_stats int
 )
 
 func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
@@ -24,10 +29,10 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 	var tun_active_chain chan quic.Connection
 	var tun_passive_chain chan quic.Connection
 
-	for {
+	for m_remote_stats == 1 {
 		time.Sleep(1 * time.Second)
 
-		for RedisGet(&redisJson) != nil {
+		for RedisGet(&redisJson) != nil && m_remote_stats == 1 {
 			time.Sleep(5 * time.Second)
 		}
 
@@ -127,35 +132,66 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 		last_state = redisJson.State
 	}
+
+	return nil, nil
+}
+
+func StopRemote() error {
+	m_remote_stats = 0
+	Release()
+	proxy.StopSocks5()
+	return nil
 }
 
 func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error {
+	var wg sync.WaitGroup
+
 	if remote_addr == "" {
 		log.Println("   开启本地代理")
 		remote_addr = tools.GetFreeLocalAddr()
 		if remote_addr == "" {
 			return errors.New("   获取本地端口失败")
 		}
-		go proxy.ListenSocks5(remote_addr)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			proxy.ListenSocks5(remote_addr)
+		}()
 	}
 
 	log.Printf("   转发地址: %s", remote_addr)
 
+	m_remote_stats = 1
+
 	m_tun_key = tun_key
 	m_md5_tun_key = md5.Encode(tun_key)
 
-	for {
+	for m_remote_stats == 1 {
 		conn, health := GetRemoteQuicConn(time_out)
 		if conn == nil {
 			Release()
 			continue
 		}
 
+		wg.Add(1)
 		go func(remote string, conn quic.Connection) {
-			defer Release()
-			go proxy.ProcessProxyServer(remote, conn)
+			defer func() {
+				Release()
+				wg.Done()
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				proxy.ProcessProxyServer(remote, conn)
+			}()
+
 			tun.ProcessHealth(health)
 			gogo.Log().DebugF("   释放连接: %v", conn.LocalAddr())
 		}(remote_addr, conn)
 	}
+
+	wg.Wait()
+	return nil
 }

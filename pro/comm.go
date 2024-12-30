@@ -8,6 +8,7 @@ import (
 	"goodlink/config"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
+	"log"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -50,6 +51,9 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
 }
 
 func Release() {
+	log.Println("   全局释放资源开始")
+	defer log.Println("   全局释放资源结束")
+
 	if m_tun_active != nil {
 		m_tun_active.Release()
 		m_tun_active = nil
