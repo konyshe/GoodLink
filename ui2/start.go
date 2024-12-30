@@ -150,7 +150,7 @@ func start_button_click() {
 				time.Sleep(time.Second * 1)
 				m_log_label.SetText("启动成功, 停止需退出程序")
 				m_button_start.Importance = widget.SuccessImportance
-				m_button_start.SetText("无法点击停止")
+				m_button_start.SetText("停止需退出程序")
 				m_activity_start_button.Stop()
 				m_activity_start_button.Hide()
 
