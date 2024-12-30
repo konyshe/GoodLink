@@ -1,6 +1,7 @@
 package ui2
 
 import (
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -22,5 +23,6 @@ func NewLogLabel(content string) *LogLabel {
 func SetLogLabel(content string) {
 	if m_log_label != nil {
 		m_log_label.SetText(content)
+		m_log_label.TextStyle = fyne.TextStyle{Bold: true}
 	}
 }

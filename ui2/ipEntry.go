@@ -16,7 +16,7 @@ func (n *ipEntry) Keyboard() mobile.KeyboardType {
 	return mobile.NumberKeyboard
 }
 
-func NewIpEntry() *ipEntry {
+func NewIpEntry(ip string) *ipEntry {
 	e := &ipEntry{}
 	e.ExtendBaseWidget(e)
 	e.Validator = func(ip string) error {
@@ -27,5 +27,6 @@ func NewIpEntry() *ipEntry {
 		return errors.New("请输入正确的IP地址")
 	}
 	e.SetPlaceHolder("例如: 127.0.0.1")
+	e.SetText(ip)
 	return e
 }

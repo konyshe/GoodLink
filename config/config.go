@@ -17,7 +17,15 @@ type RedisInfo struct {
 }
 
 type ConfigInfo struct {
-	Redis RedisInfo `bson:"redis" json:"redis"`
+	Redis      RedisInfo `bson:"redis" json:"redis"`
+	WorkType   string    `bson:"work_type" json:"work_type"`
+	TunKey     string    `bson:"tun_key" json:"tun_key"`
+	ConnType   string    `bson:"conn_type" json:"conn_type"`
+	LocalIP    string    `bson:"local_ip" json:"local_ip"`
+	LocalPort  string    `bson:"local_port" json:"local_port"`
+	RemoteType string    `bson:"remote_type" json:"remote_type"`
+	RemoteIP   string    `bson:"remote_ip" json:"remote_ip"`
+	RemotePort string    `bson:"remote_port" json:"remote_port"`
 }
 
 var configInfo ConfigInfo

@@ -1,6 +1,8 @@
 package ui2
 
 import (
+	"goodlink/config"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
@@ -13,6 +15,10 @@ type LocalUI struct {
 	box_local_port  *portEntry
 	radio1          *widget.RadioGroup
 	radio_conn_type *widget.RadioGroup
+}
+
+func (c *LocalUI) GetConnType2() string {
+	return c.radio_conn_type.Selected
 }
 
 func (c *LocalUI) GetConnType() int {
@@ -31,7 +37,15 @@ func (c *LocalUI) Enable() {
 	c.radio_conn_type.Enable()
 }
 
-func (c *LocalUI) GetRemoteAddr() (string, error) {
+func (c *LocalUI) GetLocalIP() string {
+	return c.localIP
+}
+
+func (c *LocalUI) GetLocalPort() string {
+	return c.box_local_port.Text
+}
+
+func (c *LocalUI) GetLocalAddr() (string, error) {
 	return c.localIP + ":" + c.box_local_port.Text, c.box_local_port.Validate()
 }
 
@@ -43,13 +57,14 @@ func (c *LocalUI) GetContainer() *fyne.Container {
 	)
 }
 
-func NewLocalUI(myWindow *fyne.Window) *LocalUI {
+func NewLocalUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *LocalUI {
 	c := &LocalUI{
-		box_local_port:  NewPortEntry(),
+		box_local_port:  NewPortEntry(configInfo.LocalPort),
 		radio_conn_type: widget.NewRadioGroup([]string{"主动连接", "被动连接"}, nil),
 		radio1:          widget.NewRadioGroup([]string{"只允许本机", "允许局域网"}, nil),
 	}
 
+	c.radio1.Horizontal = true
 	c.radio1.OnChanged = func(value string) {
 		switch value {
 		case "只允许本机":
@@ -60,9 +75,13 @@ func NewLocalUI(myWindow *fyne.Window) *LocalUI {
 			c.radio1.SetSelected("只允许本机")
 		}
 	}
-	c.radio1.SetSelected("只允许本机")
-	c.radio1.Horizontal = true
+	if configInfo.LocalIP == "0.0.0.0" {
+		c.radio1.SetSelected("允许局域网")
+	} else {
+		c.radio1.SetSelected("只允许本机")
+	}
 
+	c.radio_conn_type.Horizontal = true
 	c.radio_conn_type.OnChanged = func(value string) {
 		switch value {
 		case "主动连接":
@@ -73,8 +92,11 @@ func NewLocalUI(myWindow *fyne.Window) *LocalUI {
 			c.radio_conn_type.SetSelected("被动连接")
 		}
 	}
-	c.radio_conn_type.SetSelected("被动连接")
-	c.radio_conn_type.Horizontal = true
+	if len(configInfo.ConnType) > 0 {
+		c.radio_conn_type.SetSelected(configInfo.ConnType)
+	} else {
+		c.radio_conn_type.SetSelected("被动连接")
+	}
 
 	return c
 }

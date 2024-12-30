@@ -1,6 +1,8 @@
 package ui2
 
 import (
+	"goodlink/config"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
@@ -27,6 +29,18 @@ func (c *RemoteUI) Enable() {
 	c.radio.Enable()
 }
 
+func (c *RemoteUI) GetRemoteType() string {
+	return c.radio.Selected
+}
+
+func (c *RemoteUI) GetRemoteIP() string {
+	return c.box_remote_ip.Text
+}
+
+func (c *RemoteUI) GetRemotePort() string {
+	return c.box_remote_port.Text
+}
+
 func (c *RemoteUI) GetRemoteAddr() (string, error) {
 	if c.box_remote_ip.Validate() != nil {
 		return "", c.box_remote_ip.Validate()
@@ -45,13 +59,14 @@ func (c *RemoteUI) GetContainer() *fyne.Container {
 	)
 }
 
-func NewRemoteUI(myWindow *fyne.Window) *RemoteUI {
+func NewRemoteUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *RemoteUI {
 	c := &RemoteUI{
 		radio:           widget.NewRadioGroup([]string{"代理模式", "转发模式"}, nil),
-		box_remote_ip:   NewIpEntry(),
-		box_remote_port: NewPortEntry(),
+		box_remote_ip:   NewIpEntry(configInfo.RemoteIP),
+		box_remote_port: NewPortEntry(configInfo.RemotePort),
 	}
 
+	c.radio.Horizontal = true
 	c.radio.OnChanged = func(value string) {
 		switch value {
 		case "代理模式":
@@ -72,8 +87,15 @@ func NewRemoteUI(myWindow *fyne.Window) *RemoteUI {
 			c.radio.SetSelected("代理模式")
 		}
 	}
-	c.radio.SetSelected("代理模式")
-	c.radio.Horizontal = true
+
+	switch configInfo.RemoteType {
+	case "转发模式":
+		c.radio.SetSelected(configInfo.RemoteType)
+		c.box_remote_ip.SetText(configInfo.RemoteIP)
+		c.box_remote_port.SetText(configInfo.RemotePort)
+	default:
+		c.radio.SetSelected("代理模式")
+	}
 
 	return c
 }
