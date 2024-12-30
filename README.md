@@ -62,13 +62,15 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
 ```
 
+注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
+
 ### 公司的电脑 (windows)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/1.png "使用说明")
 
-注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
+注：当最下方的按钮变成绿色，表示已连接成功
 
 ## 转发模式 - 举例
 
@@ -84,11 +86,15 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
+注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
+
 ### 公司的电脑 (windows)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/2.png "使用说明")
+
+注：当最下方的按钮变成绿色，表示已连接成功
 
 # 选项说明
 
