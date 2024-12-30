@@ -4,31 +4,31 @@
 
 1. 两台主机之间直连！直连！直连！不经过第三方服务器，不用担心数据隐私泄露
 
-2. 一条命令搞定，无需安装、无需注册，无需公网IP，无需配置文件
+2. 一条命令搞定，无需安装、无需注册，无需公网 IP，无需配置文件
 
-3. 直连基于QUIC，高性能，已加密
+3. 直连基于 QUIC，高性能，已加密
 
-注：1.1.6版本开始加强了通信安全，因此和老版本不兼容
+注：1.1.6 版本开始加强了通信安全，因此和老版本不兼容
 
-![原理图](https://gitee.com/konyshe/goodlink/raw/master/prototype_cn.gif "原理图")
+![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
 
 # 介绍
 
-1. 两台主机运行同一个程序, 一台主机加--remote选项(以下称remote端), 另一台主机加--local选项(以下称local端)
+1. 两台主机运行同一个程序, 一台主机加--remote 选项(以下称 remote 端), 另一台主机加--local 选项(以下称 local 端)
 
-2. local端和remote端之间的连接是点对点直连的，不经过第三方服务器
+2. local 端和 remote 端之间的连接是点对点直连的，不经过第三方服务器
 
-3. 可以在local端访问remote端, 但是反过来不可以
+3. 可以在 local 端访问 remote 端, 但是反过来不可以
 
-4. 如果需要反过来, 或者需要访问多个remote端, 就运行多个程序或启动多个 Docker
+4. 如果需要反过来, 或者需要访问多个 remote 端, 就运行多个程序或启动多个 Docker
 
-5. 可以多个local端对应一个remote端，但一个local端不能对应多个remote端。通过使用相同的--key确认对应关系
+5. 可以多个 local 端对应一个 remote 端，但一个 local 端不能对应多个 remote 端。通过使用相同的--key 确认对应关系
 
-6. 由于直连过程复杂，会出现反复重试，通常10分钟内成功。如果长时间无法连接，请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
+6. 由于直连过程复杂，会出现反复重试，通常 10 分钟内成功。如果长时间无法连接，请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
 
-7. 本程序即支持命令行方式，也支持docker方式，以下举例仅作参考，实际可随意切换
+7. 本程序即支持命令行方式，也支持 docker 方式，以下举例仅作参考，实际可随意切换
 
-8. windows自带杀毒软件，会将所有go语言写的程序都认为是病毒。本程序已开源，可放心食用
+8. windows 自带杀毒软件，会将所有 go 语言写的程序都认为是病毒。本程序已开源，可放心食用
 
 # 简单使用
 
@@ -50,11 +50,11 @@
 
 ## 代理模式 - 举例
 
-local端运行在公司的电脑，remote端运行在家里的NAS。
+local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 
-在公司电脑上配置代理地址：socks5://127.0.0.1:18080，便可访问家里包括NAS在内的所有主机端口。
+在公司电脑上配置代理地址：socks5://127.0.0.1:18080，便可访问家里包括 NAS 在内的所有主机端口。
 
-### 家里的NAS ( linux，Docker )
+### 家里的 NAS ( linux，Docker )
 
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
@@ -62,7 +62,7 @@ local端运行在公司的电脑，remote端运行在家里的NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
 ```
 
-### 公司的电脑  ( windows, 命令行 )
+### 公司的电脑 ( windows, 命令行 )
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
@@ -70,15 +70,15 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --local=127.0.0.1:18080 --key=nas_202412140928
 ```
 
-注：remote端和local端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
+注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
 
 ## 转发模式 - 举例
 
-local端运行在公司的电脑，remote端运行在家里的NAS。
+local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 
-在公司访问 http://127.0.0.1:9999 , 等于访问家里的NAS管理页面http://192.168.3.2:9999
+在公司访问 http://127.0.0.1:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
 
-### 家里的NAS (linux，Docker)
+### 家里的 NAS (linux，Docker)
 
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
