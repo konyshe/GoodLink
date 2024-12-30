@@ -24,7 +24,7 @@ func NewPortEntry() *portEntry {
 		if n, err := strconv.Atoi(value); err == nil && n >= 1024 && n <= 65535 {
 			return nil
 		}
-		return errors.New(content)
+		return errors.New("请输入正确的端口号")
 	}
 	e.SetPlaceHolder(content)
 	return e

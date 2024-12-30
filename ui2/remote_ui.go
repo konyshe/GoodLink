@@ -8,45 +8,63 @@ import (
 )
 
 type RemoteUI struct {
-	remote_addr     string
-	remote_addr_box *ipportEntry
+	remote_ip2      string
+	remote_port2    string
+	box_remote_ip   *ipEntry
+	box_remote_port *portEntry
 	radio           *widget.RadioGroup
 }
 
 func (c *RemoteUI) Disable() {
-	c.remote_addr_box.Disable()
+	c.box_remote_ip.Disable()
+	c.box_remote_port.Disable()
 	c.radio.Disable()
 }
 
 func (c *RemoteUI) Enable() {
-	c.remote_addr_box.Enable()
+	c.box_remote_ip.Enable()
+	c.box_remote_port.Enable()
 	c.radio.Enable()
+}
+
+func (c *RemoteUI) GetRemoteAddr() string {
+	if c.box_remote_ip.Text == "" {
+		return "127.0.0.1:" + c.box_remote_port.Text
+	}
+	return c.box_remote_ip.Text + ":" + c.box_remote_port.Text
 }
 
 func (c *RemoteUI) GetContainer() *fyne.Container {
 	return container.NewVBox(
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作模式: "), c.radio),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发地址: "), c.remote_addr_box),
+		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标地址: "), c.box_remote_ip),
+		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标端口: "), c.box_remote_port),
 	)
 }
 
 func NewRemoteUI(myWindow *fyne.Window) *RemoteUI {
 	c := &RemoteUI{
 		radio:           widget.NewRadioGroup([]string{"代理模式", "转发模式"}, nil),
-		remote_addr_box: NewIpPortEntry("例如: 127.0.0.1:3389"),
+		box_remote_ip:   NewIpEntry(),
+		box_remote_port: NewPortEntry(),
 	}
 
 	c.radio.OnChanged = func(value string) {
 		switch value {
 		case "代理模式":
-			c.remote_addr = c.remote_addr_box.Text
-			c.remote_addr_box.SetPlaceHolder("不需要设置")
-			c.remote_addr_box.SetText("")
-			c.remote_addr_box.Disable()
+			c.box_remote_ip.Disable()
+			c.remote_ip2 = c.box_remote_ip.Text
+			c.box_remote_ip.SetText("不需要设置")
+
+			c.box_remote_port.Disable()
+			c.remote_port2 = c.box_remote_port.Text
+			c.box_remote_port.SetText("不需要设置")
 		case "转发模式":
-			c.remote_addr_box.Enable()
-			c.remote_addr_box.SetPlaceHolder("例如: 127.0.0.1:3389")
-			c.remote_addr_box.SetText(c.remote_addr)
+			c.box_remote_ip.SetText(c.remote_ip2)
+			c.box_remote_ip.Enable()
+
+			c.box_remote_port.SetText(c.remote_port2)
+			c.box_remote_port.Enable()
 		default:
 			c.radio.SetSelected("代理模式")
 		}

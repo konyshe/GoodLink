@@ -5,20 +5,20 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-type ipportEntry struct {
+type ipEntry struct {
 	widget.Entry
 }
 
-func (n *ipportEntry) Keyboard() mobile.KeyboardType {
+func (n *ipEntry) Keyboard() mobile.KeyboardType {
 	return mobile.NumberKeyboard
 }
 
-func NewIpPortEntry(content string) *ipportEntry {
-	e := &ipportEntry{}
+func NewIpEntry() *ipEntry {
+	e := &ipEntry{}
 	e.ExtendBaseWidget(e)
 	e.Validator = func(value string) error {
 		return nil
 	}
-	e.SetPlaceHolder(content)
+	e.SetPlaceHolder("例如: 127.0.0.1")
 	return e
 }

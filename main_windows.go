@@ -148,7 +148,13 @@ func main() {
 				m_start_mg.Add(1)
 				go func() {
 					defer m_start_mg.Done() // Goroutine 完成时调用 Done()
-					if err := pro.RunLocal(0, localUI.LocalIP+":"+localUI.PortBox.Text, keyValidated.Text); err != nil {
+					remote_addr, err := localUI.GetRemoteAddr()
+					if err != nil {
+						ui2.SetLogLabel(err.Error())
+						start_button_stats = 0
+						return
+					}
+					if err := pro.RunLocal(localUI.GetConnType(), remote_addr, keyValidated.Text); err != nil {
 						ui2.SetLogLabel(err.Error())
 						start_button_stats = 0
 						return
@@ -187,7 +193,7 @@ func main() {
 	}()
 
 	myWindow.SetContent(container.New(layout.NewVBoxLayout(),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("选择工作端: "), radio),
+		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作端侧: "), radio),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), keyValidated),
 		container.NewGridWithColumns(3, key_create_button, key_copy_button, key_paste_button),
 		localUI_Container, remoteUI_Container,
