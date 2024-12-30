@@ -62,7 +62,7 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
 ```
 
-### 公司的电脑 ( windows, 命令行 )
+### 公司的电脑 (windows)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
@@ -84,7 +84,7 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
-### 公司的电脑 (windows, 命令行)
+### 公司的电脑 (windows)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
