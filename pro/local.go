@@ -136,6 +136,8 @@ func StopLocal() error {
 func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 	m_local_state = 1
 
+	log.Printf("   本地监听地址: %v\n", tun_local_addr)
+
 	chain := make(chan int, 1)
 
 	listener, err := net.Listen("tcp", tun_local_addr)
@@ -169,7 +171,9 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 
 		m_local_state = 2
 		tun.ProcessHealth(health)
-		m_local_state = 1
+		if m_local_state != 0 {
+			m_local_state = 1
+		}
 		log.Printf("   心跳异常, 释放连接: %v\n", conn.LocalAddr())
 		Release()
 
