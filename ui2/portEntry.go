@@ -20,8 +20,8 @@ func NewPortEntry() *portEntry {
 	content := "范围: 1024-65535"
 	e := &portEntry{}
 	e.ExtendBaseWidget(e)
-	e.Validator = func(value string) error {
-		if n, err := strconv.Atoi(value); err == nil && n >= 1024 && n <= 65535 {
+	e.Validator = func(port string) error {
+		if n, err := strconv.Atoi(port); err == nil && n >= 1024 && n <= 65535 {
 			return nil
 		}
 		return errors.New("请输入正确的端口号")
