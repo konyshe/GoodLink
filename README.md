@@ -66,9 +66,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
-```
-.\goodlink-windows-amd64.exe --local=127.0.0.1:18080 --key=nas_202412140928
-```
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/1.png "使用说明")
 
 注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
 
@@ -90,9 +88,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
-```
-.\goodlink-windows-amd64.exe --local=127.0.0.1:9999 --key=nas_202412140928
-```
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/2.png "使用说明")
 
 # 选项说明
 
