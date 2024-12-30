@@ -42,7 +42,7 @@
 
 ### 转发模式
 
-    remote端需要指定所处网络中的某一个主机端口，local端也需要指定本地端口。
+    remote端需要指定所处网络中的某一个主机端口，local端也需要指定本地端口
 
     local端无需配置Socks5代理，直接访问指定的本地端口，就等于访问remote端指定的主机端口。但也只能访问这一个端口
 
@@ -50,9 +50,9 @@
 
 ## 代理模式 - 举例
 
-local 端运行在公司的电脑，remote 端运行在家里的 NAS。
+local 端运行在公司的电脑，remote 端运行在家里的 NAS
 
-在公司电脑上配置代理地址：socks5://127.0.0.1:18080，便可访问家里包括 NAS 在内的所有主机端口。
+在公司电脑上配置代理地址：socks5://127.0.0.1:18080，便可访问家里包括 NAS 在内的所有主机端口
 
 ### 家里的 NAS ( linux，Docker )
 
@@ -62,7 +62,7 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
 ```
 
-注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
+注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例
 
 ### 公司的电脑 (windows)
 
@@ -86,7 +86,7 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
-注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例。
+注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例
 
 ### 公司的电脑 (windows)
 
