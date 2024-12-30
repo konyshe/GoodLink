@@ -2,11 +2,10 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"goodlink/aes"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -30,28 +29,27 @@ type ConfigInfo struct {
 
 var configInfo ConfigInfo
 
-func Init() {
+func Init() error {
 	client := &http.Client{Timeout: 3 * time.Second}
 	resp, err := client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
 	if resp == nil || err != nil {
-		log.Fatalln(err)
-		os.Exit(0)
+		return errors.New("下载网络配置失败, 请重启程序")
 	}
 	defer resp.Body.Close()
 
 	var res []byte
 	res, err = io.ReadAll(resp.Body)
 	if res == nil || err != nil {
-		log.Fatalln(err)
-		os.Exit(0)
+		return errors.New("读取网络配置失败, 请重启程序")
 	}
 
 	temp2 := aes.Decrypt(res, "goodlink")
 	err = json.Unmarshal(temp2, &configInfo)
 	if err != nil {
-		log.Fatalln(err)
-		os.Exit(0)
+		return errors.New("解析网络配置失败, 请重启程序")
 	}
+
+	return nil
 }
 
 func GetAddr() string {

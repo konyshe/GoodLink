@@ -5,14 +5,15 @@ import (
 	"encoding/binary"
 	"fmt"
 	"goodlink/tools"
-	"log"
 	"math/rand"
 	"net"
 	"time"
+
+	"gogo"
 )
 
 func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
-	//log.Printf("   stun_svr: %s\n", addr)
+	//gogo.Log().DebugF("   stun_svr: %s\n", addr)
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -149,7 +150,7 @@ func init() {
 }
 
 func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
-	log.Println("   获取本端地址")
+	gogo.Log().Debug("   获取本端地址")
 	defer conn.SetReadDeadline(time.Time{})
 
 	for {

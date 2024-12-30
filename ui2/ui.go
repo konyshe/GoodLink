@@ -39,14 +39,27 @@ const (
 
 func LogInit(m_view_log *LogLabel) {
 	gogo.Log().RegistInfo(func(content string) {
-		SetLogLabel(content)
+		if len(content) > 24 {
+			SetLogLabel(content[:24])
+		} else {
+			SetLogLabel(content)
+		}
 		log.Println(content)
 	})
 	gogo.Log().RegistDebug(func(content string) {
-		SetLogLabel(content)
+		if len(content) > 24 {
+			SetLogLabel(content[:24])
+		} else {
+			SetLogLabel(content)
+		}
+		log.Println(content)
 	})
 	gogo.Log().RegistError(func(content string) {
-		SetLogLabel(content)
+		if len(content) > 24 {
+			SetLogLabel(content[:24])
+		} else {
+			SetLogLabel(content)
+		}
 		fyne.LogError("error: ", errors.New(content))
 	})
 }
@@ -106,7 +119,10 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	m_button_start.Resize(fyne.NewSize(100, 40))
 	m_button_start.Disable()
 	go func() {
-		pro.Init("", "", 0)
+		if err := pro.Init("", "", 0); err != nil {
+			m_view_log.SetText(err.Error())
+			return
+		}
 		m_button_start.Enable()
 	}()
 

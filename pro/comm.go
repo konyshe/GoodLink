@@ -2,13 +2,12 @@ package pro
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"goodlink/aes"
 	"goodlink/config"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
-	"log"
-	"os"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -22,9 +21,11 @@ var (
 	m_tun_passive *tun.TunPassive
 )
 
-func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) {
+func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
 	if m_cli_redis_addr == "" {
-		config.Init()
+		if err := config.Init(); err != nil {
+			return err
+		}
 		m_cli_redis_addr = config.GetAddr()
 		m_cli_redis_pass = config.GetPasswd()
 		m_cli_redis_id = config.GetID()
@@ -36,16 +37,16 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) {
 		DB:       m_cli_redis_id,
 	})
 	if m_redis_db == nil {
-		log.Println("Redis初始化失败")
-		os.Exit(0)
+		return errors.New("Redis失败, 请重启程序")
 	}
 	if _, err := m_redis_db.Ping().Result(); err != nil { //心跳
-		log.Printf("Redis连接错误: %s", err)
-		os.Exit(0)
+		return errors.New("Redis异常, 请重启程序")
 	}
 
 	m_tun_active = nil
 	m_tun_passive = nil
+
+	return nil
 }
 
 func Release() {

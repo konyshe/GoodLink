@@ -1,14 +1,15 @@
 package tools
 
 import (
-	"log"
 	"net"
+
+	"gogo"
 )
 
 func GetListenUDP() *net.UDPConn {
 	conn, err := net.ListenUDP("udp4", nil)
 	if err != nil {
-		log.Panic("   net.ListenUDP: ", err)
+		gogo.Log().ErrorF("   绑定端口失败: %v", err)
 	}
 	return conn
 }
