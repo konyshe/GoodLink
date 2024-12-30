@@ -138,13 +138,13 @@ func StopLocal() error {
 func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 	m_local_state = 1
 
-	log.Printf("   本地监听地址: %v", tun_local_addr)
+	log.Printf("   绑定端口: %v", tun_local_addr)
 
 	chain := make(chan int, 1)
 
 	listener, err := net.Listen("tcp", tun_local_addr)
 	if listener == nil || err != nil {
-		return fmt.Errorf("地址监听失败: %v", tun_local_addr)
+		return fmt.Errorf("绑定端口失败: %v", tun_local_addr)
 	}
 	defer func() {
 		listener.Close()
