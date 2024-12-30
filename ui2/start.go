@@ -71,9 +71,14 @@ func start_button_click() {
 				return
 			}
 		case "Remote":
-			if remote_addr, err = m_ui_remote.GetRemoteAddr(); err != nil {
-				SetLogLabel(err.Error())
-				return
+			switch m_ui_remote.GetRemoteType() {
+			case "代理模式":
+				remote_addr = "" //代理模式, 这里必须设置为空
+			case "转发模式":
+				if remote_addr, err = m_ui_remote.GetRemoteAddr(); err != nil {
+					SetLogLabel(err.Error())
+					return
+				}
 			}
 		}
 
@@ -96,7 +101,7 @@ func start_button_click() {
 	switch m_stats_start_button {
 	case 0:
 		m_button_start.Disable()
-		disable_other("正在连接...")
+		disable_other("正在启动...")
 
 		switch m_radio_work_type.Selected {
 		case "Local":
@@ -107,7 +112,7 @@ func start_button_click() {
 				m_button_start.Enable()
 				if m_stats_start_button == 1 {
 					m_button_start.Importance = widget.WarningImportance
-					m_button_start.SetText("点击断开")
+					m_button_start.SetText("点击关闭")
 				}
 
 				for m_stats_start_button == 1 {
@@ -135,7 +140,7 @@ func start_button_click() {
 				}
 				m_stats_start_button = 0
 				m_button_start.Importance = widget.HighImportance
-				m_button_start.SetText("点击连接")
+				m_button_start.SetText("点击启动")
 			}()
 
 		case "Remote":
@@ -143,22 +148,15 @@ func start_button_click() {
 			go func() {
 				defer m_mg_start.Done()
 				time.Sleep(time.Second * 1)
-				m_button_start.Enable()
-				m_button_start.Importance = widget.WarningImportance
-				m_button_start.Refresh()
-				m_button_start.SetText("点击断开")
-
-				for m_stats_start_button == 1 {
-					if pro.GetLocalStats() == 2 {
-						m_view_log.SetText("连接成功")
-						m_button_start.Importance = widget.SuccessImportance
-						m_button_start.Refresh()
-						break
-					}
-					time.Sleep(time.Millisecond * 200)
-				}
+				m_log_label.SetText("启动成功, 停止需退出程序")
+				m_button_start.Importance = widget.SuccessImportance
+				m_button_start.SetText("无法点击停止")
 				m_activity_start_button.Stop()
 				m_activity_start_button.Hide()
+
+				if m_stats_start_button == 0 {
+					enable_other()
+				}
 			}()
 
 			m_mg_start.Add(1)
@@ -169,7 +167,7 @@ func start_button_click() {
 				}
 				m_stats_start_button = 0
 				m_button_start.Importance = widget.HighImportance
-				m_button_start.SetText("点击连接")
+				m_button_start.SetText("点击启动")
 			}()
 		}
 

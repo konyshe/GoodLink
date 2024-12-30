@@ -8,6 +8,7 @@ import (
 	"goodlink/tools"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
+	"log"
 	"time"
 
 	"gogo"
@@ -130,12 +131,15 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error {
 	if remote_addr == "" {
+		log.Println("   开启本地代理")
 		remote_addr = tools.GetFreeLocalAddr()
 		if remote_addr == "" {
 			return errors.New("   获取本地端口失败")
 		}
 		go proxy.ListenSocks5(remote_addr)
 	}
+
+	log.Printf("   转发地址: %s", remote_addr)
 
 	m_tun_key = tun_key
 	m_md5_tun_key = md5.Encode(tun_key)
