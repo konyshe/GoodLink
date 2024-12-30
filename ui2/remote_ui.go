@@ -27,11 +27,14 @@ func (c *RemoteUI) Enable() {
 	c.radio.Enable()
 }
 
-func (c *RemoteUI) GetRemoteAddr() string {
-	if c.box_remote_ip.Text == "" {
-		return "127.0.0.1:" + c.box_remote_port.Text
+func (c *RemoteUI) GetRemoteAddr() (string, error) {
+	if c.box_remote_ip.Validate() != nil {
+		return "", c.box_remote_ip.Validate()
 	}
-	return c.box_remote_ip.Text + ":" + c.box_remote_port.Text
+	if c.box_remote_port.Validate() != nil {
+		return "", c.box_remote_port.Validate()
+	}
+	return c.box_remote_ip.Text + ":" + c.box_remote_port.Text, nil
 }
 
 func (c *RemoteUI) GetContainer() *fyne.Container {

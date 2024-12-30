@@ -47,20 +47,20 @@ func NewLocalUI(myWindow *fyne.Window) *LocalUI {
 	c := &LocalUI{
 		box_local_port:  NewPortEntry(),
 		radio_conn_type: widget.NewRadioGroup([]string{"主动连接", "被动连接"}, nil),
-		radio1:          widget.NewRadioGroup([]string{"允许本机", "允许局域网"}, nil),
+		radio1:          widget.NewRadioGroup([]string{"只允许本机", "允许局域网"}, nil),
 	}
 
 	c.radio1.OnChanged = func(value string) {
 		switch value {
-		case "允许本机":
+		case "只允许本机":
 			c.localIP = "127.0.0.1"
 		case "允许局域网":
 			c.localIP = "0.0.0.0"
 		default:
-			c.radio1.SetSelected("允许本机")
+			c.radio1.SetSelected("只允许本机")
 		}
 	}
-	c.radio1.SetSelected("允许本机")
+	c.radio1.SetSelected("只允许本机")
 	c.radio1.Horizontal = true
 
 	c.radio_conn_type.OnChanged = func(value string) {
