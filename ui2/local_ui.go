@@ -9,10 +9,10 @@ import (
 
 type LocalUI struct {
 	localIP         string
+	connType        int
 	box_local_port  *portEntry
 	radio1          *widget.RadioGroup
 	radio_conn_type *widget.RadioGroup
-	connType        int
 }
 
 func (c *LocalUI) GetConnType() int {
