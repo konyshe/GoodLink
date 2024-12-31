@@ -18,6 +18,10 @@ func (n *ipEntry) Keyboard() mobile.KeyboardType {
 	return mobile.NumberKeyboard
 }
 
+func (n *ipEntry) ResetPlaceHolder() {
+	n.SetPlaceHolder("例如: 127.0.0.1")
+}
+
 func NewIpEntry(ip string) *ipEntry {
 	e := &ipEntry{}
 	e.ExtendBaseWidget(e)
@@ -28,7 +32,7 @@ func NewIpEntry(ip string) *ipEntry {
 		}
 		return errors.New("请输入正确的IP地址")
 	}
-	e.SetPlaceHolder("例如: 127.0.0.1")
+	e.ResetPlaceHolder()
 	e.SetText(ip)
 	return e
 }

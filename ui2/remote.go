@@ -12,8 +12,6 @@ import (
 )
 
 type RemoteUI struct {
-	remote_ip2      string
-	remote_port2    string
 	box_remote_ip   *ipEntry
 	box_remote_port *portEntry
 	radio           *widget.RadioGroup
@@ -72,19 +70,25 @@ func NewRemoteUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *RemoteUI
 	c.radio.OnChanged = func(value string) {
 		switch value {
 		case "转发模式":
-			c.box_remote_ip.SetText(c.remote_ip2)
+			c.box_remote_ip.SetText(configInfo.RemoteIP)
 			c.box_remote_ip.Enable()
 
-			c.box_remote_port.SetText(c.remote_port2)
+			c.box_remote_port.SetText(configInfo.RemotePort)
 			c.box_remote_port.Enable()
 		default:
+			if c.box_remote_ip.Validate() == nil {
+				configInfo.RemoteIP = c.box_remote_ip.Text
+			}
+			c.box_remote_ip.SetText("")
+			c.box_remote_ip.ResetPlaceHolder()
 			c.box_remote_ip.Disable()
-			c.remote_ip2 = c.box_remote_ip.Text
-			c.box_remote_ip.SetText("不需要设置")
 
+			if c.box_remote_port.Validate() == nil {
+				configInfo.RemotePort = c.box_remote_port.Text
+			}
+			c.box_remote_port.SetText("")
+			c.box_remote_port.ResetPlaceHolder()
 			c.box_remote_port.Disable()
-			c.remote_port2 = c.box_remote_port.Text
-			c.box_remote_port.SetText("不需要设置")
 		}
 	}
 
