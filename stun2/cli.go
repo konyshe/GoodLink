@@ -2,10 +2,11 @@ package stun2
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"goodlink/tools"
-	"math/rand"
+	"math/big"
 	"net"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
 	//gogo.Log().DebugF("   stun_svr: %s\n", addr)
 
-	rand.Seed(time.Now().UnixNano())
+	//rand.Seed(time.Now().UnixNano())
 
 	udpAddr, err := net.ResolveUDPAddr("udp4", addr)
 	if err != nil {
@@ -154,7 +155,8 @@ func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	defer conn.SetReadDeadline(time.Time{})
 
 	for {
-		stun_svr := m_stun_list[rand.Intn(len(m_stun_list))]
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(m_stun_list))))
+		stun_svr := m_stun_list[n.Int64()]
 		conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
 			break
