@@ -11,3 +11,4 @@ fyne_metadata_init.go
 fyne.syso
 goodlink.json
 *.7z
+*.zip
