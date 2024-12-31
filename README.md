@@ -20,19 +20,19 @@
 
 # 介绍
 
-1. 两端主机运行同一个程序, 一端主机使用--remote 选项(以下称 remote 端), 另一端主机使用--local 选项(以下称 local 端)
+1. 本程序即支持命令行方式，也支持 docker 方式，windows版本也新增了UI使用更简单。以下举例仅作参考，实际可随意切换
 
-2. local 端和 remote 端之间的连接是点对点直连的，不经过第三方服务器
+2. 两端主机运行同一个程序, 一端主机使用--remote 选项(以下称 remote 端), 另一端主机使用--local 选项(以下称 local 端)
 
-3. 可以在 local 端访问 remote 端, 但是反过来不可以
+3. local 端和 remote 端之间的连接是点对点直连的，不经过第三方服务器
 
-4. 如果需要反过来, 或者需要访问多个 remote 端, 就运行多个程序或启动多个 Docker
+4. 可以在 local 端访问 remote 端, 但是反过来不可以
 
-5. 可以多个 local 端对应一个 remote 端，但一个 local 端不能对应多个 remote 端。通过使用相同的--key 确认对应关系
+5. 如果需要反过来, 或者需要访问多个 remote 端, 就运行多个程序或启动多个 Docker
 
-6. 由于直连过程复杂，会出现反复重试，通常 10 分钟内成功。如果长时间无法连接，请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
+6. 可以多个 local 端对应一个 remote 端，但一个 local 端不能对应多个 remote 端。通过使用相同的--key 确认对应关系
 
-7. 本程序即支持命令行方式，也支持 docker 方式，windows版本也新增了UI使用更简单。以下举例仅作参考，实际可随意切换
+7. 由于直连过程复杂，会出现反复重试，通常 10 分钟内成功。如果长时间无法连接，请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
 
 8. windows 自带杀毒软件，会将所有 go 语言写的程序都认为是病毒。本程序已开源，可放心食用
 
