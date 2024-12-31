@@ -1,5 +1,9 @@
 ![GoodLink Logo](https://gitee.com/konyshe/goodlink/raw/master/logo.png "GoodLink")
 
+# 背景
+
+  本人由于经常异地办公，对于市面上的远程桌面工具，无论带宽、收费、画面模糊等，感觉都不如windows自带的远程桌面，但异地如何使用windows自带的远程桌面呢？就有了该项目
+
 # 特点
 
 1. 两台主机之间直连！直连！直连！不经过第三方服务器，不用担心数据隐私泄露
