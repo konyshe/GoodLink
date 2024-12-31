@@ -2,9 +2,9 @@
 
 # 背景
 
-由于经常异地办公，对于市面上的远程桌面工具，无论带宽、收费、画面模糊等，感觉都不如windows自带的远程桌面，但异地如何使用windows自带的远程桌面呢？
+由于经常异地办公，对于市面上的远程桌面工具，无论带宽、收费、画面模糊等，感觉都不如 windows 自带的远程桌面，但异地如何使用 windows 自带的远程桌面呢？
 
-如果只是为了远程访问公司的内网WEB，是否可以远程桌面都不用，直接浏览器访问，就跟在公司一模一样？
+如果只是为了远程访问公司的内网 WEB，是否可以远程桌面都不用，直接浏览器访问，就跟在公司一模一样？
 
 # 特点
 
@@ -20,7 +20,7 @@
 
 # 介绍
 
-1. 本程序即支持命令行方式，也支持 docker 方式，windows版本也新增了UI使用更简单。以下举例仅作参考，实际可随意切换
+1. 本程序即支持命令行方式，也支持 docker 方式，windows 版本也新增了 UI 使用更简单。以下举例仅作参考，实际可随意切换
 
 2. 两端主机运行同一个程序, 一端主机使用--remote 选项(以下称 remote 端), 另一端主机使用--local 选项(以下称 local 端)
 
@@ -36,7 +36,7 @@
 
 8. windows 自带杀毒软件，会将所有 go 语言写的程序都认为是病毒。本程序已开源，可放心食用
 
-9. 以下举例说明中的key，请不要使用，否则会连上别人的remote端，或者被别人的local端连上。自己定义一个16-24个字节长度的key
+9. 以下举例说明中的 key，请不要使用，否则会连上别人的 remote 端，或者被别人的 local 端连上。自己定义一个 16-24 个字节长度的 key
 
 # 简单使用
 
@@ -62,7 +62,7 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS
 
 在公司电脑上配置代理地址：socks5://127.0.0.1:18080，便可访问家里包括 NAS 在内的所有主机端口
 
-举一反三: 如果出差在外，不必通过远程桌面。就能在笔记本浏览器上直接打开公司的内网WEB（浏览器商店安装插件SwitchyOmega配置代理），和在公司办公一模一样
+举一反三: 如果出差在外，不必通过远程桌面。就能在笔记本浏览器上直接打开公司的内网 WEB（浏览器商店安装插件 SwitchyOmega 配置代理），和在公司办公一模一样
 
 ### 家里的 NAS ( linux，Docker )
 
@@ -72,9 +72,7 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
 ```
 
-注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例
-
-### 公司的电脑 (windows)
+### 公司的电脑 (windows, UI 版本)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
@@ -82,13 +80,21 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注：当最下方的按钮变成绿色，表示已连接成功
 
+### 公司的电脑 (windows, cmd 命令行)
+
+[下载程序](https://gitee.com/konyshe/goodlink/releases/tag/v1.3.17)
+
+```
+.\goodlink-windows-amd64.exe --local=127.0.0.1:18080 --key=nas_202412140928
+```
+
 ## 转发模式 - 举例
 
 local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 
 在公司访问 http://127.0.0.1:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
 
-举一反三: 不是所有的软件都支持配置Socket5代理，比如windows自带远程桌面，这里就只能使用转发模式，直接将公司电脑的3389端口和笔记本的13389端口绑定（笔记本自带远程桌面服务已占用3389端口），出差在外，随时远程桌面。
+举一反三: 不是所有的软件都支持配置 Socket5 代理，比如 windows 自带远程桌面，这里就只能使用转发模式，直接将公司电脑的 3389 端口和笔记本的 13389 端口绑定（笔记本自带远程桌面服务已占用 3389 端口），出差在外，随时远程桌面。
 
 ### 家里的 NAS (linux，Docker)
 
@@ -98,15 +104,21 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
-注：remote 端和 local 端均支持命令行 和 Docker 方式，二选一即可，以上仅作两种方式的举例
-
-### 公司的电脑 (windows)
+### 公司的电脑 (windows, UI 版本)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/2.png "使用说明")
 
 注：当最下方的按钮变成绿色，表示已连接成功
+
+### 公司的电脑 (windows, cmd 命令行)
+
+[下载程序](https://gitee.com/konyshe/goodlink/releases/tag/v1.3.17)
+
+```
+.\goodlink-windows-amd64.exe --local=127.0.0.1:9999 --key=nas_202412140928
+```
 
 # 选项说明
 
