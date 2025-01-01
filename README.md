@@ -93,19 +93,19 @@
 #### ( linux, Docker )
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=nas_202412140928
 ```
 
 #### ( linux, 命令行 )
 
 ```
-./goodlink-linux-amd64 --key= nas_202412140928
+./goodlink-linux-amd64 --key=nas_202412140928
 ```
 
 #### ( windows, 命令行 )
 
 ```
-.\goodlink-windows-amd64.exe --key= nas_202412140928
+.\goodlink-windows-amd64.exe --key=nas_202412140928
 ```
 
 ### local 端运行在公司电脑
