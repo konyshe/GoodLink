@@ -142,13 +142,17 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注: 不是所有软件都支持 Socket5 代理，比如 windows 自带远程桌面，这时可用转发模式，将公司电脑的 3389 端口和家里电脑(或出差电脑)的 13389 端口绑定（本机远程桌面服务已占用 3389 端口）。或出于安全考虑，你只希望 Local 端能访问指定的主机端口
 
-### remote 端运行在公司电脑 (windows, UI 版本)
+### remote 端运行在公司电脑
+
+#### (windows, UI)
 
 注：当最下方的按钮变成绿色，表示启动成功
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/5.png "使用说明")
 
-### local 端运行在家里电脑(或者出差笔记本) (windows, UI 版本)
+### local 端运行在家里电脑(或者出差笔记本)
+
+#### (windows, UI)
 
 注：当最下方的按钮变成绿色，表示连接成功。如果超过 10 分钟无法连接，按照下图先“点击关闭”，然后选择“主动连接”，再“点击启动”
 
@@ -158,10 +162,24 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 目标: 在公司访问 http://127.0.0.1:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
 
-### remote 端运行在家里的 NAS (linux，Docker)
+### remote 端运行在家里的 NAS
+
+#### (linux，Docker)
 
 ```
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
+```
+
+#### ( linux, 命令行 )
+
+```
+./goodlink-linux-amd64 --remote=192.168.3.2:9999 --key=nas_202412140928
+```
+
+#### (windows, 命令行)
+
+```
+.\goodlink-windows-amd64.exe --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
 ### local 端运行在公司电脑
@@ -171,6 +189,18 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 注：当最下方的按钮变成绿色，表示已连接成功
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/2.png "使用说明")
+
+#### (linux，Docker)
+
+```
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --local=127.0.0.1:9999 --key=nas_202412140928
+```
+
+#### ( linux, 命令行 )
+
+```
+./goodlink-linux-amd64 --local=127.0.0.1:9999 --key=nas_202412140928
+```
 
 #### (windows, 命令行)
 
