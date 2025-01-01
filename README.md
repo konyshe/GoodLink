@@ -84,11 +84,7 @@
 
 目标: 在公司电脑上配置代理：socks5://127.0.0.1:18080，便可访问家里包括 NAS 在内的所有主机端口
 
-local 端运行在公司的电脑，remote 端运行在家里的 NAS
-
-举一反三: 如果出差在外，不必通过远程桌面。就能在笔记本浏览器上直接打开公司的内网 WEB（浏览器商店安装插件 SwitchyOmega 配置代理），和在公司办公一模一样
-
-#### 家里的 NAS ( linux，Docker )
+### remote 端运行在家里的 NAS ( linux，Docker )
 
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
@@ -96,7 +92,7 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key= nas_202412140928
 ```
 
-#### 公司的电脑 (windows, UI 版本)
+### local 端运行在公司电脑 (windows, UI 版本)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
