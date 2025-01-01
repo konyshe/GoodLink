@@ -71,23 +71,25 @@ func NewRemoteUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *RemoteUI
 		switch value {
 		case "转发模式":
 			c.box_remote_ip.SetText(configInfo.RemoteIP)
+			c.box_remote_ip.ResetPlaceHolder()
 			c.box_remote_ip.Enable()
 
 			c.box_remote_port.SetText(configInfo.RemotePort)
+			c.box_remote_port.ResetPlaceHolder()
 			c.box_remote_port.Enable()
 		default:
 			if c.box_remote_ip.Validate() == nil {
 				configInfo.RemoteIP = c.box_remote_ip.Text
 			}
 			c.box_remote_ip.SetText("")
-			c.box_remote_ip.ResetPlaceHolder()
+			c.box_remote_ip.SetPlaceHolder("无需配置")
 			c.box_remote_ip.Disable()
 
 			if c.box_remote_port.Validate() == nil {
 				configInfo.RemotePort = c.box_remote_port.Text
 			}
 			c.box_remote_port.SetText("")
-			c.box_remote_port.ResetPlaceHolder()
+			c.box_remote_port.SetPlaceHolder("无需配置")
 			c.box_remote_port.Disable()
 		}
 	}
