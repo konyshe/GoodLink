@@ -64,7 +64,7 @@
 
 ## 代理模式 - 举例 1
 
-目标: 在家里电脑(或者出差笔记本)浏览器上配置代理：socks5://127.0.0.1:18080，便可访问公司所有内网 WEB, 和在公司无异
+目标: 在家里电脑(或出差笔记本)浏览器上配置代理：socks5://127.0.0.1:18080，访问公司所有内网 WEB, 和在公司无异
 
 注: 浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT，SVN, SSH 等等, 也都支持 socks5 代理，可以百度搜索
 
@@ -82,7 +82,7 @@
 
 ## 代理模式 - 举例 2
 
-目标: 在公司电脑上配置代理：socks5://127.0.0.1:18080，便可访问家里包括 NAS 在内的所有主机端口
+目标: 在公司电脑上配置代理：socks5://127.0.0.1:18080，访问家里包括 NAS 在内的所有主机端口
 
 ### remote 端运行在家里的 NAS ( linux，Docker )
 
@@ -110,13 +110,27 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 ## 转发模式 - 举例 1
 
-local 端运行在公司的电脑，remote 端运行在家里的 NAS。
+目标: 在家里电脑(或出差笔记本), 打开 windows 远程桌面, 连接 127.0.0.1:13389, 访问公司电脑的远程桌面
 
-在公司访问 http://127.0.0.1:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
+注: 不是所有的软件都支持配置 Socket5 代理，比如 windows 自带远程桌面，这时只能使用转发模式，直接将公司电脑的 3389 端口和笔记本的 13389 端口绑定（笔记本自带远程桌面服务已占用 3389 端口）。或者处于安全考虑，你只希望 Local 端能访问指定的主机端口
 
-举一反三: 不是所有的软件都支持配置 Socket5 代理，比如 windows 自带远程桌面，这里就只能使用转发模式，直接将公司电脑的 3389 端口和笔记本的 13389 端口绑定（笔记本自带远程桌面服务已占用 3389 端口），出差在外，随时远程桌面。
+### remote 端运行在公司电脑 (windows, UI 版本)
 
-#### 家里的 NAS (linux，Docker)
+注：当最下方的按钮变成绿色，表示启动成功
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/5.png "使用说明")
+
+### local 端运行在家里电脑(或者出差笔记本) (windows, UI 版本)
+
+注：当最下方的按钮变成绿色，表示连接成功。如果超过 10 分钟无法连接，按照下图先“点击关闭”，然后选择“主动连接”，再“点击启动”
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/6.png "使用说明")
+
+## 转发模式 - 举例 2
+
+目标: 在公司访问 http://127.0.0.1:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
+
+### remote 端运行在家里的 NAS (linux，Docker)
 
 下载镜像：registry.cn-shanghai.aliyuncs.com/kony/goodlink
 
@@ -124,7 +138,9 @@ local 端运行在公司的电脑，remote 端运行在家里的 NAS。
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
 ```
 
-#### 公司的电脑 (windows, UI 版本)
+### local 端运行在公司电脑
+
+#### (windows, UI)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases)
 
@@ -132,7 +148,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注：当最下方的按钮变成绿色，表示已连接成功
 
-#### 公司的电脑 (windows, cmd 命令行)
+#### (windows, 命令行)
 
 [下载程序](https://gitee.com/konyshe/goodlink/releases/tag/v1.3.17)
 
