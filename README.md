@@ -66,21 +66,19 @@
 
 目标: 在家里电脑(或者出差笔记本)浏览器上配置代理：socks5://127.0.0.1:18080，便可访问公司所有内网 WEB, 和在公司无异
 
-local 端运行在家里电脑(或者出差笔记本)，remote 端运行在公司的电脑
-
 注: 浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT，SVN, SSH 等等, 也都支持 socks5 代理，可以百度搜索
 
-#### 公司电脑 (windows, UI 版本)
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/3.png "使用说明")
+### remote 端运行在公司电脑 (windows, UI 版本)
 
 注：当最下方的按钮变成绿色，表示启动成功
 
-#### 家里电脑(或者出差笔记本) (windows, UI 版本)
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/3.png "使用说明")
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/4.png "使用说明")
+### local 端运行在家里电脑(或者出差笔记本) (windows, UI 版本)
 
 注：当最下方的按钮变成绿色，表示连接成功
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/4.png "使用说明")
 
 ## 代理模式 - 举例 2
 
