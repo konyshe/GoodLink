@@ -116,8 +116,6 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/1.png "使用说明")
 
-### 公司电脑
-
 #### ( linux, Docker )
 
 ```
