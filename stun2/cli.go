@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"goodlink/config"
 	"goodlink/tools"
 	"math/big"
 	"net"
@@ -138,25 +139,13 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
 	return net.IP(ip).String(), int(port2), nil
 }
 
-var m_stun_list []string
-
-func init() {
-	m_stun_list = []string{
-		"stun.easyvoip.com:3478",
-		"stun.voipbuster.com:3478",
-		"stun.voipstunt.com:3478",
-		"stun.internetcalls.com:3478",
-		"124.223.50.150:13478",
-	}
-}
-
 func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
 	gogo.Log().Debug("   获取本端地址")
 	defer conn.SetReadDeadline(time.Time{})
 
 	for {
-		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(m_stun_list))))
-		stun_svr := m_stun_list[n.Int64()]
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.GetConfig().StunList))))
+		stun_svr := config.GetConfig().StunList[n.Int64()]
 		conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
 			break
@@ -175,7 +164,7 @@ func TestStun() {
 	conn := tools.GetListenUDP()
 
 	for {
-		for _, stun_svr := range m_stun_list {
+		for _, stun_svr := range config.GetConfig().StunList {
 			conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 			if wan_ip, wan_port, _ := getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
 				conn.SetReadDeadline(time.Time{})

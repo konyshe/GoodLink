@@ -23,10 +23,11 @@ var (
 )
 
 func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
+	if err := config.Init(); err != nil {
+		return err
+	}
+
 	if m_cli_redis_addr == "" {
-		if err := config.Init(); err != nil {
-			return err
-		}
 		m_cli_redis_addr = config.GetAddr()
 		m_cli_redis_pass = config.GetPasswd()
 		m_cli_redis_id = config.GetID()
