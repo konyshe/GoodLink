@@ -107,25 +107,35 @@ func start_button_click() {
 		case "Local":
 			m_mg_start.Add(1)
 			go func() {
-				defer m_mg_start.Done()
+				defer func() {
+					m_activity_start_button.Stop()
+					m_activity_start_button.Hide()
+					m_mg_start.Done()
+				}()
+
 				time.Sleep(time.Second * 1)
-				m_button_start.Enable()
-				if m_stats_start_button == 1 {
-					m_button_start.Importance = widget.WarningImportance
-					m_button_start.SetText("点击关闭")
+				if m_stats_start_button != 1 {
+					return
 				}
+				m_button_start.Enable()
+				m_button_start.Importance = widget.WarningImportance
+				m_button_start.SetText("关闭连接")
 
 				for m_stats_start_button == 1 {
-					if pro.GetLocalStats() == 2 {
-						m_view_log.SetText("连接成功")
+					switch pro.GetLocalStats() {
+					case 1:
+						m_activity_start_button.Start()
+						m_activity_start_button.Show()
+						m_button_start.Importance = widget.WarningImportance
+						m_button_start.Refresh()
+					case 2:
+						m_activity_start_button.Stop()
+						m_activity_start_button.Hide()
 						m_button_start.Importance = widget.SuccessImportance
 						m_button_start.Refresh()
-						break
 					}
-					time.Sleep(time.Millisecond * 200)
+					time.Sleep(time.Second * 1)
 				}
-				m_activity_start_button.Stop()
-				m_activity_start_button.Hide()
 			}()
 
 			m_mg_start.Add(1)
