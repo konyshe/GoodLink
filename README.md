@@ -1,4 +1,4 @@
-<img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g.png" width="50" height="50"><font size="9">oodLink</font>
+<img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
 
 由于经常异地办公, 对于市面上的远程桌面工具, 无论速度、收费、画面模糊等, 都不如 windows 自带的远程桌面, 但异地如何使用 windows 远程桌面呢？
 
