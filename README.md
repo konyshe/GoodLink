@@ -2,9 +2,9 @@
 
 由于经常异地办公, 对于市面上的远程桌面工具, 无论速度、收费、画面模糊等, 都不如 windows 自带的远程桌面, 但异地如何使用 windows 远程桌面呢？
 
-是否可以远程桌面都不用, 直接浏览器访问公司的内网 WEB, 登录内网 GIT, 内网 SSH, 远程 VS CODE 调试等等, 就跟在公司一模一样？
+是否可以无需远程桌面, 直接浏览器访问公司的内网 WEB, 登录内网 GIT, 内网 SSH, 远程 VS CODE 调试等等, 就跟在公司一模一样？
 
- **注: 作者开发该项目的初衷，是方便自己的同时，方便大家，还能提升热度，希望对未来的工作有所帮助，毕竟现在的大环境不好。本项目仅用于学习研究, 目前没有任何商业合作，更没有任何恶意行为。如果将来有广告之类盈利的行为，会在这里郑重告知大家。另外声明：严禁用于违法行为！！！** 
+ **注: 作者开发该项目的初衷，是方便自己的同时，方便大家，提升热度，希望对未来有所帮助。本项目仅用于学习研究, 目前没有任何商业合作，更没有任何恶意行为。如果将来有广告之类盈利的行为，会在这里郑重告知大家。另外声明：严禁用于违法行为！！！** 
 
 # 特点
 
@@ -17,15 +17,6 @@
 注: 1.1.6 版本开始加强了通信安全, 因此和老版本不兼容
 
 ![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
-
- <table>
-	<th>服务端NAT</th><th>客户端NAT</th><th>P2P成功</th>
-	<tr><td>NAT1-3</td><td>NAT1-3</td><td>YES</td></tr>
-	<tr><td>NAT1-2</td><td>NAT4</td><td>YES</td></tr>
-	<tr><td>NAT4</td><td>NAT1-2</td><td>YES</td></tr>
-	<tr><td>NAT4</td><td>NAT3-4</td><td>YES</td></tr>
-	<tr><td>NAT3-4</td><td>NAT4</td><td>YES</td></tr>
-  </table>
 
 # 介绍
 
@@ -50,6 +41,16 @@
 10. 1.4.17 版本开始, windows 版本新增了 UI, 目前还在测试阶段, 可能不太稳定。如果影响使用, 可先使用 1.3.17 之前的 windows 版本
 
 11. 1024 以下是操作系统的保留端口, 基本都被占用了, local 端请使用 1024 以上端口。linux 系统可以使用命令 `netstat -anp|grep 22` 判断 22 端口是否已被占用。
+
+ <table>
+	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
+	<tr><td>NAT1-3</td><td>NAT1-3</td><td>YES</td></tr>
+	<tr><td>NAT1-2</td><td>NAT4</td><td>YES</td></tr>
+	<tr><td>NAT4</td><td>NAT1-2</td><td>YES</td></tr>
+	<tr><td>NAT4</td><td>NAT3-4</td><td>YES</td></tr>
+	<tr><td>NAT3-4</td><td>NAT4</td><td>YES</td></tr>
+  </table>
+
 
 # 简单使用
 
