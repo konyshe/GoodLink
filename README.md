@@ -1,6 +1,4 @@
-![GoodLink Logo](https://gitee.com/konyshe/goodlink/raw/master/logo.png "GoodLink")
-
-# 背景
+<img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g.png" width="50" height="50"><font size="9">oodLink</font>
 
 由于经常异地办公, 对于市面上的远程桌面工具, 无论速度、收费、画面模糊等, 都不如 windows 自带的远程桌面, 但异地如何使用 windows 远程桌面呢？
 
@@ -20,6 +18,15 @@
 
 ![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
 
+ <table>
+	<th>服务端NAT</th><th>客户端NAT</th><th>P2P成功</th>
+	<tr><td>NAT1-3</td><td>NAT1-3</td><td>YES</td></tr>
+	<tr><td>NAT1-2</td><td>NAT4</td><td>YES</td></tr>
+	<tr><td>NAT4</td><td>NAT1-2</td><td>YES</td></tr>
+	<tr><td>NAT4</td><td>NAT3-4</td><td>YES</td></tr>
+	<tr><td>NAT3-4</td><td>NAT4</td><td>YES</td></tr>
+  </table>
+
 # 介绍
 
 1. 本程序即支持命令行方式, 也支持 docker 方式, windows 版本也新增了 UI 使用更简单。以下举例仅作参考, 可随意切换
@@ -34,7 +41,7 @@
 
 6. 如果需要反过来, 或者需要访问多个 remote 端, 就需要运行多个程序或启动多个 Docker
 
-7. 由于直连过程复杂, 会出现反复重试, 通常 10 分钟内成功。如果长时间无法连接, 请[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
+7. 由于直连过程复杂, 会出现反复重试, 通常 10 分钟内成功。如果长时间无法连接, 点[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
 
 8. windows 自带杀毒软件, 会将所有 go 语言写的程序都认为是病毒。本程序已开源, 可放心食用
 
