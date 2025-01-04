@@ -13,3 +13,4 @@ goodlink.json
 *.7z
 *.zip
 config.json
+*.upx

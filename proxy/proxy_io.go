@@ -20,7 +20,7 @@ func check(err error) bool {
 
 func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
 	for {
-		if n, err := io.Copy(tc, qc); n == 0 || err != nil {
+		if _, err := io.Copy(tc, qc); err != nil {
 			tc.Close()
 			qc.Close()
 			if check(err) {
@@ -33,7 +33,7 @@ func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection
 
 func stunQ2TProcess1(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
 	for {
-		if n, err := io.Copy(qc, tc); n == 0 || err != nil {
+		if _, err := io.Copy(qc, tc); err != nil {
 			tc.Close()
 			qc.Close()
 			if check(err) {
