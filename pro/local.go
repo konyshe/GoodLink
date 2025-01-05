@@ -21,7 +21,7 @@ var (
 	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
 )
 
-func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
+func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, error) {
 	var err error
 
 	redisJson := RedisJsonType{
@@ -61,21 +61,25 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 		err = RedisGet(&redisJson)
 		if err != nil {
 			gogo.Log().Debug(err)
-			return nil, nil
+			return nil, nil, nil
 		}
 
 		switch redisJson.State {
 		case 1:
+			gogo.Log().DebugF("%d: 收到对端地址: %v", redisJson.State, redisJson)
+
 			switch conn_type {
 			case 0:
-				gogo.Log().DebugF("%d: 收到对端地址: %v", redisJson.State, redisJson)
-
 				if m_tun_passive != nil {
 					m_tun_passive.Release()
 				}
 				m_tun_active = nil
 
 				redisJson.ClientIP, redisJson.ClientPort = <-wan_ip_chain, <-wan_port_chain
+				if redisJson.ClientIP == redisJson.ServerIP {
+					RedisDel()
+					return nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
+				}
 
 				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ServerIP, redisJson.ServerPort, redisJson.SendPortCount)
 				m_tun_passive.Start()
@@ -85,14 +89,18 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
-				gogo.Log().DebugF("%d: 收到对端地址: %v", redisJson.State, redisJson)
 				if m_tun_active != nil {
 					m_tun_active.Release()
 				}
 				m_tun_passive = nil
 
+				if redisJson.ClientIP == redisJson.ServerIP {
+					RedisDel()
+					return nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
+				}
+
 				m_tun_active = tun.CreateTunActive(conn, 15*time.Second)
-				m_tun_active.Start(redisJson.ServerIP, redisJson.ServerPort, redisJson.SocketTimeOut)
+				m_tun_active.Start(redisJson.ClientPort, redisJson.ServerIP, redisJson.ServerPort, redisJson.SocketTimeOut)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
@@ -101,28 +109,28 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream) {
 			if m_tun_passive != nil {
 				if m_tun_passive.TunQuicConn != nil {
 					gogo.Log().DebugF("%d: 连接成功", redisJson.State)
-					return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream
+					return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream, nil
 				}
 			}
 			if m_tun_active != nil {
 				if m_tun_active.TunQuicConn != nil {
 					gogo.Log().DebugF("%d: 连接成功", redisJson.State)
-					return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream
+					return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream, nil
 				}
 			}
 			gogo.Log().Debug("   连接失败")
-			return nil, nil
+			return nil, nil, nil
 
 		case 4:
 			gogo.Log().DebugF("%d: 连接超时", redisJson.State)
-			return nil, nil
+			return nil, nil, nil
 
 		default:
 			gogo.Log().DebugF("%d: 等待对端状态", redisJson.State)
 		}
 	}
 
-	return nil, nil
+	return nil, nil, nil
 }
 
 func GetLocalStats() int {
@@ -160,7 +168,11 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 
 		count++
 
-		conn, health := GetLocalQuicConn(conn_type, count)
+		conn, health, err := GetLocalQuicConn(conn_type, count)
+		if err != nil {
+			Release()
+			return err
+		}
 		if conn == nil {
 			Release()
 			continue

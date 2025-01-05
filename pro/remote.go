@@ -98,7 +98,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			switch conn_type {
 			case 0:
 				gogo.Log().DebugF("%d: 收到对端地址: %v", redisJson.State, redisJson)
-				m_tun_active.Start(redisJson.ClientIP, redisJson.ClientPort, redisJson.SocketTimeOut)
+				m_tun_active.Start(redisJson.ServerPort, redisJson.ClientIP, redisJson.ClientPort, redisJson.SocketTimeOut)
 
 			case 1:
 				gogo.Log().DebugF("%d: 收到对端地址, 等待连接: %v", redisJson.State, redisJson)
@@ -109,13 +109,19 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				redisJson.State = 3
 				gogo.Log().DebugF("%d: 通知对端, 连接成功", redisJson.State)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
-				return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream
+				if m_tun_active != nil {
+					return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream
+				}
+				return nil, nil
 
 			case <-tun_passive_chain:
 				redisJson.State = 3
 				gogo.Log().DebugF("%d: 通知对端, 连接成功", redisJson.State)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
-				return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream
+				if m_tun_passive != nil {
+					return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream
+				}
+				return nil, nil
 
 			case <-time.After(time_out):
 				redisJson.State = 4

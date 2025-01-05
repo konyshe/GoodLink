@@ -95,3 +95,7 @@ func RedisGet(redisJson *RedisJsonType) error {
 
 	return nil
 }
+
+func RedisDel() {
+	m_redis_db.Del(m_md5_tun_key)
+}
