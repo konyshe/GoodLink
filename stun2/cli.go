@@ -14,85 +14,7 @@ import (
 	"gogo"
 )
 
-func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
-	//gogo.Log().DebugF("   stun_svr: %s\n", addr)
-
-	//rand.Seed(time.Now().UnixNano())
-
-	udpAddr, err := net.ResolveUDPAddr("udp4", addr)
-	if err != nil {
-		return "", 0, err
-	}
-
-	// https://www.rfc-editor.org/rfc/rfc5389.html#section-6
-	// STUN Message Structure
-	//   0                   1                   2                   3
-	//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	// |0 0|     STUN Message Type     |         Message Length        |
-	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	// |                         Magic Cookie                          |
-	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	// |                                                               |
-	// |                     Transaction ID (96 bits)                  |
-	// |                                                               |
-	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-	// STUN message header
-	buf := new(bytes.Buffer)
-	// Start with fixed 0x00, message type: 0x01, message length: 0x0000
-	buf.Write([]byte{0x00, 0x01, 0x00, 0x00})
-	magicCookie := []byte{0x21, 0x12, 0xA4, 0x42}
-	buf.Write(magicCookie)
-	transactionID := make([]byte, 12)
-	rand.Read(transactionID)
-	buf.Write(transactionID)
-
-	_, err = conn.WriteToUDP(buf.Bytes(), udpAddr)
-	if err != nil {
-		return "", 0, err
-	}
-
-	response := make([]byte, 1024)
-	n, err := conn.Read(response)
-	if err != nil {
-		return "", 0, err
-	}
-	if n < 32 {
-		return "", 0, fmt.Errorf("invalid response")
-	}
-
-	// Parse STUN message
-	if !bytes.Equal(response[4:8], buf.Bytes()[4:8]) {
-		return "", 0, fmt.Errorf("invalid magic cookie in response")
-	}
-	if !bytes.Equal(response[8:20], buf.Bytes()[8:20]) {
-		return "", 0, fmt.Errorf("transaction ID mismatch in response")
-	}
-
-	// https://www.rfc-editor.org/rfc/rfc5389.html#section-15
-	// STUN Attributes
-	//   0                   1                   2                   3
-	//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	// |         Type                  |            Length             |
-	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	// |                         Value (variable)                ....
-	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-	// Parse STUN attributes
-	attributes := response[20:]
-
-	attrType := binary.BigEndian.Uint16(attributes[:2])
-	// Mapped Address && Xor-Mapped Address
-	if attrType != 0x0001 && attrType != 0x0020 {
-		return "", 0, fmt.Errorf("invalid address attribute type")
-	}
-	attrLength := binary.BigEndian.Uint16(attributes[2:4])
-	if attrLength < 8 {
-		return "", 0, fmt.Errorf("invalid address attribute length")
-	}
-
+func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magicCookie []byte, transactionID []byte) (string, int, error) {
 	// https://www.rfc-editor.org/rfc/rfc5389.html#section-15.1
 	// MAPPED-ADDRESS
 	//  0                   1                   2                   3
@@ -139,22 +61,156 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, error) {
 	return net.IP(ip).String(), int(port2), nil
 }
 
-func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port int) {
+func getStunIpPort4(response []byte, response_len int, needType uint16, magicCookie []byte, transactionID []byte) (string, int, error) {
+	start := 0
+
+	for {
+		if start >= response_len-4 {
+			break
+		}
+
+		// Parse STUN attributes
+		attributes := response[start:]
+		attrType := binary.BigEndian.Uint16(attributes[:2])
+		attrLength := binary.BigEndian.Uint16(attributes[2:4])
+		if attrLength < 8 {
+			break
+		}
+
+		if attrType == needType {
+			return getStunIpPort5(attrType, attributes, attrLength, magicCookie, transactionID)
+		}
+
+		start = start + int(attrLength) + 4
+	}
+
+	return "", 0, fmt.Errorf("attrType not found")
+}
+
+func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte, int, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp4", addr)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	_, err = conn.WriteToUDP(buf.Bytes(), udpAddr)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	response := make([]byte, 1024)
+
+	conn.SetReadDeadline(time.Now().Add(2000 * time.Millisecond))
+	n, err := conn.Read(response)
+	defer conn.SetDeadline(time.Time{})
+
+	if err != nil {
+		return nil, 0, err
+	}
+	if n < 32 {
+		return nil, 0, fmt.Errorf("invalid response")
+	}
+
+	// Parse STUN message
+	if !bytes.Equal(response[4:8], buf.Bytes()[4:8]) {
+		return nil, 0, fmt.Errorf("invalid magic cookie in response")
+	}
+	if !bytes.Equal(response[8:20], buf.Bytes()[8:20]) {
+		return nil, 0, fmt.Errorf("transaction ID mismatch in response")
+	}
+
+	return response, n, nil
+}
+
+func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, int, error) {
+
+	// https://www.rfc-editor.org/rfc/rfc5389.html#section-6
+	// STUN Message Structure
+	//   0                   1                   2                   3
+	//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |0 0|     STUN Message Type     |         Message Length        |
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                         Magic Cookie                          |
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                                                               |
+	// |                     Transaction ID (96 bits)                  |
+	// |                                                               |
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+	// STUN message header
+	buf := new(bytes.Buffer)
+	// Start with fixed 0x00, message type: 0x01, message length: 0x0000
+	buf.Write([]byte{0x00, 0x01, 0x00, 0x00})
+	magicCookie := []byte{0x21, 0x12, 0xA4, 0x42}
+	buf.Write(magicCookie)
+	transactionID := make([]byte, 12)
+	rand.Read(transactionID)
+	buf.Write(transactionID)
+
+	response, n, err := getStunResponse(conn, addr, buf)
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	// https://www.rfc-editor.org/rfc/rfc5389.html#section-15
+	// STUN Attributes
+	//   0                   1                   2                   3
+	//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |         Type                  |            Length             |
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                         Value (variable)                ....
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+	wan_ip1, wan_port1, err := getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
+	if wan_ip1 == "" || wan_port1 == 0 {
+		wan_ip1, wan_port1, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
+	}
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	change_ip, change_port, err := getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	response, n, err = getStunResponse(conn, fmt.Sprintf("%s:%d", change_ip, change_port), buf)
+	if err != nil {
+		return "", 0, 0, err
+	}
+	wan_ip2, wan_port2, err := getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
+	if wan_ip2 == "" || wan_port2 == 0 {
+		wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
+	}
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	if wan_ip1 != wan_ip2 {
+		gogo.Log().ErrorF("wan_ip1: %s, wan_ip2: %s", wan_ip1, wan_ip2)
+	}
+
+	return wan_ip1, wan_port1, wan_port2, nil
+}
+
+func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 	gogo.Log().Debug("   获取本端地址")
 	defer conn.SetReadDeadline(time.Time{})
 
 	for {
 		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.GetConfig().StunList))))
 		stun_svr := config.GetConfig().StunList[n.Int64()]
-		conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-		if wan_ip, wan_port, _ = getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
-			break
+		wan_ip, wan_port1, wan_port2, err := getStunIpPort2(conn, stun_svr)
+		//log.Printf("   stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d, err: %v", stun_svr, wan_ip, wan_port1, wan_port2, err)
+		if err == nil {
+			return wan_ip, wan_port1, wan_port2
 		}
 	}
-	return
 }
 
-func GetWanIpPort() (wan_ip string, wan_port int) {
+func GetWanIpPort() (string, int, int) {
 	conn := tools.GetListenUDP()
 	defer conn.Close()
 	return GetWanIpPort2(conn)
@@ -166,9 +222,9 @@ func TestStun() {
 	for {
 		for _, stun_svr := range config.GetConfig().StunList {
 			conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-			if wan_ip, wan_port, _ := getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port > 0 {
+			if wan_ip, wan_port1, wan_port2, _ := getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port1 > 0 && wan_port2 > 0 {
 				conn.SetReadDeadline(time.Time{})
-				fmt.Printf("stun_svr: %s, wan_ip: %s, wan_port: %d\n", stun_svr, wan_ip, wan_port)
+				fmt.Printf("stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d\n", stun_svr, wan_ip, wan_port1, wan_port2)
 			} else {
 				fmt.Printf("stun_svr: %s, failed\n", stun_svr)
 			}

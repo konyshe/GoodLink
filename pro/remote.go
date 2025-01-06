@@ -55,9 +55,9 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			gogo.Log().DebugF("%d: 收到对端请求: %v", redisJson.State, redisJson)
 
 			conn := tools.GetListenUDP()
-			redisJson.ServerIP, redisJson.ServerPort = stun2.GetWanIpPort2(conn)
+			redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2 = stun2.GetWanIpPort2(conn)
 
-			switch redisJson.ClientPort {
+			switch redisJson.ClientPort2 {
 			case 0:
 				conn_type = 0
 				gogo.Log().Debug("   对端未发来IP")
@@ -84,7 +84,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_active = nil
 
-				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ClientIP, redisJson.ClientPort, 0x100)
+				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, 0x100)
 				m_tun_passive.Start()
 
 				tun_passive_chain = m_tun_passive.GetChain()
@@ -98,7 +98,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			switch conn_type {
 			case 0:
 				gogo.Log().DebugF("%d: 收到对端地址: %v", redisJson.State, redisJson)
-				m_tun_active.Start(redisJson.ServerPort, redisJson.ClientIP, redisJson.ClientPort, redisJson.SocketTimeOut)
+				m_tun_active.Start(redisJson.ServerPort1, redisJson.ServerPort2, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, redisJson.SocketTimeOut)
 
 			case 1:
 				gogo.Log().DebugF("%d: 收到对端地址, 等待连接: %v", redisJson.State, redisJson)

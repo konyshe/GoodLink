@@ -72,9 +72,11 @@ type RedisJsonType struct {
 	SendPortCount int           `bson:"send_port_count" json:"send_port_count"`
 	ConnectCount  int           `bson:"connect_count" json:"connect_count"`
 	ServerIP      string        `bson:"server_ip" json:"server_ip"`
-	ServerPort    int           `bson:"server_port" json:"server_port"`
+	ServerPort1   int           `bson:"server_port1" json:"server_port1"`
+	ServerPort2   int           `bson:"server_port2" json:"server_port2"`
 	ClientIP      string        `bson:"client_ip" json:"client_ip"`
-	ClientPort    int           `bson:"client_port" json:"client_port"`
+	ClientPort1   int           `bson:"client_port1" json:"client_port1"`
+	ClientPort2   int           `bson:"client_port2" json:"client_port2"`
 }
 
 func RedisSet(time_out time.Duration, redisJson *RedisJsonType) {
