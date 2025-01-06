@@ -12,26 +12,43 @@ GOBUILD=GO111MODULE=on \
 		-w -s -buildid='
 
 PLATFORM_LIST = \
-	linux-arm64 \
-	linux-arm \
-	linux-amd64 \
-	windows-amd64-app
+	linux-386-cmd \
+	linux-amd64-cmd \
+	linux-arm-cmd \
+	linux-arm64-cmd \
+	darwin-amd64-cmd \
+	darwin-arm64-cmd \
+	windows-amd64-cmd \
+	windows-arm64-cmd \
+	windows-amd64-ui
 
 all: clean $(PLATFORM_LIST) strip
 
-linux-amd64:
-	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+linux-386-cmd:
+	GOARCH=386 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
 
-linux-arm64:
-	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+linux-amd64-cmd:
+	GOARCH=amd64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
 
-linux-arm:
-	GOARCH=arm GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
+linux-arm-cmd:
+	GOARCH=arm GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
 
-windows-amd64:
-	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
+linux-arm64-cmd:
+	GOARCH=arm64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
 
-windows-amd64-app:
+darwin-amd64-cmd:
+	GOARCH=amd64 GOOS=darwin $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+darwin-arm64-cmd:
+	GOARCH=arm64 GOOS=darwin $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+windows-amd64-cmd:
+	GOARCH=amd64 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
+
+windows-arm64-cmd:
+	GOARCH=arm64 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
+
+windows-amd64-ui:
 #	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 fyne package -os windows -icon theme/favicon.ico
 #	go build -ldflags -H=windowsgui
 	fyne package; mv *.exe bin/

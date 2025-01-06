@@ -5,6 +5,12 @@
 make clean
 make
 cd bin
-7z a goodlink-linux-amd64.7z goodlink-linux-amd64
-7z a goodlink-linux-arm64.7z goodlink-linux-arm64
-7z a goodlink-windows-amd64.7z goodlink-windows-amd64.exe
+zip goodlink-linux-amd64-cmd.zip goodlink-linux-amd64-cmd
+zip goodlink-linux-arm64-cmd.zip goodlink-linux-arm64-cmd
+zip goodlink-darwin-amd64-cmd.zip goodlink-darwin-amd64-cmd
+zip goodlink-darwin-arm64-cmd.zip goodlink-darwin-arm64-cmd
+zip goodlink-linux-386-cmd.zip goodlink-linux-386-cmd
+zip goodlink-linux-arm-cmd.zip goodlink-linux-arm-cmd
+zip goodlink-windows-amd64-cmd.zip goodlink-windows-amd64-cmd.exe
+zip goodlink-windows-arm64-cmd.zip goodlink-windows-arm64-cmd.exe
+zip goodlink-windows-amd64-ui.zip goodlink-windows-amd64-ui.exe
