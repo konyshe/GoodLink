@@ -24,10 +24,10 @@ func main() {
 	myApp.Settings().SetTheme(&theme.MyTheme{})
 	icon, _ := fyne.LoadResourceFromPath("./theme/favicon.png")
 	myApp.SetIcon(icon)
-	myWindow := myApp.NewWindow(M_APP_TITLE)
+	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + myApp.Metadata().Version)
 
 	if desk, ok := myApp.(desktop.App); ok {
-		m := fyne.NewMenu(M_APP_TITLE,
+		m := fyne.NewMenu(M_APP_TITLE+"  v"+myApp.Metadata().Version,
 			fyne.NewMenuItem("打开主程序", func() {
 				myWindow.Show()
 			}))
