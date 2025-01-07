@@ -22,8 +22,6 @@ var (
 )
 
 func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, error) {
-	var err error
-
 	redisJson := RedisJsonType{
 		ConnectCount: count,
 	}
@@ -50,10 +48,8 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 	for m_local_state == 1 {
 		time.Sleep(1 * time.Second)
 
-		err = RedisGet(&redisJson)
-		if err != nil {
-			gogo.Log().Debug(err)
-			return nil, nil, nil
+		if RedisGet(&redisJson) != nil {
+			continue
 		}
 
 		switch redisJson.State {
