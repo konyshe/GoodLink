@@ -41,9 +41,6 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
 	if m_redis_db == nil {
 		return errors.New("Redis失败, 请重启程序")
 	}
-	if _, err := m_redis_db.Ping().Result(); err != nil { //心跳
-		return errors.New("请检查网络故障, 退出重启")
-	}
 
 	m_tun_active = nil
 	m_tun_passive = nil

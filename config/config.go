@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"gogo"
 	"goodlink/aes"
 	"io"
 	"net/http"
@@ -35,17 +36,24 @@ func GetConfig() ConfigInfo {
 }
 
 func Init() error {
-	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
-	if resp == nil || err != nil {
-		return errors.New("下载配置失败, 请重启程序")
-	}
-	defer resp.Body.Close()
+	gogo.Log().Debug("   初始化配置中")
+	defer gogo.Log().Debug("   初始化配置完成")
 
+	client := &http.Client{Timeout: 3 * time.Second}
+	var resp *http.Response
+	var err error
 	var res []byte
-	res, err = io.ReadAll(resp.Body)
-	if res == nil || err != nil {
-		return errors.New("读取配置失败, 请重启程序")
+
+	for {
+		resp, err = client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
+		if resp != nil && err == nil {
+			res, err = io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if res != nil && err == nil {
+				break
+			}
+		}
+		time.Sleep(1 * time.Second)
 	}
 
 	temp2 := aes.Decrypt(res, "goodlink")

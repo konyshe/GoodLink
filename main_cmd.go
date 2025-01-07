@@ -35,7 +35,10 @@ func main2() {
 
 	// 第三方集成, 关注以下代码即可
 	go func() {
-		pro.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id)
+		if err := pro.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id); err != nil {
+			log.Println(err)
+			return
+		}
 
 		switch len(m_cli_tun_local_addr) {
 		case 0:
