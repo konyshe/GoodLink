@@ -57,7 +57,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			conn := tools.GetListenUDP()
 			redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2 = stun2.GetWanIpPort2(conn)
 
-			switch redisJson.ClientPort2 {
+			switch redisJson.ClientPort1 {
 			case 0:
 				conn_type = 0
 				gogo.Log().Debug("   对端未发来IP")
