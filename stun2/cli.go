@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"goodlink/config"
 	"goodlink/tools"
+	"log"
 	"math/big"
 	"net"
 	"time"
@@ -100,7 +101,7 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 
 	response := make([]byte, 1024)
 
-	conn.SetReadDeadline(time.Now().Add(2000 * time.Millisecond))
+	conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 	n, err := conn.Read(response)
 	defer conn.SetDeadline(time.Time{})
 
@@ -164,48 +165,60 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, int, error) {
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 	wan_ip1, wan_port1, err := getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
-	if wan_ip1 == "" || wan_port1 == 0 {
+	if err != nil {
 		wan_ip1, wan_port1, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
 	}
 	if err != nil {
 		return "", 0, 0, err
 	}
 
-	change_ip, change_port, err := getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
-	if err != nil {
-		return "", 0, 0, err
+	var change_ip, wan_ip2 string
+	var change_port, wan_port2 int
+
+	change_ip, change_port, err = getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
+	if err == nil {
+		response, n, err = getStunResponse(conn, fmt.Sprintf("%s:%d", change_ip, change_port), buf)
+		if err == nil {
+			wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
+			if err != nil {
+				wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
+			}
+			if err == nil {
+				if wan_ip1 != wan_ip2 {
+					gogo.Log().ErrorF("wan_ip: %s, %s", wan_ip1, wan_ip2)
+				}
+				return wan_ip1, wan_port1, wan_port2, nil
+			}
+		}
+		return wan_ip1, wan_port1, 0, err
 	}
 
-	response, n, err = getStunResponse(conn, fmt.Sprintf("%s:%d", change_ip, change_port), buf)
-	if err != nil {
-		return "", 0, 0, err
-	}
-	wan_ip2, wan_port2, err := getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
-	if wan_ip2 == "" || wan_port2 == 0 {
-		wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
-	}
-	if err != nil {
-		return "", 0, 0, err
-	}
-
-	if wan_ip1 != wan_ip2 {
-		gogo.Log().ErrorF("wan_ip1: %s, wan_ip2: %s", wan_ip1, wan_ip2)
-	}
-
-	return wan_ip1, wan_port1, wan_port2, nil
+	return wan_ip1, wan_port1, 0, nil
 }
 
 func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 	gogo.Log().Debug("   获取本端地址")
 	defer conn.SetReadDeadline(time.Time{})
+	n2 := 0
 
 	for {
 		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.GetConfig().StunList))))
 		stun_svr := config.GetConfig().StunList[n.Int64()]
 		wan_ip, wan_port1, wan_port2, err := getStunIpPort2(conn, stun_svr)
 		//log.Printf("   stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d, err: %v", stun_svr, wan_ip, wan_port1, wan_port2, err)
-		if err == nil {
+		if err != nil {
+			log.Printf("   stun_svr: %s, err: %v", stun_svr, err)
+			/*if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "closed") {
+				time.Sleep(1 * time.Second)
+			}*/
+		}
+		if wan_ip != "" && wan_port1 > 0 {
 			return wan_ip, wan_port1, wan_port2
+		}
+		n2++
+		if n2 >= len(config.GetConfig().StunList) {
+			time.Sleep(3 * time.Second)
+			n2 = 0
 		}
 	}
 }

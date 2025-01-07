@@ -28,24 +28,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		ConnectCount: count,
 	}
 
-	wan_ip_chain := make(chan string, 1)
-	wan_port1_chain := make(chan int, 1)
-	wan_port2_chain := make(chan int, 1)
-	defer func() {
-		close(wan_ip_chain)
-		close(wan_port1_chain)
-		close(wan_port2_chain)
-	}()
-
 	conn := tools.GetListenUDP()
-
-	go func() {
-		ClientIP, ClientPort1, ClientPort2 := stun2.GetWanIpPort2(conn)
-		wan_ip_chain <- ClientIP
-		wan_port1_chain <- ClientPort1
-		wan_port2_chain <- ClientPort2
-		log.Printf("   本地地址: %v: %v,%v", ClientIP, ClientPort1, ClientPort2)
-	}()
 
 	switch conn_type {
 	case 0:
@@ -53,7 +36,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		RedisSet(15*time.Second, &redisJson)
 
 	default:
-		redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2 = <-wan_ip_chain, <-wan_port1_chain, <-wan_port2_chain
+		redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2 = stun2.GetWanIpPort2(conn)
 		redisJson.State = 0
 		gogo.Log().DebugF("%d: 发送本端地址: %v", redisJson.State, redisJson)
 		RedisSet(15*time.Second, &redisJson)
@@ -79,7 +62,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 				}
 				m_tun_active = nil
 
-				redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2 = <-wan_ip_chain, <-wan_port1_chain, <-wan_port2_chain
+				redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2 = stun2.GetWanIpPort2(conn)
 				if redisJson.ClientIP == redisJson.ServerIP {
 					RedisDel()
 					return nil, nil, fmt.Errorf("已经和对端处在同一个公网下")

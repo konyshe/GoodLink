@@ -79,13 +79,21 @@ type RedisJsonType struct {
 	ClientPort2   int           `bson:"client_port2" json:"client_port2"`
 }
 
-func RedisSet(time_out time.Duration, redisJson *RedisJsonType) {
+func RedisSet(time_out time.Duration, redisJson *RedisJsonType) error {
+	if m_redis_db == nil {
+		return errors.New("Redis为初始化")
+	}
 	if jsonByte, err := json.Marshal(*redisJson); err == nil {
 		m_redis_db.Set(m_md5_tun_key, aes.Encrypt(jsonByte, m_tun_key), time_out)
 	}
+	return nil
 }
 
 func RedisGet(redisJson *RedisJsonType) error {
+	if m_redis_db == nil {
+		return errors.New("Redis为初始化")
+	}
+
 	aes_res, err := m_redis_db.Get(m_md5_tun_key).Bytes()
 	if err != nil || aes_res == nil || len(aes_res) == 0 {
 		return fmt.Errorf("   获取信令数据失败: %v", err)
