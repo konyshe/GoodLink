@@ -23,9 +23,16 @@ var (
 )
 
 func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
-	if err := config.Init(); err != nil {
-		return err
+	log.Println("   初始化配置中")
+	for {
+		if err := config.Init(); err != nil {
+			log.Println(err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		break
 	}
+	log.Println("   初始化配置完成")
 
 	if m_cli_redis_addr == "" {
 		m_cli_redis_addr = config.GetAddr()

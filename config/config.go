@@ -2,8 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
-	"gogo"
 	"goodlink/aes"
 	"io"
 	"net/http"
@@ -36,30 +34,23 @@ func GetConfig() ConfigInfo {
 }
 
 func Init() error {
-	gogo.Log().Debug("   初始化配置中")
-	defer gogo.Log().Debug("   初始化配置完成")
-
 	client := &http.Client{Timeout: 3 * time.Second}
-	var resp *http.Response
-	var err error
-	var res []byte
+	resp, err := client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 
-	for {
-		resp, err = client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
-		if resp != nil && err == nil {
-			res, err = io.ReadAll(resp.Body)
-			resp.Body.Close()
-			if res != nil && err == nil {
-				break
-			}
-		}
-		time.Sleep(1 * time.Second)
+	var res []byte
+	res, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return err
 	}
 
 	temp2 := aes.Decrypt(res, "goodlink")
 	err = json.Unmarshal(temp2, &configInfo)
 	if err != nil {
-		return errors.New("解析配置失败, 请重启程序")
+		return err
 	}
 
 	return nil
