@@ -44,6 +44,8 @@
 
 12. 该项目刚刚起步, 功能还不完善, 欢迎到 Issues 上提出问题和建议, 帮忙测试的同学将保证永久免费使用
 
+13. UI版本是从1.4开始有的，但1.4还在测试阶段，未提交Docker(停留在1.3), 因此暂时不建议1.4搭配Docker使用，直到这一行文字被删除
+
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
 	<tr><td>NAT1-3</td><td>NAT1-3</td><td>YES</td></tr>
