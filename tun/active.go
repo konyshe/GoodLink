@@ -79,6 +79,12 @@ func (c *TunActive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
 	m_process_lock.Lock()
 	defer m_process_lock.Unlock()
 
+	if c.TunQuicConn != nil || c.TunHealthStream != nil {
+		return
+	}
+
+	c.State = 0
+
 	time.Sleep(1000 * time.Millisecond)
 
 	log.Printf("   process_quic quic.Dial: %v ==> %v\n", conn.LocalAddr(), remoteAddr)

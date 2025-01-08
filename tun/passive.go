@@ -18,7 +18,7 @@ type TunPassive struct {
 	TunHealthStream quic.Stream
 	remote_addr     *net.UDPAddr
 	ConnList        []*net.UDPConn
-	TunState        int
+	State           int
 	process_chain   chan quic.Connection
 }
 
@@ -26,7 +26,7 @@ func CteateTunPassive(conn *net.UDPConn, ip string, port int, count int) *TunPas
 	c := &TunPassive{
 		TunQuicConn:     nil,
 		TunHealthStream: nil,
-		TunState:        1,
+		State:           1,
 		ConnList:        make([]*net.UDPConn, 0),
 		process_chain:   make(chan quic.Connection, 1),
 	}
@@ -73,12 +73,17 @@ func (c *TunPassive) Release() {
 }
 
 func (c *TunPassive) process_quic(conn *net.UDPConn, remoteAddr *net.UDPAddr) {
-	c.TunState = 0
-	//log.Println("   请求停止发包")
 
-	if c.TunQuicConn != nil {
+	m_process_lock.Lock()
+	defer m_process_lock.Unlock()
+
+	if c.TunQuicConn != nil || c.TunHealthStream != nil {
 		return
 	}
+
+	c.State = 0
+
+	log.Printf("   锁定连接 local:%v remote:%v recv:%v...\n", conn.LocalAddr(), remoteAddr, string(m_recv_data[:10]))
 
 	log.Printf("   quic.Listen: %v\n", conn.LocalAddr())
 	listener, err := quic.Listen(conn, tls2.GetServerTLSConfig(), nil)
@@ -117,7 +122,7 @@ func (c *TunPassive) Send() int {
 	count := 0
 
 	for _, conn := range c.ConnList {
-		if c.TunState == 1 && conn != nil && c.TunQuicConn == nil {
+		if c.State == 1 && conn != nil && c.TunQuicConn == nil {
 			if _, err := conn.WriteToUDP(m_send_data, c.remote_addr); err == nil {
 				count += 1
 				continue
@@ -143,10 +148,6 @@ func (c *TunPassive) Start() {
 func (c *TunPassive) SetReadFunc(conn *net.UDPConn) {
 	go func(d *TunPassive, conn2 *net.UDPConn) {
 		if n, remoteAddr, err := conn2.ReadFromUDP(m_recv_data); err == nil && n > 0 {
-			m_process_lock.Lock()
-			defer m_process_lock.Unlock()
-
-			log.Printf("   锁定连接 local:%v remote:%v recv:%v... count:%v\n", conn2.LocalAddr(), remoteAddr, string(m_recv_data[:10]), n)
 			d.process_quic(conn2, remoteAddr)
 		}
 	}(c, conn)

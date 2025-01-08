@@ -23,8 +23,18 @@ var (
 )
 
 func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int, tun_key string) {
+	log.Println("   初始化配置中")
+	for {
+		if err := config.Init(); err != nil {
+			log.Println(err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		break
+	}
+	log.Println("   初始化配置完成")
+
 	if m_cli_redis_addr == "" {
-		config.Init()
 		m_cli_redis_addr = config.GetAddr()
 		m_cli_redis_pass = config.GetPasswd()
 		m_cli_redis_id = config.GetID()

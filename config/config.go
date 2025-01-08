@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"goodlink/aes"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -22,28 +20,27 @@ type ConfigInfo struct {
 
 var configInfo ConfigInfo
 
-func Init() {
+func Init() error {
 	client := &http.Client{Timeout: 3 * time.Second}
 	resp, err := client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
-	if resp == nil || err != nil {
-		log.Fatalln(err)
-		os.Exit(0)
+	if err != nil {
+		return err
 	}
 	defer resp.Body.Close()
 
 	var res []byte
 	res, err = io.ReadAll(resp.Body)
-	if res == nil || err != nil {
-		log.Fatalln(err)
-		os.Exit(0)
+	if err != nil {
+		return err
 	}
 
 	temp2 := aes.Decrypt(res, "goodlink")
 	err = json.Unmarshal(temp2, &configInfo)
 	if err != nil {
-		log.Fatalln(err)
-		os.Exit(0)
+		return err
 	}
+
+	return nil
 }
 
 func GetAddr() string {
