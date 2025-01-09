@@ -25,11 +25,14 @@ var (
 func help() {
 	v := flag.Bool("v", false, "查看版本信息")
 
-	flag.StringVar(&m_cli_stun_svr_addr, "stun_svr", "", "stun svr listen addr")
-	flag.IntVar(&m_cli_stun_svr_port, "stun_port", 3478, "stun svr listen port")
-	m_cli_stun_test = flag.Bool("stun_test", false, "后台执行")
+	/*
+		flag.StringVar(&m_cli_stun_svr_addr, "stun_svr", "", "stun svr listen addr")
+		flag.IntVar(&m_cli_stun_svr_port, "stun_port", 3478, "stun svr listen port")
+	*/
 
-	flag.StringVar(&m_cli_pprof_addr, "pprof_addr", "", "性能监测服务监听的地址端口, 例如: 0.0.0.0:6060")
+	m_cli_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
+	flag.StringVar(&m_cli_pprof_addr, "pprof_addr", "", "如果CPU/内存/网络异常, 可监测运行, 例如: 0.0.0.0:6060")
+
 	flag.StringVar(&m_cli_redis_addr, "redis_addr", "", "Redis服务地址端口, 例如: 1.2.3.4:6379")
 	flag.StringVar(&m_cli_redis_pass, "redis_pass", "", "Redis服务密码, 例如: 123456")
 	flag.IntVar(&m_cli_redis_id, "redis_id", 15, "Redis服务可使用的表ID")
