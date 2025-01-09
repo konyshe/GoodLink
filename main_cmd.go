@@ -3,10 +3,10 @@
 package main
 
 import (
-	"gogo"
 	"goodlink/pro"
 	_ "goodlink/pro"
 	"goodlink/stun2"
+	"goodlink/tools"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -67,10 +67,11 @@ func main2() {
 func main() {
 	help()
 
-	gogo.GuardStart(main2, func(err error) {
+	tools.GuardStart(main2, 500*time.Millisecond, func(err error) {
 		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
 		if err != nil {
-			log.Printf("   发现导致重启的错误: %v", err)
+			log.Printf("   异常退出: %v", err)
+			tools.DingF("error: %v", err)
 		}
 	})
 }

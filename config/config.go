@@ -15,23 +15,20 @@ type RedisInfo struct {
 }
 
 type ConfigInfo struct {
-	Redis      RedisInfo `bson:"redis" json:"redis"`
-	WorkType   string    `bson:"work_type" json:"work_type"`
-	TunKey     string    `bson:"tun_key" json:"tun_key"`
-	ConnType   string    `bson:"conn_type" json:"conn_type"`
-	LocalIP    string    `bson:"local_ip" json:"local_ip"`
-	LocalPort  string    `bson:"local_port" json:"local_port"`
-	RemoteType string    `bson:"remote_type" json:"remote_type"`
-	RemoteIP   string    `bson:"remote_ip" json:"remote_ip"`
-	RemotePort string    `bson:"remote_port" json:"remote_port"`
-	StunList   []string  `bson:"stun_list" json:"stun_list"`
+	Redis       RedisInfo `bson:"redis" json:"redis"`
+	WorkType    string    `bson:"work_type" json:"work_type"`
+	TunKey      string    `bson:"tun_key" json:"tun_key"`
+	ConnType    string    `bson:"conn_type" json:"conn_type"`
+	LocalIP     string    `bson:"local_ip" json:"local_ip"`
+	LocalPort   string    `bson:"local_port" json:"local_port"`
+	RemoteType  string    `bson:"remote_type" json:"remote_type"`
+	RemoteIP    string    `bson:"remote_ip" json:"remote_ip"`
+	RemotePort  string    `bson:"remote_port" json:"remote_port"`
+	StunList    []string  `bson:"stun_list" json:"stun_list"`
+	DingTalkUrl string    `bson:"ding_talk_url" json:"ding_talk_url"`
 }
 
 var configInfo ConfigInfo
-
-func GetConfig() ConfigInfo {
-	return configInfo
-}
 
 func Init() error {
 	client := &http.Client{Timeout: 3 * time.Second}
@@ -56,14 +53,25 @@ func Init() error {
 	return nil
 }
 
+func GetConfig() ConfigInfo {
+	if len(configInfo.StunList) == 0 {
+		Init()
+	}
+	return configInfo
+}
+
 func GetAddr() string {
-	return configInfo.Redis.Addr
+	return GetConfig().Redis.Addr
 }
 
 func GetPasswd() string {
-	return configInfo.Redis.Passwd
+	return GetConfig().Redis.Passwd
 }
 
 func GetID() int {
-	return configInfo.Redis.Id
+	return GetConfig().Redis.Id
+}
+
+func GetDingTalkUrl() string {
+	return GetConfig().DingTalkUrl
 }

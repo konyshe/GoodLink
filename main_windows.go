@@ -5,7 +5,11 @@ package main
 import (
 	_ "goodlink/pro"
 	"goodlink/theme"
+	"goodlink/tools"
 	"goodlink/ui2"
+	"log"
+	"os"
+	"time"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -19,7 +23,7 @@ const (
 	M_APP_TITLE = "GoodLink"
 )
 
-func main() {
+func main2() {
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
 	icon, _ := fyne.LoadResourceFromPath("./theme/favicon.png")
@@ -39,5 +43,19 @@ func main() {
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Hide()
 	})
+
 	myWindow.ShowAndRun()
+}
+
+func main() {
+	help()
+
+	tools.GuardStart(main2, 500*time.Millisecond, func(err error) {
+		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
+		if err == nil {
+			os.Exit(0)
+		}
+		log.Printf("   异常退出: %v", err)
+		tools.DingF("error: %v", err)
+	})
 }

@@ -25,11 +25,6 @@ var (
 func help() {
 	v := flag.Bool("v", false, "查看版本信息")
 
-	/* 没有用到的参数 */
-	var temp_value int64
-	flag.Int64Var(&temp_value, "gogo-restart-delay", 1000, "自动重启的延迟时间, 单位: 毫秒")
-	flag.Bool("gogo-background", false, "后台执行")
-
 	flag.StringVar(&m_cli_stun_svr_addr, "stun_svr", "", "stun svr listen addr")
 	flag.IntVar(&m_cli_stun_svr_port, "stun_port", 3478, "stun svr listen port")
 	m_cli_stun_test = flag.Bool("stun_test", false, "后台执行")
@@ -44,6 +39,9 @@ func help() {
 	flag.StringVar(&m_cli_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
 	flag.IntVar(&m_cli_stun_timeout, "time_out", 30, "最大连接超时, 单位: 秒")
 	flag.IntVar(&m_cli_conn_type, "conn", 0, "若超过10分钟无法连接, 可尝试更换连接方式: 0: 主动; 1: 被动")
+
+	/* 没有用到的参数 */
+	flag.Bool("fork", false, "子进程")
 
 	flag.Parse()
 
