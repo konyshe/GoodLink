@@ -3,6 +3,7 @@
 package main
 
 import (
+	"goodlink/config"
 	_ "goodlink/pro"
 	"goodlink/theme"
 	"goodlink/tools"
@@ -48,7 +49,7 @@ func main2() {
 }
 
 func main() {
-	help()
+	config.Help()
 
 	tools.GuardStart(main2, 500*time.Millisecond, func(err error) {
 		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2

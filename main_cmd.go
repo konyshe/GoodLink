@@ -3,6 +3,7 @@
 package main
 
 import (
+	"goodlink/config"
 	"goodlink/pro"
 	_ "goodlink/pro"
 	"goodlink/stun2"
@@ -17,39 +18,34 @@ import (
 )
 
 func main2() {
-	if *m_cli_stun_test { // 测试stun节点，开发使用选项
+	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
 		stun2.TestStun()
 		os.Exit(0)
 	}
 
 	go func() {
-		if m_cli_pprof_addr != "" { // 性能监测，开发使用选项
-			log.Println(http.ListenAndServe(m_cli_pprof_addr, nil))
+		if config.Arg_pprof_addr != "" { // 性能监测，开发使用选项
+			log.Println(http.ListenAndServe(config.Arg_pprof_addr, nil))
 		}
 	}()
 
-	if m_cli_stun_svr_addr != "" { // 自建stun服务，开发使用选项
-		stun2.StartSvr(m_cli_stun_svr_addr, m_cli_stun_svr_port)
-		os.Exit(0)
-	}
-
 	// 第三方集成, 关注以下代码即可
 	go func() {
-		if err := pro.Init(m_cli_redis_addr, m_cli_redis_pass, m_cli_redis_id); err != nil {
+		if err := pro.Init(config.Arg_redis_addr, config.Arg_redis_pass, config.Arg_redis_id); err != nil {
 			log.Println(err)
 			return
 		}
 
-		switch len(m_cli_tun_local_addr) {
+		switch len(config.Arg_tun_local_addr) {
 		case 0:
-			pro.RunRemote(m_cli_tun_remote_addr,
-				m_cli_tun_key,
-				time.Duration(m_cli_stun_timeout)*time.Second)
+			pro.RunRemote(config.Arg_tun_remote_addr,
+				config.Arg_tun_key,
+				time.Duration(config.Arg_p2p_timeout)*time.Second)
 
 		default:
-			if err := pro.RunLocal(m_cli_conn_type,
-				m_cli_tun_local_addr,
-				m_cli_tun_key); err != nil {
+			if err := pro.RunLocal(config.Arg_conn_type,
+				config.Arg_tun_local_addr,
+				config.Arg_tun_key); err != nil {
 
 				log.Println(err)
 				os.Exit(0)
@@ -65,7 +61,7 @@ func main2() {
 }
 
 func main() {
-	help()
+	config.Help()
 
 	tools.GuardStart(main2, 500*time.Millisecond, func(err error) {
 		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
