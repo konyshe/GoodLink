@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"errors"
 	"fmt"
 	"goodlink/md5"
 	"goodlink/proxy"
@@ -49,7 +50,8 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		time.Sleep(1 * time.Second)
 
 		if RedisGet(&redisJson) != nil {
-			continue
+			gogo.Log().Debug("   连接超时")
+			return nil, nil, errors.New("   连接超时")
 		}
 
 		switch redisJson.State {

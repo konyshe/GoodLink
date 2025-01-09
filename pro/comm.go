@@ -41,9 +41,13 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
 	}
 
 	m_redis_db = redis.NewClient(&redis.Options{
-		Addr:     m_cli_redis_addr,
-		Password: m_cli_redis_pass,
-		DB:       m_cli_redis_id,
+		Addr:         m_cli_redis_addr,
+		Password:     m_cli_redis_pass,
+		DB:           m_cli_redis_id,
+		MaxRetries:   99,
+		DialTimeout:  15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
 	})
 	if m_redis_db == nil {
 		return errors.New("Redis失败, 请重启程序")

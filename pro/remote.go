@@ -29,15 +29,20 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 	var tun_active_chain chan quic.Connection
 	var tun_passive_chain chan quic.Connection
 
+	for RedisGet(&redisJson) != nil && m_remote_stats == 1 {
+		time.Sleep(5 * time.Second)
+	}
+
 	for m_remote_stats == 1 {
 		time.Sleep(1 * time.Second)
 
-		for RedisGet(&redisJson) != nil && m_remote_stats == 1 {
-			time.Sleep(5 * time.Second)
+		if RedisGet(&redisJson) != nil {
+			gogo.Log().Debug("   连接超时")
+			return nil, nil
 		}
 
 		if redisJson.State < last_state {
-			gogo.Log().Debug("   对端已重置连接")
+			gogo.Log().Debug("   连接被重置")
 			return nil, nil
 		}
 
