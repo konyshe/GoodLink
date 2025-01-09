@@ -33,6 +33,9 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		time.Sleep(5 * time.Second)
 	}
 
+	SessionID := redisJson.SessionID
+	gogo.Log().DebugF("   会话ID: %s", SessionID)
+
 	for m_remote_stats == 1 {
 		time.Sleep(1 * time.Second)
 
@@ -41,14 +44,20 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			return nil, nil
 		}
 
-		if redisJson.State < last_state {
+		if redisJson.SessionID != SessionID {
 			gogo.Log().Debug("   连接被重置")
 			return nil, nil
 		}
 
-		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
-			gogo.Log().Debug("   状态异常")
+		if redisJson.State < last_state {
 			m_redis_db.Del(m_md5_tun_key)
+			gogo.Log().DebugF("   状态异常: %d -> %d", last_state, redisJson.State)
+			return nil, nil
+		}
+
+		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
+			m_redis_db.Del(m_md5_tun_key)
+			gogo.Log().DebugF("   状态异常: %d -> %d", last_state, redisJson.State)
 			return nil, nil
 		}
 

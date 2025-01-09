@@ -1,7 +1,6 @@
 package pro
 
 import (
-	"errors"
 	"fmt"
 	"goodlink/md5"
 	"goodlink/proxy"
@@ -34,6 +33,10 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		conn_type = 0
 	}
 
+	SessionID := tools.RandomString(16)
+	redisJson.SessionID = SessionID
+	gogo.Log().DebugF("   会话ID: %s", SessionID)
+
 	switch conn_type {
 	case 0:
 		gogo.Log().Debug("0: 请求连接对端")
@@ -51,7 +54,12 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 
 		if RedisGet(&redisJson) != nil {
 			gogo.Log().Debug("   连接超时")
-			return nil, nil, errors.New("   连接超时")
+			return nil, nil, nil
+		}
+
+		if redisJson.SessionID != SessionID {
+			gogo.Log().Debug("   连接被重置")
+			return nil, nil, nil
 		}
 
 		switch redisJson.State {
