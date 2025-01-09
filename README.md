@@ -49,8 +49,7 @@
 	<tr><td>NAT1-3</td><td>NAT1-3</td><td>YES</td></tr>
 	<tr><td>NAT1-2</td><td>NAT4</td><td>YES</td></tr>
 	<tr><td>NAT4</td><td>NAT1-2</td><td>YES</td></tr>
-	<tr><td>NAT4</td><td>NAT3-4</td><td>YES</td></tr>
-	<tr><td>NAT3-4</td><td>NAT4</td><td>YES</td></tr>
+	<tr><td>NAT3-4</td><td>NAT3-4</td><td>由于运营商算法调整，不保证100%</td></tr>
   </table>
 
 # 简单使用
