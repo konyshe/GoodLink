@@ -35,7 +35,7 @@ func disable_other(content string) {
 	m_button_key_paste.Disable()
 	m_activity_start_button.Start()
 	m_activity_start_button.Show()
-	m_view_log.SetText(content)
+	UILogPrintF(content)
 	m_stats_start_button = 1
 }
 
@@ -147,6 +147,7 @@ func start_button_click() {
 				m_stats_start_button = 0
 				m_button_start.Importance = widget.HighImportance
 				m_button_start.SetText("点击启动")
+				m_button_start.Enable()
 				enable_other()
 			}()
 
@@ -178,7 +179,7 @@ func start_button_click() {
 
 	case 1:
 		m_button_start.Disable()
-		m_view_log.SetText("正在停止...")
+		UILogPrintF("正在停止...")
 		m_stats_start_button = 0
 
 		switch m_radio_work_type.Selected {
@@ -195,7 +196,7 @@ func start_button_click() {
 
 		m_mg_start.Wait()
 		enable_other()
-		m_view_log.SetText("等待启动")
+		UILogPrintF("等待启动")
 		m_button_start.Importance = widget.HighImportance
 		m_button_start.SetText("点击启动")
 		m_button_start.Enable()

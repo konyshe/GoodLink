@@ -5,6 +5,7 @@ package ui2
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gogo"
 	"log"
 	"time"
@@ -39,8 +40,15 @@ const (
 	M_APP_TITLE = "GoodLink"
 )
 
-func SetLogLabel2(content string) {
+func UILogPrintF(a ...any) {
+	var content string
+	if len(a) > 1 {
+		content = fmt.Sprintf(a[0].(string), a[1:]...)
+	} else {
+		content = a[0].(string)
+	}
 	log.Println(content)
+
 	if len(content) > 32 {
 		content = content[:32]
 	}
@@ -49,15 +57,17 @@ func SetLogLabel2(content string) {
 	m_view_time.SetText(time.Now().Format("2006/01/02 15:04:05"))
 }
 
-func LogInit(m_view_log *LogLabel) {
+func UILogInit() {
+	m_view_log = NewLogLabel("等待启动")
+
 	gogo.Log().RegistInfo(func(content string) {
-		SetLogLabel2(content)
+		UILogPrintF(content)
 	})
 	gogo.Log().RegistDebug(func(content string) {
-		SetLogLabel2(content)
+		UILogPrintF(content)
 	})
 	gogo.Log().RegistError(func(content string) {
-		SetLogLabel2(content)
+		UILogPrintF(content)
 		fyne.LogError("error: ", errors.New(content))
 	})
 }
@@ -110,8 +120,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	}
 	m_radio_work_type.SetSelected(configInfo.WorkType)
 
-	m_view_log = NewLogLabel("等待启动")
-	LogInit(m_view_log)
+	UILogInit()
 
 	m_stats_start_button = 0
 	m_activity_start_button = widget.NewActivity()
@@ -120,8 +129,8 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	m_button_start.Resize(fyne.NewSize(100, 40))
 	m_button_start.Disable()
 	go func() {
-		if err := pro.Init("", "", 0); err != nil {
-			m_view_log.SetText(err.Error())
+		if err := pro.Init(config.Arg_redis_addr, config.Arg_redis_pass, config.Arg_redis_id); err != nil {
+			UILogPrintF(err.Error())
 			return
 		}
 		m_button_start.Enable()
