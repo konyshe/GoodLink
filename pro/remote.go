@@ -99,13 +99,15 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				m_tun_active = nil
 
 				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, 0x100)
-				m_tun_passive.Start()
 
 				tun_passive_chain = m_tun_passive.GetChain()
 
 				redisJson.State = 1
 				gogo.Log().DebugF("%d: 发送本端地址: %v", redisJson.State, redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
+
+				m_tun_passive.Start()
+
 			}
 
 		case 2:

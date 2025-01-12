@@ -38,8 +38,8 @@ func Help() {
 	flag.IntVar(&Arg_p2p_timeout, "time_out", 30, "最大连接超时, 单位: 秒")
 	flag.IntVar(&Arg_conn_type, "conn", 0, "若超过10分钟无法连接, 可尝试更换连接方式: 0: 主动; 1: 被动")
 
-	flag.IntVar(&Arg_conn_n0, "n0", 64, "dev n0")
-	flag.IntVar(&Arg_conn_n1, "n1", 16, "dev n1")
+	flag.IntVar(&Arg_conn_n0, "n0", 256, "dev n0")
+	flag.IntVar(&Arg_conn_n1, "n1", 1, "dev n1")
 
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")
