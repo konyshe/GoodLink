@@ -9,6 +9,7 @@ import (
 	"goodlink2/tun"
 	_ "goodlink2/tun"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,7 +45,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			return nil, nil
 		}
 
-		if redisJson.SessionID != SessionID {
+		if !strings.EqualFold(redisJson.SessionID, SessionID) {
 			gogo.Log().Debug("   连接被重置")
 			return nil, nil
 		}
@@ -81,7 +82,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_passive = nil
 
-				m_tun_active = tun.CreateTunActive(conn, time_out)
+				m_tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, time_out)
 				tun_active_chain = m_tun_active.GetChain()
 
 				redisJson.State = 1
@@ -98,7 +99,8 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_active = nil
 
-				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, 0x100)
+				m_tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, 0x100)
+				m_tun_passive.Start()
 
 				tun_passive_chain = m_tun_passive.GetChain()
 
@@ -106,8 +108,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				gogo.Log().DebugF("%d: 发送本端地址: %v", redisJson.State, redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
-				m_tun_passive.Start()
-
+				go m_tun_passive.Start()
 			}
 
 		case 2:

@@ -10,6 +10,7 @@ import (
 	_ "goodlink2/tun"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"gogo"
@@ -33,7 +34,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		conn_type = 0
 	}
 
-	SessionID := tools.RandomString(16)
+	SessionID := string(tools.RandomBytes(24))
 	redisJson.SessionID = SessionID
 	gogo.Log().DebugF("   会话ID: %s", SessionID)
 
@@ -57,7 +58,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 			return nil, nil, nil
 		}
 
-		if redisJson.SessionID != SessionID {
+		if !strings.EqualFold(redisJson.SessionID, SessionID) {
 			gogo.Log().Debug("   连接被重置")
 			return nil, nil, nil
 		}
@@ -79,13 +80,14 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 					return nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
 				}
 
-				m_tun_passive = tun.CteateTunPassive(conn, redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2, redisJson.SendPortCount)
+				m_tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2, redisJson.SendPortCount)
+				m_tun_passive.Start()
 
 				redisJson.State = 2
 				gogo.Log().DebugF("%d: 发送本端地址: %v", redisJson.State, redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
-				m_tun_passive.Start()
+				go m_tun_passive.Start()
 
 			default:
 				if m_tun_active != nil {
@@ -98,7 +100,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 					return nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
 				}
 
-				m_tun_active = tun.CreateTunActive(conn, 15*time.Second)
+				m_tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, 15*time.Second)
 				m_tun_active.Start(redisJson.ClientPort1, redisJson.ClientPort2, redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2, redisJson.SocketTimeOut)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
