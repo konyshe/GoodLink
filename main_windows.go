@@ -6,8 +6,8 @@ import (
 	"goodlink/config"
 	_ "goodlink/pro"
 	"goodlink/theme"
-	"goodlink/tools"
 	"goodlink/ui2"
+	"goodlink/utils"
 	"log"
 	"os"
 	"time"
@@ -51,12 +51,12 @@ func main2() {
 func main() {
 	config.Help()
 
-	tools.GuardStart(main2, 500*time.Millisecond, func(err error) {
+	utils.GuardStart(main2, 500*time.Millisecond, func(err error) {
 		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
 		if err == nil {
 			os.Exit(0)
 		}
 		log.Printf("   异常退出: %v", err)
-		tools.DingF("error: %v", err)
+		utils.DingF("error: %v", err)
 	})
 }

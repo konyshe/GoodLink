@@ -13,7 +13,7 @@ import (
 	"goodlink/config"
 	"goodlink/pro"
 	_ "goodlink/pro"
-	"goodlink/tools"
+	"goodlink/utils"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -84,7 +84,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	}
 
 	m_button_key_create = widget.NewButton("生成密钥", func() {
-		m_validated_key.SetText(string(tools.RandomBytes(24)))
+		m_validated_key.SetText(string(utils.RandomBytes(24)))
 	})
 	key_copy_button := widget.NewButton("复制密钥", func() {
 		clipboard.WriteAll(m_validated_key.Text)

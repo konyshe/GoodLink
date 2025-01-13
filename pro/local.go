@@ -5,7 +5,7 @@ import (
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/stun2"
-	"goodlink/tools"
+	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
 	"log"
@@ -27,14 +27,14 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		ConnectCount: count,
 	}
 
-	conn := tools.GetListenUDP()
+	conn := utils.GetListenUDP()
 
 	ClientIP, ClientPort1, ClientPort2 := stun2.GetWanIpPort2(conn)
 	if ClientPort1 == ClientPort2 {
 		conn_type = 0
 	}
 
-	SessionID := string(tools.RandomBytes(24))
+	SessionID := string(utils.RandomBytes(24))
 	redisJson.SessionID = SessionID
 	gogo.Log().DebugF("   会话ID: %s", SessionID)
 

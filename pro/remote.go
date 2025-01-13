@@ -5,7 +5,7 @@ import (
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/stun2"
-	"goodlink/tools"
+	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
 	"log"
@@ -69,7 +69,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		case 0:
 			gogo.Log().DebugF("%d: 收到对端请求: %v", redisJson.State, redisJson)
 
-			conn := tools.GetListenUDP()
+			conn := utils.GetListenUDP()
 			redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2 = stun2.GetWanIpPort2(conn)
 
 			switch redisJson.ClientPort1 {
@@ -171,7 +171,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 
 	if remote_addr == "" {
 		log.Println("   开启本地代理")
-		remote_addr = tools.GetFreeLocalAddr()
+		remote_addr = utils.GetFreeLocalAddr()
 		if remote_addr == "" {
 			return errors.New("   获取本地端口失败")
 		}

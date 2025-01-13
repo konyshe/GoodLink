@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"goodlink/config"
-	"goodlink/tools"
+	"goodlink/utils"
 	"log"
 	"math/big"
 	"net"
@@ -224,13 +224,13 @@ func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 }
 
 func GetWanIpPort() (string, int, int) {
-	conn := tools.GetListenUDP()
+	conn := utils.GetListenUDP()
 	defer conn.Close()
 	return GetWanIpPort2(conn)
 }
 
 func TestStun() {
-	conn := tools.GetListenUDP()
+	conn := utils.GetListenUDP()
 
 	for {
 		for _, stun_svr := range config.GetConfig().StunList {
