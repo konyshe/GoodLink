@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"goodlink/aes"
 	"goodlink/config"
+	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
-	"log"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -23,16 +23,16 @@ var (
 )
 
 func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
-	log.Println("   初始化配置中")
+	utils.Log().Debug("初始化配置中")
 	for {
 		if err := config.Init(); err != nil {
-			log.Println(err)
+			utils.Log().Debug(err.Error())
 			time.Sleep(3 * time.Second)
 			continue
 		}
 		break
 	}
-	log.Println("   初始化配置完成")
+	utils.Log().Debug("初始化配置完成")
 
 	if m_cli_redis_addr == "" {
 		m_cli_redis_addr = config.GetAddr()
@@ -60,8 +60,7 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
 }
 
 func Release() {
-	log.Println("   全局释放资源开始")
-	defer log.Println("   全局释放资源结束")
+	utils.Log().SetDebugSate(0)
 
 	if m_tun_active != nil {
 		m_tun_active.Release()
@@ -105,11 +104,11 @@ func RedisGet(redisJson *RedisJsonType) error {
 
 	aes_res, err := m_redis_db.Get(m_md5_tun_key).Bytes()
 	if err != nil || aes_res == nil || len(aes_res) == 0 {
-		return fmt.Errorf("   获取信令数据失败: %v", err)
+		return fmt.Errorf("获取信令数据失败: %v", err)
 	}
 
 	if err = json.Unmarshal(aes.Decrypt(aes_res, m_tun_key), redisJson); err != nil {
-		return fmt.Errorf("   解析信令数据失败: %v", err)
+		return fmt.Errorf("解析信令数据失败: %v", err)
 	}
 
 	return nil

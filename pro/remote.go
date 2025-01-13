@@ -8,12 +8,9 @@ import (
 	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
-	"log"
 	"strings"
 	"sync"
 	"time"
-
-	"gogo"
 
 	"github.com/quic-go/quic-go"
 )
@@ -35,30 +32,32 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 	}
 
 	SessionID := redisJson.SessionID
-	gogo.Log().DebugF("   会话ID: %s", SessionID)
+	utils.Log().DebugF("会话ID: %s", SessionID)
 
 	for m_remote_stats == 1 {
 		time.Sleep(1 * time.Second)
 
 		if RedisGet(&redisJson) != nil {
-			gogo.Log().Debug("   连接超时")
+			utils.Log().Debug("连接超时")
 			return nil, nil
 		}
 
+		utils.Log().SetDebugSate(redisJson.State)
+
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
-			gogo.Log().Debug("   连接被重置")
+			utils.Log().Debug("连接被重置")
 			return nil, nil
 		}
 
 		if redisJson.State < last_state {
 			m_redis_db.Del(m_md5_tun_key)
-			gogo.Log().DebugF("   状态异常: %d -> %d", last_state, redisJson.State)
+			utils.Log().DebugF("状态异常: %d -> %d", last_state, redisJson.State)
 			return nil, nil
 		}
 
 		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
 			m_redis_db.Del(m_md5_tun_key)
-			gogo.Log().DebugF("   状态异常: %d -> %d", last_state, redisJson.State)
+			utils.Log().DebugF("状态异常: %d -> %d", last_state, redisJson.State)
 			return nil, nil
 		}
 
@@ -67,7 +66,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 		switch redisJson.State {
 		case 0:
-			gogo.Log().DebugF("%d: 收到对端请求: %v", redisJson.State, redisJson)
+			utils.Log().DebugF("收到对端请求: %v", redisJson)
 
 			conn := utils.GetListenUDP()
 			redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2 = stun2.GetWanIpPort2(conn)
@@ -75,7 +74,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			switch redisJson.ClientPort1 {
 			case 0:
 				conn_type = 0
-				gogo.Log().Debug("   对端未发来IP")
+				utils.Log().Debug("对端未发来IP")
 
 				if m_tun_active != nil {
 					m_tun_active.Release()
@@ -87,11 +86,11 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 				redisJson.State = 1
 				redisJson.SendPortCount = 0x100
-				gogo.Log().DebugF("%d: 发送本端地址: %v", redisJson.State, redisJson)
+				utils.Log().DebugF("发送本端地址: %v", redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
-				gogo.Log().Debug("   对端有发来IP")
+				utils.Log().Debug("对端有发来IP")
 				conn_type = 1
 
 				if m_tun_passive != nil {
@@ -105,7 +104,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				tun_passive_chain = m_tun_passive.GetChain()
 
 				redisJson.State = 1
-				gogo.Log().DebugF("%d: 发送本端地址: %v", redisJson.State, redisJson)
+				utils.Log().DebugF("发送本端地址: %v", redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 				go m_tun_passive.Start()
@@ -114,17 +113,17 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		case 2:
 			switch conn_type {
 			case 0:
-				gogo.Log().DebugF("%d: 收到对端地址: %v", redisJson.State, redisJson)
+				utils.Log().DebugF("收到对端地址: %v", redisJson)
 				m_tun_active.Start(redisJson.ServerPort1, redisJson.ServerPort2, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, redisJson.SocketTimeOut)
 
 			case 1:
-				gogo.Log().DebugF("%d: 收到对端地址, 等待连接: %v", redisJson.State, redisJson)
+				utils.Log().DebugF("收到对端地址, 等待连接: %v", redisJson)
 			}
 
 			select {
 			case <-tun_active_chain:
 				redisJson.State = 3
-				gogo.Log().DebugF("%d: 通知对端, 连接成功", redisJson.State)
+				utils.Log().Debug("通知对端, 连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if m_tun_active != nil {
 					return m_tun_active.TunQuicConn, m_tun_active.TunHealthStream
@@ -133,7 +132,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 			case <-tun_passive_chain:
 				redisJson.State = 3
-				gogo.Log().DebugF("%d: 通知对端, 连接成功", redisJson.State)
+				utils.Log().Debug("通知对端, 连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if m_tun_passive != nil {
 					return m_tun_passive.TunQuicConn, m_tun_passive.TunHealthStream
@@ -142,7 +141,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 
 			case <-time.After(time_out):
 				redisJson.State = 4
-				gogo.Log().DebugF("%d: 通知对端, 连接超时", redisJson.State)
+				utils.Log().Debug("通知对端, 连接超时")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				return nil, nil
 			}
@@ -150,7 +149,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		case 3, 4:
 
 		default:
-			gogo.Log().DebugF("%d: 等待对端状态", redisJson.State)
+			utils.Log().Debug("等待对端状态")
 		}
 
 		last_state = redisJson.State
@@ -170,10 +169,10 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 	var wg sync.WaitGroup
 
 	if remote_addr == "" {
-		log.Println("   开启本地代理")
+		utils.Log().Debug("开启本地代理")
 		remote_addr = utils.GetFreeLocalAddr()
 		if remote_addr == "" {
-			return errors.New("   获取本地端口失败")
+			return errors.New("获取本地端口失败")
 		}
 
 		wg.Add(1)
@@ -183,7 +182,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 		}()
 	}
 
-	log.Printf("   转发地址: %s", remote_addr)
+	utils.Log().DebugF("转发地址: %s", remote_addr)
 
 	m_remote_stats = 1
 
@@ -211,7 +210,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 			}()
 
 			tun.ProcessHealth(health)
-			gogo.Log().DebugF("   释放连接: %v", conn.LocalAddr())
+			utils.Log().DebugF("释放连接: %v", conn.LocalAddr())
 		}(remote_addr, conn)
 	}
 

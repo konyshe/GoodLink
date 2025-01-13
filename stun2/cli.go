@@ -11,8 +11,6 @@ import (
 	"math/big"
 	"net"
 	"time"
-
-	"gogo"
 )
 
 func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magicCookie []byte, transactionID []byte) (string, int, error) {
@@ -185,7 +183,7 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, int, error) {
 			}
 			if err == nil {
 				if wan_ip1 != wan_ip2 {
-					gogo.Log().ErrorF("wan_ip: %s, %s", wan_ip1, wan_ip2)
+					utils.Log().ErrorF("wan_ip: %s, %s", wan_ip1, wan_ip2)
 				}
 				return wan_ip1, wan_port1, wan_port2, nil
 			}
@@ -197,7 +195,7 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, int, error) {
 }
 
 func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
-	gogo.Log().Debug("   获取本端地址")
+	utils.Log().Debug("获取本端地址")
 	defer conn.SetReadDeadline(time.Time{})
 	n2 := 0
 
@@ -205,7 +203,7 @@ func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.GetConfig().StunList))))
 		stun_svr := config.GetConfig().StunList[n.Int64()]
 		wan_ip, wan_port1, wan_port2, err := getStunIpPort2(conn, stun_svr)
-		//log.Printf("   stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d, err: %v", stun_svr, wan_ip, wan_port1, wan_port2, err)
+		//log.Printf("stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d, err: %v", stun_svr, wan_ip, wan_port1, wan_port2, err)
 		if err != nil {
 			log.Printf("   stun_svr: %s, err: %v", stun_svr, err)
 			/*if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "closed") {

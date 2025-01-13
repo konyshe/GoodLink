@@ -4,11 +4,8 @@ package ui2
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"gogo"
 	"log"
-	"time"
 
 	"goodlink/config"
 	"goodlink/pro"
@@ -32,45 +29,11 @@ var (
 	m_ui_remote         *RemoteUI
 	m_button_key_create *widget.Button
 	m_button_key_paste  *widget.Button
-	m_view_log          *LogLabel
-	m_view_time         widget.Label
 )
 
 const (
 	M_APP_TITLE = "GoodLink"
 )
-
-func UILogPrintF(a ...any) {
-	var content string
-	if len(a) > 1 {
-		content = fmt.Sprintf(a[0].(string), a[1:]...)
-	} else {
-		content = a[0].(string)
-	}
-	log.Println(content)
-
-	if len(content) > 32 {
-		content = content[:32]
-	}
-	SetLogLabel(content)
-
-	m_view_time.SetText(time.Now().Format("2006/01/02 15:04:05"))
-}
-
-func UILogInit() {
-	m_view_log = NewLogLabel("等待启动")
-
-	gogo.Log().RegistInfo(func(content string) {
-		UILogPrintF(content)
-	})
-	gogo.Log().RegistDebug(func(content string) {
-		UILogPrintF(content)
-	})
-	gogo.Log().RegistError(func(content string) {
-		UILogPrintF(content)
-		fyne.LogError("error: ", errors.New(content))
-	})
-}
 
 func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	var configInfo config.ConfigInfo
@@ -141,7 +104,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), m_validated_key),
 		container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste),
 		localUI_Container, remoteUI_Container,
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新状态: "), m_view_log),
+		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新状态: "), NewLogLabel("等待启动")),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新时间: "), &m_view_time),
 		container.NewStack(m_button_start, m_activity_start_button))
 }
