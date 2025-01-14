@@ -86,8 +86,6 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 				utils.Log().DebugF("发送本端地址: %v", redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
-				//go m_tun_passive.Start()
-
 			default:
 				if m_tun_active != nil {
 					m_tun_active.Release()

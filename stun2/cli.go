@@ -198,10 +198,18 @@ func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 	utils.Log().Debug("获取本端地址")
 	defer conn.SetReadDeadline(time.Time{})
 	n2 := 0
+	var stun_svr string
 
 	for {
-		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.GetConfig().StunList))))
-		stun_svr := config.GetConfig().StunList[n.Int64()]
+		switch len(config.Arg_stun_svr_addr) {
+		case 0:
+			n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.GetConfig().StunList))))
+			stun_svr = config.GetConfig().StunList[n.Int64()]
+
+		default:
+			stun_svr = config.Arg_stun_svr_addr
+		}
+
 		wan_ip, wan_port1, wan_port2, err := getStunIpPort2(conn, stun_svr)
 		//log.Printf("stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d, err: %v", stun_svr, wan_ip, wan_port1, wan_port2, err)
 		if err != nil {
