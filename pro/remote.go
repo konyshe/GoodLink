@@ -8,6 +8,7 @@ import (
 	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -38,14 +39,14 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 		time.Sleep(1 * time.Second)
 
 		if RedisGet(&redisJson) != nil {
-			utils.Log().Debug("连接超时")
+			utils.Log().Debug("会话超时")
 			return nil, nil
 		}
 
 		utils.Log().SetDebugSate(redisJson.State)
 
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
-			utils.Log().Debug("连接被重置")
+			utils.Log().Debug("会话被重置")
 			return nil, nil
 		}
 
@@ -69,9 +70,10 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			utils.Log().DebugF("收到对端请求: %v", redisJson)
 
 			conn := utils.GetListenUDP()
-			redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2 = stun2.GetWanIpPort2(conn)
+			redisJson.RemotePort0 = conn.LocalAddr().(*net.UDPAddr).Port
+			redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2 = stun2.GetWanIpPort2(conn)
 
-			switch redisJson.ClientPort1 {
+			switch redisJson.LocalPort1 {
 			case 0:
 				conn_type = 0
 				utils.Log().Debug("对端未发来IP")
@@ -98,7 +100,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 				}
 				m_tun_active = nil
 
-				m_tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, 0x100)
+				m_tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2, 0x100)
 				m_tun_passive.Start()
 
 				tun_passive_chain = m_tun_passive.GetChain()
@@ -114,7 +116,7 @@ func GetRemoteQuicConn(time_out time.Duration) (quic.Connection, quic.Stream) {
 			switch conn_type {
 			case 0:
 				utils.Log().DebugF("收到对端地址: %v", redisJson)
-				m_tun_active.Start(redisJson.ServerPort1, redisJson.ServerPort2, redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2, redisJson.SocketTimeOut)
+				m_tun_active.Start(redisJson.RemotePort1, redisJson.RemotePort2, redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2, redisJson.SocketTimeOut)
 
 			case 1:
 				utils.Log().DebugF("收到对端地址, 等待连接: %v", redisJson)

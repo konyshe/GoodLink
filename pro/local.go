@@ -25,9 +25,9 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 	}
 
 	conn := utils.GetListenUDP()
-
-	ClientIP, ClientPort1, ClientPort2 := stun2.GetWanIpPort2(conn)
-	if ClientPort1 == ClientPort2 {
+	redisJson.LocalPort0 = conn.LocalAddr().(*net.UDPAddr).Port
+	LocalIP, LocalPort1, LocalPort2 := stun2.GetWanIpPort2(conn)
+	if LocalPort1 == LocalPort2 {
 		conn_type = 0
 	}
 
@@ -41,7 +41,7 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		RedisSet(15*time.Second, &redisJson)
 
 	default:
-		redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2 = ClientIP, ClientPort1, ClientPort2
+		redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2 = LocalIP, LocalPort1, LocalPort2
 		redisJson.State = 0
 		utils.Log().DebugF("发送本端地址: %v", redisJson)
 		RedisSet(15*time.Second, &redisJson)
@@ -51,14 +51,14 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 		time.Sleep(1 * time.Second)
 
 		if RedisGet(&redisJson) != nil {
-			utils.Log().Debug("连接超时")
+			utils.Log().Debug("会话超时")
 			return nil, nil, nil
 		}
 
 		utils.Log().SetDebugSate(redisJson.State)
 
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
-			utils.Log().Debug("连接被重置")
+			utils.Log().Debug("会话被重置")
 			return nil, nil, nil
 		}
 
@@ -73,20 +73,20 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 				}
 				m_tun_active = nil
 
-				redisJson.ClientIP, redisJson.ClientPort1, redisJson.ClientPort2 = ClientIP, ClientPort1, ClientPort2
-				if redisJson.ClientIP == redisJson.ServerIP {
+				redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2 = LocalIP, LocalPort1, LocalPort2
+				if redisJson.LocalIP == redisJson.RemoteIP {
 					RedisDel()
 					return nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
 				}
 
-				m_tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2, redisJson.SendPortCount)
+				m_tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2, redisJson.SendPortCount)
 				m_tun_passive.Start()
 
 				redisJson.State = 2
 				utils.Log().DebugF("发送本端地址: %v", redisJson)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
-				go m_tun_passive.Start()
+				//go m_tun_passive.Start()
 
 			default:
 				if m_tun_active != nil {
@@ -94,13 +94,13 @@ func GetLocalQuicConn(conn_type int, count int) (quic.Connection, quic.Stream, e
 				}
 				m_tun_passive = nil
 
-				if redisJson.ClientIP == redisJson.ServerIP {
+				if redisJson.LocalIP == redisJson.RemoteIP {
 					RedisDel()
 					return nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
 				}
 
 				m_tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, 15*time.Second)
-				m_tun_active.Start(redisJson.ClientPort1, redisJson.ClientPort2, redisJson.ServerIP, redisJson.ServerPort1, redisJson.ServerPort2, redisJson.SocketTimeOut)
+				m_tun_active.Start(redisJson.LocalPort1, redisJson.LocalPort2, redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2, redisJson.SocketTimeOut)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
