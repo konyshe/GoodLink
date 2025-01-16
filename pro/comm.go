@@ -18,8 +18,6 @@ var (
 	m_redis_db    *redis.Client
 	m_tun_key     string
 	m_md5_tun_key string
-	m_tun_active  *tun.TunActive
-	m_tun_passive *tun.TunPassive
 )
 
 func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
@@ -53,22 +51,17 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
 		return errors.New("Redis失败, 请重启程序")
 	}
 
-	m_tun_active = nil
-	m_tun_passive = nil
-
 	return nil
 }
 
-func Release() {
+func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
 	utils.Log().SetDebugSate(0)
 
-	if m_tun_active != nil {
-		m_tun_active.Release()
-		m_tun_active = nil
+	if tun_active != nil {
+		tun_active.Release()
 	}
-	if m_tun_passive != nil {
-		m_tun_passive.Release()
-		m_tun_passive = nil
+	if tun_passive != nil {
+		tun_passive.Release()
 	}
 }
 

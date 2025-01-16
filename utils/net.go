@@ -14,8 +14,8 @@ func GetListenUDP() *net.UDPConn {
 }
 
 func GetListenUDP2(port int) *net.UDPConn {
-	if addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port)); addr != nil && err == nil {
-		if conn, err := net.ListenUDP("udp", addr); conn != nil && err == nil {
+	if addr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", port)); addr != nil && err == nil {
+		if conn, err := net.ListenUDP("udp4", addr); conn != nil && err == nil {
 			return conn
 		}
 	}
