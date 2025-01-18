@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/quic-go/quic-go"
 	"golang.org/x/net/context"
 )
 
@@ -55,7 +56,6 @@ type Config struct {
 type Server struct {
 	config      *Config
 	authMethods map[uint8]Authenticator
-	svr_socket  net.Listener
 }
 
 // New creates a new Server and potentially returns an error
@@ -97,38 +97,7 @@ func New(conf *Config) (*Server, error) {
 	return server, nil
 }
 
-func (s *Server) StopSocks5() {
-	if s.svr_socket != nil {
-		s.svr_socket.Close()
-		s.svr_socket = nil
-	}
-}
-
-// ListenAndServe is used to create a listener and serve on it
-func (s *Server) ListenAndServe(network, addr string) error {
-	var err error
-	s.svr_socket, err = net.Listen(network, addr)
-	if err != nil {
-		s.svr_socket = nil
-		return err
-	}
-	return s.Serve(s.svr_socket)
-}
-
-// Serve is used to serve connections from a listener
-func (s *Server) Serve(l net.Listener) error {
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			return err
-		}
-		go s.ServeConn(conn)
-	}
-	return nil
-}
-
-// ServeConn is used to serve a single connection.
-func (s *Server) ServeConn(conn net.Conn) error {
+func (s *Server) ServeConnQuic(conn quic.Stream, client_ip net.IP, client_port int) error {
 	defer conn.Close()
 	bufConn := bufio.NewReader(conn)
 
@@ -164,9 +133,7 @@ func (s *Server) ServeConn(conn net.Conn) error {
 		return fmt.Errorf("Failed to read destination address: %v", err)
 	}
 	request.AuthContext = authContext
-	if client, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
-		request.RemoteAddr = &AddrSpec{IP: client.IP, Port: client.Port}
-	}
+	request.RemoteAddr = &AddrSpec{IP: client_ip, Port: client_port}
 
 	// Process the client request
 	if err := s.handleRequest(request, conn); err != nil {

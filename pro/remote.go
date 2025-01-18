@@ -1,7 +1,6 @@
 package pro
 
 import (
-	"errors"
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/stun2"
@@ -170,7 +169,6 @@ var (
 
 func StopRemote() error {
 	m_remote_stats = 0
-	proxy.StopSocks5()
 
 	lock_remote.Lock()
 	defer lock_remote.Unlock()
@@ -198,22 +196,6 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 	tun_active_list = make([]*tun.TunActive, 0)
 	tun_passive_list = make([]*tun.TunPassive, 0)
 
-	if remote_addr == "" {
-		utils.Log().Debug("开启本地代理")
-		remote_addr = utils.GetFreeLocalAddr()
-		if remote_addr == "" {
-			return errors.New("获取本地端口失败")
-		}
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			proxy.ListenSocks5(remote_addr)
-		}()
-	}
-
-	utils.Log().DebugF("转发地址: %s", remote_addr)
-
 	m_remote_stats = 1
 
 	m_tun_key = tun_key
@@ -236,7 +218,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 		lock_remote.Unlock()
 
 		wg.Add(1)
-		go func(tun_active2 *tun.TunActive, tun_passive2 *tun.TunPassive, remote string, conn quic.Connection) {
+		go func(tun_active2 *tun.TunActive, tun_passive2 *tun.TunPassive, remote_addr string, conn quic.Connection) {
 			defer func() {
 				Release(tun_active2, tun_passive2)
 				wg.Done()
@@ -245,7 +227,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				proxy.ProcessProxyServer(remote, conn)
+				proxy.ProcessProxyServer(remote_addr, conn)
 			}()
 
 			tun.ProcessHealth(health)
