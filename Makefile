@@ -18,6 +18,12 @@ PLATFORM_LIST = \
 	linux-arm-cmd \
 	linux-armv7l-cmd \
 	linux-arm64-cmd \
+	linux-loong64-cmd \
+	linux-mips-cmd \
+	linux-mipsle-cmd \
+	linux-mips64-cmd \
+	linux-riscv64-cmd \
+	linux-mips64le-cmd \
 	darwin-amd64-cmd \
 	darwin-arm64-cmd \
 	windows-amd64-cmd \
@@ -30,6 +36,24 @@ linux-386-cmd:
 
 linux-amd64-cmd:
 	GOARCH=amd64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+linux-loong64-cmd:
+	GOARCH=loong64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+linux-mips-cmd:
+	GOARCH=mips GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+linux-mipsle-cmd:
+	GOARCH=mipsle GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+linux-mips64-cmd:
+	GOARCH=mips64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+linux-mips64le-cmd:
+	GOARCH=mips64le GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+linux-riscv64-cmd:
+	GOARCH=riscv64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
 
 linux-arm-cmd:
 	GOARCH=arm GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
