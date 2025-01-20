@@ -53,9 +53,4 @@ func Help() {
 		fmt.Print(gogo.BuildVersion())
 		os.Exit(0)
 	}
-
-	if Arg_tun_key == "" {
-		flag.Usage()
-		os.Exit(0)
-	}
 }

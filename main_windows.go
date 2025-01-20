@@ -3,6 +3,7 @@
 package main
 
 import (
+	"goodlink/config"
 	_ "goodlink/pro"
 	"goodlink/theme"
 	"goodlink/ui2"
@@ -20,6 +21,8 @@ const (
 )
 
 func main() {
+	config.Help()
+
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
 	icon, _ := fyne.LoadResourceFromPath("./theme/favicon.png")

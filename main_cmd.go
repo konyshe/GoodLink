@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"goodlink/config"
 	"goodlink/pro"
 	_ "goodlink/pro"
@@ -62,6 +63,11 @@ func main2() {
 
 func main() {
 	config.Help()
+
+	if config.Arg_tun_key == "" {
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	utils.GuardStart(main2, 500*time.Millisecond, func(err error) {
 		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
