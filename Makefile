@@ -16,6 +16,7 @@ PLATFORM_LIST = \
 	linux-386-cmd \
 	linux-amd64-cmd \
 	linux-arm-cmd \
+	linux-armv7l-cmd \
 	linux-arm64-cmd \
 	darwin-amd64-cmd \
 	darwin-arm64-cmd \
@@ -32,6 +33,9 @@ linux-amd64-cmd:
 
 linux-arm-cmd:
 	GOARCH=arm GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+
+linux-armv7l-cmd:
+	GOARCH=arm GOARM=7 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
 
 linux-arm64-cmd:
 	GOARCH=arm64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
