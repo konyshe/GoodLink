@@ -43,26 +43,26 @@ func GetRemoteQuicConn(time_out time.Duration) (*tun.TunActive, *tun.TunPassive,
 
 		if RedisGet(&redisJson) != nil {
 			log.Println("会话超时")
-			return nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil
 		}
 
 		utils.Log().SetDebugSate(redisJson.State)
 
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
 			utils.Log().Debug("会话被重置")
-			return nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil
 		}
 
 		if redisJson.State < last_state {
 			m_redis_db.Del(m_md5_tun_key)
 			utils.Log().DebugF("状态异常: %d -> %d", last_state, redisJson.State)
-			return nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil
 		}
 
 		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
 			m_redis_db.Del(m_md5_tun_key)
 			utils.Log().DebugF("状态异常: %d -> %d", last_state, redisJson.State)
-			return nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil
 		}
 
 		redisJson.SocketTimeOut = time_out
@@ -129,24 +129,24 @@ func GetRemoteQuicConn(time_out time.Duration) (*tun.TunActive, *tun.TunPassive,
 				utils.Log().Debug("对端被动连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if tun_active != nil {
-					return tun_active, nil, tun_active.TunQuicConn, tun_active.TunHealthStream
+					return tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream
 				}
-				return nil, nil, nil, nil
+				return tun_active, tun_passive, nil, nil
 
 			case <-tun_passive_chain:
 				redisJson.State = 3
 				utils.Log().Debug("对端主动连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if tun_passive != nil {
-					return nil, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream
+					return tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream
 				}
-				return nil, nil, nil, nil
+				return tun_active, tun_passive, nil, nil
 
 			case <-time.After(time_out):
 				redisJson.State = 4
 				utils.Log().Debug("对端连接超时")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
-				return nil, nil, nil, nil
+				return tun_active, tun_passive, nil, nil
 			}
 
 		case 3, 4:
@@ -158,7 +158,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*tun.TunActive, *tun.TunPassive,
 		last_state = redisJson.State
 	}
 
-	return nil, nil, nil, nil
+	return tun_active, tun_passive, nil, nil
 }
 
 var (

@@ -56,14 +56,14 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 
 		if RedisGet(&redisJson) != nil {
 			log.Println("会话超时")
-			return nil, nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil
 		}
 
 		utils.Log().SetDebugSate(redisJson.State)
 
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
 			utils.Log().Debug("会话被重置")
-			return nil, nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil
 		}
 
 		switch redisJson.State {
@@ -80,7 +80,7 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 				redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2 = LocalIP, LocalPort1, LocalPort2
 				if redisJson.LocalIP == redisJson.RemoteIP {
 					RedisDel()
-					return nil, nil, nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
+					return tun_active, tun_passive, nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
 				}
 
 				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2, redisJson.SendPortCount)
@@ -98,7 +98,7 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 
 				if redisJson.LocalIP == redisJson.RemoteIP {
 					RedisDel()
-					return nil, nil, nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
+					return tun_active, tun_passive, nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
 				}
 
 				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, 15*time.Second)
@@ -111,28 +111,28 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 			if tun_passive != nil {
 				if tun_passive.TunQuicConn != nil {
 					utils.Log().DebugF("连接成功")
-					return nil, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream, nil
+					return tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream, nil
 				}
 			}
 			if tun_active != nil {
 				if tun_active.TunQuicConn != nil {
 					utils.Log().DebugF("连接成功")
-					return tun_active, nil, tun_active.TunQuicConn, tun_active.TunHealthStream, nil
+					return tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream, nil
 				}
 			}
 			utils.Log().Debug("连接失败")
-			return nil, nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil
 
 		case 4:
 			utils.Log().Debug("连接超时")
-			return nil, nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil
 
 		default:
 			utils.Log().Debug("等待对端状态")
 		}
 	}
 
-	return nil, nil, nil, nil, nil
+	return tun_active, tun_passive, nil, nil, nil
 }
 
 func GetLocalStats() int {
