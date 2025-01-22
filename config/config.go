@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/tls"
 	"encoding/json"
+	"gogo"
 	"goodlink/aes"
 	"io"
 	"net/http"
@@ -32,29 +33,33 @@ type ConfigInfo struct {
 var configInfo ConfigInfo
 
 func Init() error {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // 跳过证书验证
-			},
-		},
-		Timeout: 3 * time.Second,
-	}
-	resp, err := client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
 	var res []byte
-	res, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	var err error
+	var resp *http.Response
+
+	if gogo.Utils().FileExist("config.json") {
+		res = gogo.Utils().FileReadAll("config.json")
+
+	} else {
+		client := &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, // 跳过证书验证
+				},
+			},
+			Timeout: 3 * time.Second,
+		}
+		if resp, err = client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json"); err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if res, err = io.ReadAll(resp.Body); err != nil {
+			return err
+		}
 	}
 
-	temp2 := aes.Decrypt(res, "goodlink")
-	err = json.Unmarshal(temp2, &configInfo)
-	if err != nil {
+	if err = json.Unmarshal(aes.Decrypt(res, "goodlink"), &configInfo); err != nil {
 		return err
 	}
 
