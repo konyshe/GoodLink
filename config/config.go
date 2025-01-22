@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"goodlink/aes"
 	"io"
@@ -31,7 +32,14 @@ type ConfigInfo struct {
 var configInfo ConfigInfo
 
 func Init() error {
-	client := &http.Client{Timeout: 3 * time.Second}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // 跳过证书验证
+			},
+		},
+		Timeout: 3 * time.Second,
+	}
 	resp, err := client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json")
 	if err != nil {
 		return err
