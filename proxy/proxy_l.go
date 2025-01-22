@@ -2,14 +2,14 @@ package proxy
 
 import (
 	"context"
-	"goodlink/utils"
+	"log"
 	"net"
 
 	"github.com/quic-go/quic-go"
 )
 
 func ProcessProxyClient(listener net.Listener, stun_quic_conn quic.Connection) {
-	utils.Log().Debug("您已可以访问remote端的主机, 请勿关闭本程序")
+	log.Println("您已可以访问remote端的主机, 请勿关闭本程序")
 
 	for {
 		new_tcp_conn, err := listener.Accept()
