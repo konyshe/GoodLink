@@ -19,13 +19,13 @@ func GetListenUDP(level string) *net.UDPConn {
 	return conn
 }
 
-func GetListenUDP2(level string, port int) *net.UDPConn {
-	if addr, err := net.ResolveUDPAddr(level, fmt.Sprintf(":%d", port)); addr != nil && err == nil {
-		if conn, err := net.ListenUDP(level, addr); conn != nil && err == nil {
-			return conn
-		}
+func GetListenUDPPort(level string, port int) *net.UDPConn {
+	addr, _ := net.ResolveUDPAddr(level, fmt.Sprintf(":%d", port))
+	conn, err := net.ListenUDP(level, addr)
+	if err != nil {
+		Log().ErrorF("绑定端口失败: %v", err)
 	}
-	return nil
+	return conn
 }
 
 func GetUDPLocalIPPort(level string) (string, int) {

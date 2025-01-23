@@ -29,9 +29,9 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 	}
 
 	conn := utils.GetListenUDP("udp4")
-	redisJson.LocalPort0 = conn.LocalAddr().(*net.UDPAddr).Port
-	LocalIP, LocalPort1, LocalPort2 := stun2.GetWanIpPort2(conn)
-	if LocalPort1 == LocalPort2 {
+	redisJson.LocalLocalPort = conn.LocalAddr().(*net.UDPAddr).Port
+	WanIPv4, WanPort1, WanPort2 := stun2.GetWanIpPort2(conn)
+	if WanPort1 == WanPort2 {
 		conn_type = 0
 	}
 
@@ -45,7 +45,7 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 		RedisSet(15*time.Second, &redisJson)
 
 	default:
-		redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2 = LocalIP, LocalPort1, LocalPort2
+		redisJson.LocalWanIPv4, redisJson.LocalWanPort1, redisJson.LocalWanPort2 = WanIPv4, WanPort1, WanPort2
 		redisJson.State = 0
 		utils.Log().DebugF("发送本端地址: %v", redisJson)
 		RedisSet(15*time.Second, &redisJson)
@@ -77,13 +77,13 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 				}
 				tun_active = nil
 
-				redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2 = LocalIP, LocalPort1, LocalPort2
-				if redisJson.LocalIP == redisJson.RemoteIP {
+				redisJson.LocalWanIPv4, redisJson.LocalWanPort1, redisJson.LocalWanPort2 = WanIPv4, WanPort1, WanPort2
+				if redisJson.LocalWanIPv4 == redisJson.RemoteWanIPv4 {
 					RedisDel()
-					return tun_active, tun_passive, nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
+					return tun_active, tun_passive, nil, nil, fmt.Errorf("和对端处在同一个公网IP, 退出")
 				}
 
-				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2, redisJson.SendPortCount)
+				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteWanIPv4, redisJson.RemoteWanPort1, redisJson.RemoteWanPort2, redisJson.SendPortCount)
 				tun_passive.Start()
 
 				redisJson.State = 2
@@ -96,13 +96,13 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 				}
 				tun_passive = nil
 
-				if redisJson.LocalIP == redisJson.RemoteIP {
+				if redisJson.LocalWanIPv4 == redisJson.RemoteWanIPv4 {
 					RedisDel()
-					return tun_active, tun_passive, nil, nil, fmt.Errorf("已经和对端处在同一个公网下")
+					return tun_active, tun_passive, nil, nil, fmt.Errorf("已经和对端处在同一个公网IP, 退出")
 				}
 
 				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, 15*time.Second)
-				tun_active.Start(redisJson.LocalPort1, redisJson.LocalPort2, redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2, redisJson.SocketTimeOut)
+				tun_active.Start(redisJson.LocalWanPort1, redisJson.LocalWanPort2, redisJson.RemoteWanIPv4, redisJson.RemoteWanPort1, redisJson.RemoteWanPort2, redisJson.SocketTimeOut)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}

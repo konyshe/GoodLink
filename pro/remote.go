@@ -73,10 +73,10 @@ func GetRemoteQuicConn(time_out time.Duration) (*tun.TunActive, *tun.TunPassive,
 			utils.Log().DebugF("收到对端请求: %v", redisJson)
 
 			conn := utils.GetListenUDP("udp4")
-			redisJson.RemotePort0 = conn.LocalAddr().(*net.UDPAddr).Port
-			redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2 = stun2.GetWanIpPort2(conn)
+			redisJson.RemoteLocalPort = conn.LocalAddr().(*net.UDPAddr).Port
+			redisJson.RemoteWanIPv4, redisJson.RemoteWanPort1, redisJson.RemoteWanPort2 = stun2.GetWanIpPort2(conn)
 
-			switch redisJson.LocalPort1 {
+			switch redisJson.LocalWanPort1 {
 			case 0:
 				conn_type = 0
 				utils.Log().Debug("对端未发来IP")
@@ -103,7 +103,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*tun.TunActive, *tun.TunPassive,
 				}
 				tun_active = nil
 
-				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2, 0x100)
+				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.LocalWanIPv4, redisJson.LocalWanPort1, redisJson.LocalWanPort2, 0x100)
 				tun_passive.Start()
 
 				tun_passive_chain = tun_passive.GetChain()
@@ -117,7 +117,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*tun.TunActive, *tun.TunPassive,
 			switch conn_type {
 			case 0:
 				utils.Log().DebugF("收到对端地址: %v", redisJson)
-				tun_active.Start(redisJson.RemotePort1, redisJson.RemotePort2, redisJson.LocalIP, redisJson.LocalPort1, redisJson.LocalPort2, redisJson.SocketTimeOut)
+				tun_active.Start(redisJson.RemoteWanPort1, redisJson.RemoteWanPort2, redisJson.LocalWanIPv4, redisJson.LocalWanPort1, redisJson.LocalWanPort2, redisJson.SocketTimeOut)
 
 			case 1:
 				utils.Log().DebugF("收到对端地址, 等待连接: %v", redisJson)
