@@ -178,10 +178,6 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 		}
 		log.Printf("本端地址: %v", addr)
 
-		conn.SetReadDeadline(time.Time{})
-		conn.SetWriteDeadline(time.Time{})
-		conn.SetDeadline(time.Time{})
-
 		count++
 
 		tun_active, tun_passive, conn, health, err := GetLocalQuicConn(conn, &addr, conn_type, count)

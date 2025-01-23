@@ -213,10 +213,6 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 		}
 		log.Printf("本端地址: %v", addr)
 
-		conn.SetReadDeadline(time.Time{})
-		conn.SetWriteDeadline(time.Time{})
-		conn.SetDeadline(time.Time{})
-
 		tun_active, tun_passive, conn, health := GetRemoteQuicConn(conn, &addr, time_out)
 		if conn == nil {
 			Release(tun_active, tun_passive)

@@ -101,7 +101,7 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 
 	conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 	n, err := conn.Read(response)
-	defer conn.SetDeadline(time.Time{})
+	defer conn.SetReadDeadline(time.Time{})
 
 	if err != nil {
 		return nil, 0, err
@@ -196,7 +196,7 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, int, error) {
 
 func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 	utils.Log().Debug("获取本端地址")
-	defer conn.SetReadDeadline(time.Time{})
+
 	n2 := 0
 	var stun_svr string
 
@@ -240,9 +240,7 @@ func TestStun() {
 
 	for {
 		for _, stun_svr := range config.GetConfig().StunList {
-			conn4.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 			if wan_ip, wan_port1, wan_port2, _ := getStunIpPort2(conn4, stun_svr); wan_ip != "" && wan_port1 > 0 && wan_port2 > 0 {
-				conn4.SetReadDeadline(time.Time{})
 				fmt.Printf("stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d\n", stun_svr, wan_ip, wan_port1, wan_port2)
 			} else {
 				fmt.Printf("stun_svr: %s, failed\n", stun_svr)
