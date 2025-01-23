@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"goodlink/aes"
 	"goodlink/config"
+	"goodlink/stun2"
 	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
+	"net"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -65,25 +67,24 @@ func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
 	}
 }
 
+type AddrType struct {
+	WanIPv4   string `bson:"wan_ip_v4" json:"wan_ip_v4"`     // 外网IPv4地址
+	WanPort1  int    `bson:"remote_port1" json:"wan_port1"`  // 外网端口1
+	WanPort2  int    `bson:"remote_port2" json:"wan_port2"`  // 外网端口2
+	LocalIPv4 string `bson:"local_ip_v4" json:"local_ip_v4"` // 本地IPv4地址
+	LocalPort int    `bson:"lcoal_port" json:"local_port"`   // 本地端口
+	IPv6      string `bson:"ip" json:"ip_v6"`                // IPv6地址
+}
+
 type RedisJsonType struct {
-	SessionID       string        `bson:"session_id" json:"session_id"`
-	State           int           `bson:"state" json:"state"`
-	SocketTimeOut   time.Duration `bson:"SocketTimeOut" json:"SocketTimeOut"`
-	RedisTimeOut    time.Duration `bson:"RedisTimeOut" json:"RedisTimeOut"`
-	SendPortCount   int           `bson:"send_port_count" json:"send_port_count"`
-	ConnectCount    int           `bson:"connect_count" json:"connect_count"`
-	RemoteWanIPv4   string        `bson:"remote_ip" json:"remote_wan_ip_v4"`     // Remote端, 外网IPv4地址
-	RemoteLocalIPv4 string        `bson:"remote_ip" json:"remote_local_ip_v4"`   // Remote端, 本地IPv4地址
-	RemoteIPv6      string        `bson:"remote_ip" json:"remote_ip_v6"`         // Remote端, IPv6地址
-	RemoteLocalPort int           `bson:"remote_port0" json:"remote_local_port"` // Remote端, 本地端口
-	RemoteWanPort1  int           `bson:"remote_port1" json:"remote_wan_port1"`  // Remote端, 外网端口1
-	RemoteWanPort2  int           `bson:"remote_port2" json:"remote_wan_port2"`  // Remote端, 外网端口2
-	LocalWanIPv4    string        `bson:"local_ip" json:"local_wan_ip_v4"`       // Remote端, 外网IPv4地址
-	LocalLocalIPv4  string        `bson:"local_ip" json:"local_local_ip_v4"`     // Local端, 本地IPv4地址
-	LocalIPv6       string        `bson:"local_ip" json:"local_ip_v6"`           // Local端, IPv6地址
-	LocalLocalPort  int           `bson:"local_port0" json:"local_local_port"`   // Local端, 本地端口
-	LocalWanPort1   int           `bson:"local_port1" json:"local_wan_port1"`    // Local端, 外网端口1
-	LocalWanPort2   int           `bson:"local_port2" json:"local_wan_port2"`    // Local端, 外网端口2
+	SessionID     string        `bson:"session_id" json:"session_id"`
+	State         int           `bson:"state" json:"state"`
+	SocketTimeOut time.Duration `bson:"socket_time_out" json:"socket_time_out"`
+	RedisTimeOut  time.Duration `bson:"redis_time_out" json:"redis_time_out"`
+	SendPortCount int           `bson:"send_port_count" json:"send_port_count"`
+	ConnectCount  int           `bson:"connect_count" json:"connect_count"`
+	RemoteAddr    AddrType      `bson:"remote_addr" json:"remote_addr"`
+	LocalAddr     AddrType      `bson:"local_addr" json:"local_addr"`
 }
 
 func RedisSet(time_out time.Duration, redisJson *RedisJsonType) error {
@@ -115,4 +116,15 @@ func RedisGet(redisJson *RedisJsonType) error {
 
 func RedisDel() {
 	m_redis_db.Del(m_md5_tun_key)
+}
+
+func GetUDPAddr() (conn *net.UDPConn, addr AddrType) {
+	addr.LocalIPv4, _ = utils.GetUDPLocalIPPort("udp4")
+	addr.IPv6, _ = utils.GetUDPLocalIPPort("udp6")
+
+	conn, _ = net.ListenUDP("udp4", nil) // 只监听IPv4
+	addr.LocalPort = conn.LocalAddr().(*net.UDPAddr).Port
+	addr.WanIPv4, addr.WanPort1, addr.WanPort2 = stun2.GetWanIpPort2(conn)
+
+	return
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"goodlink/md5"
 	"goodlink/proxy"
-	"goodlink/stun2"
 	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
@@ -20,36 +19,29 @@ var (
 	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
 )
 
-func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
+	SessionID := string(utils.RandomBytes(24))
+	utils.Log().DebugF("会话ID: %s", SessionID)
+
 	redisJson := RedisJsonType{
+		State:        0,
+		SessionID:    SessionID,
 		ConnectCount: count,
 	}
-
-	conn := utils.GetListenUDP("udp4")
-	redisJson.LocalLocalPort = conn.LocalAddr().(*net.UDPAddr).Port
-	WanIPv4, WanPort1, WanPort2 := stun2.GetWanIpPort2(conn)
-	if WanPort1 == WanPort2 {
-		conn_type = 0
-	}
-
-	SessionID := string(utils.RandomBytes(24))
-	redisJson.SessionID = SessionID
-	utils.Log().DebugF("会话ID: %s", SessionID)
 
 	switch conn_type {
 	case 0:
 		utils.Log().Debug("请求连接对端")
-		RedisSet(15*time.Second, &redisJson)
 
 	default:
-		redisJson.LocalWanIPv4, redisJson.LocalWanPort1, redisJson.LocalWanPort2 = WanIPv4, WanPort1, WanPort2
-		redisJson.State = 0
-		utils.Log().DebugF("发送本端地址: %v", redisJson)
-		RedisSet(15*time.Second, &redisJson)
+		redisJson.LocalAddr = *addr
+		utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)
 	}
+
+	RedisSet(15*time.Second, &redisJson)
 
 	for m_local_state == 1 {
 		time.Sleep(1 * time.Second)
@@ -58,6 +50,8 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 			log.Println("会话超时")
 			return tun_active, tun_passive, nil, nil, nil
 		}
+
+		//log.Printf("状态消息: %v", redisJson)
 
 		utils.Log().SetDebugSate(redisJson.State)
 
@@ -68,7 +62,7 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 
 		switch redisJson.State {
 		case 1:
-			utils.Log().DebugF("收到对端地址: %v", redisJson)
+			utils.Log().DebugF("收到对端地址: %v", redisJson.RemoteAddr)
 
 			switch conn_type {
 			case 0:
@@ -77,17 +71,17 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 				}
 				tun_active = nil
 
-				redisJson.LocalWanIPv4, redisJson.LocalWanPort1, redisJson.LocalWanPort2 = WanIPv4, WanPort1, WanPort2
-				if redisJson.LocalWanIPv4 == redisJson.RemoteWanIPv4 {
+				redisJson.LocalAddr = *addr
+				if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
 					RedisDel()
 					return tun_active, tun_passive, nil, nil, fmt.Errorf("和对端处在同一个公网IP, 退出")
 				}
 
-				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteWanIPv4, redisJson.RemoteWanPort1, redisJson.RemoteWanPort2, redisJson.SendPortCount)
+				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SendPortCount)
 				tun_passive.Start()
 
 				redisJson.State = 2
-				utils.Log().DebugF("发送本端地址: %v", redisJson)
+				utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
@@ -96,13 +90,13 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 				}
 				tun_passive = nil
 
-				if redisJson.LocalWanIPv4 == redisJson.RemoteWanIPv4 {
+				if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
 					RedisDel()
 					return tun_active, tun_passive, nil, nil, fmt.Errorf("已经和对端处在同一个公网IP, 退出")
 				}
 
 				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, 15*time.Second)
-				tun_active.Start(redisJson.LocalWanPort1, redisJson.LocalWanPort2, redisJson.RemoteWanIPv4, redisJson.RemoteWanPort1, redisJson.RemoteWanPort2, redisJson.SocketTimeOut)
+				tun_active.Start(redisJson.LocalAddr.WanPort1, redisJson.LocalAddr.WanPort2, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SocketTimeOut)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
@@ -128,7 +122,7 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 			return tun_active, tun_passive, nil, nil, nil
 
 		default:
-			utils.Log().Debug("等待对端状态")
+			utils.Log().DebugF("等待对端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
 
@@ -171,11 +165,26 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 
 	count := 0
 
+	conn, addr := GetUDPAddr()
+
 	for m_local_state == 1 {
+
+		conn.Close()
+		conn = utils.GetListenUDPPort("udp", addr.LocalPort) // 同时监听IPv4和IPv6
+		if conn == nil {
+			utils.Log().DebugF("绑定端口失败: %v", addr.LocalPort)
+			time.Sleep(time.Second)
+			continue
+		}
+		log.Printf("本端地址: %v", addr)
+
+		conn.SetReadDeadline(time.Time{})
+		conn.SetWriteDeadline(time.Time{})
+		conn.SetDeadline(time.Time{})
 
 		count++
 
-		tun_active, tun_passive, conn, health, err := GetLocalQuicConn(conn_type, count)
+		tun_active, tun_passive, conn, health, err := GetLocalQuicConn(conn, &addr, conn_type, count)
 		if err != nil {
 			Release(tun_active, tun_passive)
 			return err

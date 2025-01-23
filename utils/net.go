@@ -11,14 +11,6 @@ import (
 	"time"
 )
 
-func GetListenUDP(level string) *net.UDPConn {
-	conn, err := net.ListenUDP(level, nil)
-	if err != nil {
-		Log().ErrorF("绑定端口失败: %v", err)
-	}
-	return conn
-}
-
 func GetListenUDPPort(level string, port int) *net.UDPConn {
 	addr, _ := net.ResolveUDPAddr(level, fmt.Sprintf(":%d", port))
 	conn, err := net.ListenUDP(level, addr)

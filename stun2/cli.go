@@ -230,19 +230,19 @@ func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 }
 
 func GetWanIpPort() (string, int, int) {
-	conn := utils.GetListenUDP("udp4")
-	defer conn.Close()
-	return GetWanIpPort2(conn)
+	conn4, _ := net.ListenUDP("udp4", nil)
+	defer conn4.Close()
+	return GetWanIpPort2(conn4)
 }
 
 func TestStun() {
-	conn := utils.GetListenUDP("udp4")
+	conn4, _ := net.ListenUDP("udp4", nil)
 
 	for {
 		for _, stun_svr := range config.GetConfig().StunList {
-			conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-			if wan_ip, wan_port1, wan_port2, _ := getStunIpPort2(conn, stun_svr); wan_ip != "" && wan_port1 > 0 && wan_port2 > 0 {
-				conn.SetReadDeadline(time.Time{})
+			conn4.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+			if wan_ip, wan_port1, wan_port2, _ := getStunIpPort2(conn4, stun_svr); wan_ip != "" && wan_port1 > 0 && wan_port2 > 0 {
+				conn4.SetReadDeadline(time.Time{})
 				fmt.Printf("stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d\n", stun_svr, wan_ip, wan_port1, wan_port2)
 			} else {
 				fmt.Printf("stun_svr: %s, failed\n", stun_svr)
