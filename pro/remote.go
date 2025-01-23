@@ -72,7 +72,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*tun.TunActive, *tun.TunPassive,
 		case 0:
 			utils.Log().DebugF("收到对端请求: %v", redisJson)
 
-			conn := utils.GetListenUDP()
+			conn := utils.GetListenUDP("udp4")
 			redisJson.RemotePort0 = conn.LocalAddr().(*net.UDPAddr).Port
 			redisJson.RemoteIP, redisJson.RemotePort1, redisJson.RemotePort2 = stun2.GetWanIpPort2(conn)
 

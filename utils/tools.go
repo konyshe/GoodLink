@@ -3,7 +3,6 @@ package utils
 import (
 	"crypto/rand"
 	"math/big"
-	"net"
 )
 
 func RandomBytes(length int) []byte {
@@ -18,15 +17,4 @@ func RandomBytes(length int) []byte {
 		i++
 	}
 	return bytes
-}
-
-// 检测未使用的端口
-func GetFreeLocalAddr() string {
-	listener, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		return ""
-	}
-	defer listener.Close() // 确保在函数退出时关闭监听器
-
-	return listener.Addr().String()
 }

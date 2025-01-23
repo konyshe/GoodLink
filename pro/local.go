@@ -28,7 +28,7 @@ func GetLocalQuicConn(conn_type int, count int) (*tun.TunActive, *tun.TunPassive
 		ConnectCount: count,
 	}
 
-	conn := utils.GetListenUDP()
+	conn := utils.GetListenUDP("udp4")
 	redisJson.LocalPort0 = conn.LocalAddr().(*net.UDPAddr).Port
 	LocalIP, LocalPort1, LocalPort2 := stun2.GetWanIpPort2(conn)
 	if LocalPort1 == LocalPort2 {

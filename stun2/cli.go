@@ -230,13 +230,13 @@ func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
 }
 
 func GetWanIpPort() (string, int, int) {
-	conn := utils.GetListenUDP()
+	conn := utils.GetListenUDP("udp4")
 	defer conn.Close()
 	return GetWanIpPort2(conn)
 }
 
 func TestStun() {
-	conn := utils.GetListenUDP()
+	conn := utils.GetListenUDP("udp4")
 
 	for {
 		for _, stun_svr := range config.GetConfig().StunList {
