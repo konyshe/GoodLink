@@ -72,13 +72,21 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count in
 				tun_active = nil
 
 				redisJson.LocalAddr = *addr
-				if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
-					RedisDel()
-					return tun_active, tun_passive, nil, nil, fmt.Errorf("和对端处在同一个公网IP, 退出")
-				}
 
-				tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SendPortCount)
-				tun_passive.Start()
+				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
+					utils.Log().Debug("IPv6直连")
+					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.IPv6, redisJson.RemoteAddr.LocalPort, 0, redisJson.SendPortCount)
+					tun_passive.Start1()
+
+				} else if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
+					utils.Log().Debug("内网直连")
+					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.LocalIPv4, redisJson.RemoteAddr.LocalPort, 0, redisJson.SendPortCount)
+					tun_passive.Start1()
+
+				} else {
+					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SendPortCount)
+					tun_passive.Start()
+				}
 
 				redisJson.State = 2
 				utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)
@@ -90,13 +98,20 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count in
 				}
 				tun_passive = nil
 
-				if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
-					RedisDel()
-					return tun_active, tun_passive, nil, nil, fmt.Errorf("已经和对端处在同一个公网IP, 退出")
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn)
+
+				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
+					utils.Log().Debug("IPv6直连")
+					tun_active.Start1(redisJson.RemoteAddr.IPv6, redisJson.RemoteAddr.LocalPort, 0)
+
+				} else if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
+					utils.Log().Debug("内网直连")
+					tun_active.Start1(redisJson.RemoteAddr.LocalIPv4, redisJson.RemoteAddr.LocalPort, 0)
+
+				} else {
+					tun_active.Start(redisJson.LocalAddr.WanPort1, redisJson.LocalAddr.WanPort2, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2)
 				}
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, 15*time.Second)
-				tun_active.Start(redisJson.LocalAddr.WanPort1, redisJson.LocalAddr.WanPort2, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SocketTimeOut)
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
