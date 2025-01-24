@@ -14,6 +14,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 )
@@ -62,6 +63,13 @@ func main2() {
 }
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
+			log.Println(string(debug.Stack()))
+		}
+	}()
+
 	config.Help()
 
 	if config.Arg_tun_key == "" {
