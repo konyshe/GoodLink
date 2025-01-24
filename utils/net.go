@@ -2,7 +2,6 @@ package utils
 
 import (
 	"crypto/tls"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -10,15 +9,6 @@ import (
 	"strings"
 	"time"
 )
-
-func GetListenUDPPort(level string, port int) *net.UDPConn {
-	addr, _ := net.ResolveUDPAddr(level, fmt.Sprintf(":%d", port))
-	conn, err := net.ListenUDP(level, addr)
-	if err != nil {
-		Log().ErrorF("绑定端口失败: %v", err)
-	}
-	return conn
-}
 
 func GetUDPLocalIPPort(level string) (string, int) {
 	conn, err := net.Dial(level, "ifconfig.co:80")

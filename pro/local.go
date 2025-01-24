@@ -185,10 +185,8 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 	for m_local_state == 1 {
 
 		conn.Close()
-		conn = utils.GetListenUDPPort("udp", addr.LocalPort) // 同时监听IPv4和IPv6
+		conn, _ = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
 		if conn == nil {
-			utils.Log().DebugF("绑定端口失败: %v", addr.LocalPort)
-			time.Sleep(time.Second)
 			continue
 		}
 		log.Printf("本端地址: %v", addr)

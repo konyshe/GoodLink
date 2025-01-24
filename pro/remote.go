@@ -186,6 +186,7 @@ var (
 	lock_remote      sync.Mutex
 	tun_active_list  []*tun.TunActive
 	tun_passive_list []*tun.TunPassive
+	tun_conn_list    []*net.UDPConn
 )
 
 func StopRemote() error {
@@ -208,6 +209,13 @@ func StopRemote() error {
 		tun_passive_list = nil
 	}
 
+	if tun_conn_list != nil {
+		for _, tun_conn := range tun_conn_list {
+			tun_conn.Close()
+		}
+		tun_conn_list = nil
+	}
+
 	return nil
 }
 
@@ -216,27 +224,26 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 
 	tun_active_list = make([]*tun.TunActive, 0)
 	tun_passive_list = make([]*tun.TunPassive, 0)
+	tun_conn_list = make([]*net.UDPConn, 0)
 
 	m_remote_stats = 1
 
 	m_tun_key = tun_key
 	m_md5_tun_key = md5.Encode(tun_key)
 
-	conn, addr := GetUDPAddr()
+	tun_conn, addr := GetUDPAddr()
 
 	for m_remote_stats == 1 {
 
-		conn.Close()
-		conn = utils.GetListenUDPPort("udp", addr.LocalPort) // 同时监听IPv4和IPv6
-		if conn == nil {
-			utils.Log().DebugF("绑定端口失败: %v", addr.LocalPort)
-			time.Sleep(time.Second)
+		tun_conn.Close()
+		tun_conn, _ = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
+		if tun_conn == nil {
 			continue
 		}
 		log.Printf("本端地址: %v", addr)
 
-		tun_active, tun_passive, conn, health := GetRemoteQuicConn(conn, &addr, time_out)
-		if conn == nil {
+		tun_active, tun_passive, quic_conn, health := GetRemoteQuicConn(tun_conn, &addr, time_out)
+		if quic_conn == nil {
 			Release(tun_active, tun_passive)
 			continue
 		}
@@ -248,10 +255,13 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 		if tun_passive != nil {
 			tun_passive_list = append(tun_passive_list, tun_passive)
 		}
+		if tun_conn != nil {
+			tun_conn_list = append(tun_conn_list, tun_conn)
+		}
 		lock_remote.Unlock()
 
 		wg.Add(1)
-		go func(tun_active2 *tun.TunActive, tun_passive2 *tun.TunPassive, remote_addr string, conn quic.Connection) {
+		go func(tun_active2 *tun.TunActive, tun_passive2 *tun.TunPassive, remote_addr2 string, quic_conn2 quic.Connection) {
 			defer func() {
 				Release(tun_active2, tun_passive2)
 				wg.Done()
@@ -260,12 +270,14 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				proxy.ProcessProxyServer(remote_addr, conn)
+				proxy.ProcessProxyServer(remote_addr2, quic_conn2)
 			}()
 
 			tun.ProcessHealth(health)
-			utils.Log().DebugF("释放连接: %v", conn.LocalAddr())
-		}(tun_active, tun_passive, remote_addr, conn)
+			utils.Log().DebugF("释放连接: %v", quic_conn2.LocalAddr())
+		}(tun_active, tun_passive, remote_addr, quic_conn)
+
+		tun_conn, addr = GetUDPAddr()
 	}
 
 	wg.Wait()
