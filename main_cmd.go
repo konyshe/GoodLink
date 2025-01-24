@@ -59,7 +59,8 @@ func main2() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 
-	log.Println("   main2 end")
+	pro.StopLocal()
+	pro.StopRemote()
 }
 
 func main() {
