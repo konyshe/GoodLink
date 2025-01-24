@@ -12,7 +12,7 @@ import (
 
 func ProcessProxyServer_Quic(remote_addr string, stun_quic_conn quic.Connection) {
 
-	log.Fatalf("转发地址: %s", remote_addr)
+	log.Printf("转发地址: %s", remote_addr)
 
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
