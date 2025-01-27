@@ -84,7 +84,7 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn)
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.RemoteAddr, &redisJson.LocalAddr)
 				tun_active_chain = tun_active.GetChain()
 
 				redisJson.State = 1
@@ -115,17 +115,7 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 			switch conn_type {
 			case 0:
 				utils.Log().DebugF("收到对端地址: %v", redisJson.LocalAddr)
-				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
-					utils.Log().Debug("IPv6直连")
-					tun_active.Start1(redisJson.LocalAddr.IPv6, redisJson.LocalAddr.LocalPort, 0)
-
-				} else if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
-					utils.Log().Debug("内网直连")
-					tun_active.Start1(redisJson.LocalAddr.LocalIPv4, redisJson.LocalAddr.LocalPort, 0)
-
-				} else {
-					tun_active.Start(redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.LocalAddr.WanIPv4, redisJson.LocalAddr.WanPort1, redisJson.LocalAddr.WanPort2)
-				}
+				tun_active.Start()
 
 			case 1:
 				utils.Log().DebugF("收到对端地址, 等待连接: %v", redisJson.LocalAddr)

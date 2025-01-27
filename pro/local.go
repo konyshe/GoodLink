@@ -85,19 +85,8 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, coun
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn)
-
-				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
-					utils.Log().Debug("IPv6直连")
-					tun_active.Start1(redisJson.RemoteAddr.IPv6, redisJson.RemoteAddr.LocalPort, 0)
-
-				} else if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
-					utils.Log().Debug("内网直连")
-					tun_active.Start1(redisJson.RemoteAddr.LocalIPv4, redisJson.RemoteAddr.LocalPort, 0)
-
-				} else {
-					tun_active.Start(redisJson.LocalAddr.WanPort1, redisJson.LocalAddr.WanPort2, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2)
-				}
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr)
+				tun_active.Start()
 
 				redisJson.State = 2
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
