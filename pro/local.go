@@ -156,25 +156,26 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 
 	count := 0
 
-	conn, addr := GetUDPAddr()
+	var udp_conn *net.UDPConn
+	var addr tun.AddrType
 
 	for m_local_state == 1 {
 
-		conn.Close()
-		conn, _ = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
-		if conn == nil {
-			continue
+		if udp_conn != nil {
+			udp_conn.Close()
 		}
+		udp_conn, addr = GetUDPAddr()
+
 		log.Printf("本端地址: %v", addr)
 
 		count++
 
-		tun_active, tun_passive, conn, health, err := GetLocalQuicConn(conn, &addr, conn_type, count)
+		tun_active, tun_passive, quic_conn, health, err := GetLocalQuicConn(udp_conn, &addr, conn_type, count)
 		if err != nil {
 			Release(tun_active, tun_passive)
 			return err
 		}
-		if conn == nil {
+		if quic_conn == nil {
 			Release(tun_active, tun_passive)
 			continue
 		}
@@ -183,7 +184,7 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 		m_tun_passive = tun_passive
 
 		go func() {
-			proxy.ProcessProxyClient(listener, conn)
+			proxy.ProcessProxyClient(listener, quic_conn)
 			chain <- 1
 		}()
 
@@ -192,12 +193,12 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 		if m_local_state != 0 {
 			m_local_state = 1
 		}
-		utils.Log().DebugF("释放连接: %v", conn.LocalAddr())
+		utils.Log().DebugF("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive)
 
-		if conn, err := net.Dial("tcp", tun_local_addr); conn != nil && err == nil {
-			conn.Write([]byte("hello"))
-			conn.Close() // 关闭连接
+		if tcp_client_conn, err := net.Dial("tcp", tun_local_addr); tcp_client_conn != nil && err == nil {
+			tcp_client_conn.Write([]byte("hello"))
+			tcp_client_conn.Close() // 关闭连接
 		}
 
 		<-chain

@@ -18,9 +18,10 @@ var (
 	m_remote_stats int
 )
 
-func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Duration) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream) {
+func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
+	var udp_conn *net.UDPConn
 
 	redisJson := RedisJsonType{}
 	last_state := redisJson.State
@@ -41,7 +42,7 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 
 		if RedisGet(&redisJson) != nil {
 			log.Println("会话超时")
-			return tun_active, tun_passive, nil, nil
+			return udp_conn, tun_active, tun_passive, nil, nil
 		}
 
 		//log.Printf("状态消息: %v", redisJson)
@@ -50,19 +51,19 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
 			utils.Log().Debug("会话被重置")
-			return tun_active, tun_passive, nil, nil
+			return udp_conn, tun_active, tun_passive, nil, nil
 		}
 
 		if redisJson.State < last_state {
 			m_redis_db.Del(m_md5_tun_key)
 			utils.Log().DebugF("状态异常: %d -> %d", last_state, redisJson.State)
-			return tun_active, tun_passive, nil, nil
+			return udp_conn, tun_active, tun_passive, nil, nil
 		}
 
 		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
 			m_redis_db.Del(m_md5_tun_key)
 			utils.Log().DebugF("状态异常: %d -> %d", last_state, redisJson.State)
-			return tun_active, tun_passive, nil, nil
+			return udp_conn, tun_active, tun_passive, nil, nil
 		}
 
 		redisJson.SocketTimeOut = time_out
@@ -72,7 +73,7 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 		case 0:
 			utils.Log().DebugF("收到对端请求: %v", redisJson)
 
-			redisJson.RemoteAddr = *addr
+			udp_conn, redisJson.RemoteAddr = GetUDPAddr()
 
 			switch redisJson.LocalAddr.WanPort1 {
 			case 0:
@@ -84,7 +85,7 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.RemoteAddr, &redisJson.LocalAddr)
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr)
 				tun_active_chain = tun_active.GetChain()
 
 				redisJson.State = 1
@@ -101,7 +102,7 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 				}
 				tun_active = nil
 
-				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100)
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100)
 				tun_passive.Start()
 
 				tun_passive_chain = tun_passive.GetChain()
@@ -127,24 +128,24 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 				utils.Log().Debug("对端被动连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if tun_active != nil {
-					return tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream
+					return udp_conn, tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream
 				}
-				return tun_active, tun_passive, nil, nil
+				return udp_conn, tun_active, tun_passive, nil, nil
 
 			case <-tun_passive_chain:
 				redisJson.State = 3
 				utils.Log().Debug("对端主动连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if tun_passive != nil {
-					return tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream
+					return udp_conn, tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream
 				}
-				return tun_active, tun_passive, nil, nil
+				return udp_conn, tun_active, tun_passive, nil, nil
 
 			case <-time.After(time_out):
 				redisJson.State = 4
 				utils.Log().Debug("对端连接超时")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
-				return tun_active, tun_passive, nil, nil
+				return udp_conn, tun_active, tun_passive, nil, nil
 			}
 
 		case 3, 4:
@@ -156,14 +157,14 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Dura
 		last_state = redisJson.State
 	}
 
-	return tun_active, tun_passive, nil, nil
+	return udp_conn, tun_active, tun_passive, nil, nil
 }
 
 var (
 	lock_remote      sync.Mutex
 	tun_active_list  []*tun.TunActive
 	tun_passive_list []*tun.TunPassive
-	tun_conn_list    []*net.UDPConn
+	udp_conn_list    []*net.UDPConn
 )
 
 func StopRemote() error {
@@ -186,11 +187,11 @@ func StopRemote() error {
 		tun_passive_list = nil
 	}
 
-	if tun_conn_list != nil {
-		for _, tun_conn := range tun_conn_list {
-			tun_conn.Close()
+	if udp_conn_list != nil {
+		for _, udp_conn := range udp_conn_list {
+			udp_conn.Close()
 		}
-		tun_conn_list = nil
+		udp_conn_list = nil
 	}
 
 	return nil
@@ -201,25 +202,16 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 
 	tun_active_list = make([]*tun.TunActive, 0)
 	tun_passive_list = make([]*tun.TunPassive, 0)
-	tun_conn_list = make([]*net.UDPConn, 0)
+	udp_conn_list = make([]*net.UDPConn, 0)
 
 	m_remote_stats = 1
 
 	m_tun_key = tun_key
 	m_md5_tun_key = md5.Encode(tun_key)
 
-	tun_conn, addr := GetUDPAddr()
-
 	for m_remote_stats == 1 {
 
-		tun_conn.Close()
-		tun_conn, _ = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
-		if tun_conn == nil {
-			continue
-		}
-		log.Printf("本端地址: %v", addr)
-
-		tun_active, tun_passive, quic_conn, health := GetRemoteQuicConn(tun_conn, &addr, time_out)
+		udp_conn, tun_active, tun_passive, quic_conn, health := GetRemoteQuicConn(time_out)
 		if quic_conn == nil {
 			Release(tun_active, tun_passive)
 			continue
@@ -232,8 +224,8 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 		if tun_passive != nil {
 			tun_passive_list = append(tun_passive_list, tun_passive)
 		}
-		if tun_conn != nil {
-			tun_conn_list = append(tun_conn_list, tun_conn)
+		if udp_conn != nil {
+			udp_conn_list = append(udp_conn_list, udp_conn)
 		}
 		lock_remote.Unlock()
 
@@ -254,7 +246,6 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 			utils.Log().DebugF("释放连接: %v", quic_conn2.LocalAddr())
 		}(tun_active, tun_passive, remote_addr, quic_conn)
 
-		tun_conn, addr = GetUDPAddr()
 	}
 
 	wg.Wait()

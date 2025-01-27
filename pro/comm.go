@@ -113,9 +113,29 @@ func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 	addr.LocalIPv4, _ = utils.GetUDPLocalIPPort("udp4")
 	addr.IPv6, _ = utils.GetUDPLocalIPPort("udp6")
 
-	conn, _ = net.ListenUDP("udp4", nil) // 只监听IPv4
-	addr.LocalPort = conn.LocalAddr().(*net.UDPAddr).Port
-	addr.WanIPv4, addr.WanPort1, addr.WanPort2 = stun2.GetWanIpPort2(conn)
+	var err error
+
+	for {
+		conn, err = net.ListenUDP("udp4", nil) // 只监听IPv4
+		if err != nil {
+			utils.Log().Debug(err.Error())
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		addr.LocalPort = conn.LocalAddr().(*net.UDPAddr).Port
+		addr.WanIPv4, addr.WanPort1, addr.WanPort2 = stun2.GetWanIpPort2(conn)
+		conn.Close()
+
+		conn, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
+		if err != nil {
+			utils.Log().Debug(err.Error())
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		break
+	}
 
 	return
 }
