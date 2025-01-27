@@ -18,7 +18,7 @@ var (
 	m_remote_stats int
 )
 
-func GetRemoteQuicConn(conn *net.UDPConn, addr *AddrType, time_out time.Duration) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream) {
+func GetRemoteQuicConn(conn *net.UDPConn, addr *tun.AddrType, time_out time.Duration) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
@@ -101,20 +101,8 @@ func GetRemoteQuicConn(conn *net.UDPConn, addr *AddrType, time_out time.Duration
 				}
 				tun_active = nil
 
-				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
-					utils.Log().Debug("IPv6直连")
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.LocalAddr.IPv6, redisJson.LocalAddr.LocalPort, 0, 0x100)
-					tun_passive.Start1()
-
-				} else if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
-					utils.Log().Debug("内网直连")
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.LocalAddr.LocalIPv4, redisJson.LocalAddr.LocalPort, 0, 0x100)
-					tun_passive.Start1()
-
-				} else {
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.LocalAddr.WanIPv4, redisJson.LocalAddr.WanPort1, redisJson.LocalAddr.WanPort2, 0x100)
-					tun_passive.Start()
-				}
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100)
+				tun_passive.Start()
 
 				tun_passive_chain = tun_passive.GetChain()
 

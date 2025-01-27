@@ -18,7 +18,7 @@ var (
 	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
 )
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
@@ -72,20 +72,8 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count in
 
 				redisJson.LocalAddr = *addr
 
-				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
-					utils.Log().Debug("IPv6直连")
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.IPv6, redisJson.RemoteAddr.LocalPort, 0, redisJson.SendPortCount)
-					tun_passive.Start1()
-
-				} else if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
-					utils.Log().Debug("内网直连")
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.LocalIPv4, redisJson.RemoteAddr.LocalPort, 0, redisJson.SendPortCount)
-					tun_passive.Start1()
-
-				} else {
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SendPortCount)
-					tun_passive.Start()
-				}
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount)
+				tun_passive.Start()
 
 				redisJson.State = 2
 				utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)

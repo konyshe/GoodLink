@@ -67,15 +67,6 @@ func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
 	}
 }
 
-type AddrType struct {
-	WanIPv4   string `bson:"wan_ip_v4" json:"wan_ip_v4"`     // 外网IPv4地址
-	WanPort1  int    `bson:"remote_port1" json:"wan_port1"`  // 外网端口1
-	WanPort2  int    `bson:"remote_port2" json:"wan_port2"`  // 外网端口2
-	LocalIPv4 string `bson:"local_ip_v4" json:"local_ip_v4"` // 本地IPv4地址
-	LocalPort int    `bson:"lcoal_port" json:"local_port"`   // 本地端口
-	IPv6      string `bson:"ip" json:"ip_v6"`                // IPv6地址
-}
-
 type RedisJsonType struct {
 	SessionID     string        `bson:"session_id" json:"session_id"`
 	State         int           `bson:"state" json:"state"`
@@ -83,8 +74,8 @@ type RedisJsonType struct {
 	RedisTimeOut  time.Duration `bson:"redis_time_out" json:"redis_time_out"`
 	SendPortCount int           `bson:"send_port_count" json:"send_port_count"`
 	ConnectCount  int           `bson:"connect_count" json:"connect_count"`
-	RemoteAddr    AddrType      `bson:"remote_addr" json:"remote_addr"`
-	LocalAddr     AddrType      `bson:"local_addr" json:"local_addr"`
+	RemoteAddr    tun.AddrType  `bson:"remote_addr" json:"remote_addr"`
+	LocalAddr     tun.AddrType  `bson:"local_addr" json:"local_addr"`
 }
 
 func RedisSet(time_out time.Duration, redisJson *RedisJsonType) error {
@@ -118,7 +109,7 @@ func RedisDel() {
 	m_redis_db.Del(m_md5_tun_key)
 }
 
-func GetUDPAddr() (conn *net.UDPConn, addr AddrType) {
+func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 	addr.LocalIPv4, _ = utils.GetUDPLocalIPPort("udp4")
 	addr.IPv6, _ = utils.GetUDPLocalIPPort("udp6")
 
