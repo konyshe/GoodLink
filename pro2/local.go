@@ -1,11 +1,12 @@
-package pro
+package pro2
 
 import (
 	"fmt"
 	"goodlink/md5"
+	"goodlink/pro"
 	"goodlink/proxy"
 	"goodlink/utils"
-	"goodlink2/tun"
+	"goodlink2/tun2"
 	"log"
 	"net"
 	"strings"
@@ -18,14 +19,14 @@ var (
 	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
 )
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
-	var tun_active *tun.TunActive
-	var tun_passive *tun.TunPassive
+func GetLocalTCPConn(l *net.Listener, tcp_addr *net.TCPAddr, addr *pro.AddrType, conn_type int, count int) (*tun2.TunActive, *tun2.TunPassive, quic.Connection, quic.Stream, error) {
+	var tun_active *tun2.TunActive
+	var tun_passive *tun2.TunPassive
 
 	SessionID := string(utils.RandomBytes(24))
 	utils.Log().DebugF("会话ID: %s", SessionID)
 
-	redisJson := RedisJsonType{
+	redisJson := pro.RedisJsonType{
 		State:        0,
 		SessionID:    SessionID,
 		ConnectCount: count,
@@ -40,12 +41,12 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count in
 		utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)
 	}
 
-	RedisSet(15*time.Second, &redisJson)
+	pro.RedisSet(15*time.Second, &redisJson)
 
 	for m_local_state == 1 {
 		time.Sleep(1 * time.Second)
 
-		if RedisGet(&redisJson) != nil {
+		if pro.RedisGet(&redisJson) != nil {
 			log.Println("会话超时")
 			return tun_active, tun_passive, nil, nil, nil
 		}
@@ -72,24 +73,12 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count in
 
 				redisJson.LocalAddr = *addr
 
-				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
-					utils.Log().Debug("IPv6直连")
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.IPv6, redisJson.RemoteAddr.LocalPort, 0, redisJson.SendPortCount)
-					tun_passive.Start1()
-
-				} else if redisJson.LocalAddr.WanIPv4 == redisJson.RemoteAddr.WanIPv4 {
-					utils.Log().Debug("内网直连")
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.LocalIPv4, redisJson.RemoteAddr.LocalPort, 0, redisJson.SendPortCount)
-					tun_passive.Start1()
-
-				} else {
-					tun_passive = tun.CteateTunPassive([]byte(redisJson.SessionID), conn, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SendPortCount)
-					tun_passive.Start()
-				}
+				tun_passive = tun2.CteateTunPassive([]byte(redisJson.SessionID), l, tcp_addr, redisJson.RemoteAddr.WanIPv4, redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2, redisJson.SendPortCount)
+				tun_passive.Start()
 
 				redisJson.State = 2
 				utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)
-				RedisSet(redisJson.RedisTimeOut, &redisJson)
+				pro.RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
 				if tun_active != nil {
@@ -97,7 +86,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count in
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn)
+				tun_active = tun2.CreateTunActive([]byte(redisJson.SessionID), l, tcp_addr)
 
 				if redisJson.LocalAddr.IPv6 != "" && redisJson.RemoteAddr.IPv6 != "" {
 					utils.Log().Debug("IPv6直连")
@@ -112,7 +101,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *AddrType, conn_type int, count in
 				}
 
 				redisJson.State = 2
-				RedisSet(redisJson.RedisTimeOut, &redisJson)
+				pro.RedisSet(redisJson.RedisTimeOut, &redisJson)
 			}
 
 		case 3:
@@ -148,8 +137,8 @@ func GetLocalStats() int {
 }
 
 var (
-	m_tun_active  *tun.TunActive
-	m_tun_passive *tun.TunPassive
+	m_tun_active  *tun2.TunActive
+	m_tun_passive *tun2.TunPassive
 )
 
 func StopLocal() error {
@@ -179,20 +168,16 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 
 	count := 0
 
-	conn, addr := GetUDPAddr()
+	l, dialer, addr := GetTCPAddr()
+	defer (*l).Close() // 注意这里我们延迟关闭监听者，但不关闭端口
 
 	for m_local_state == 1 {
 
-		conn.Close()
-		conn, _ = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
-		if conn == nil {
-			continue
-		}
 		log.Printf("本端地址: %v", addr)
 
 		count++
 
-		tun_active, tun_passive, conn, health, err := GetLocalQuicConn(conn, &addr, conn_type, count)
+		tun_active, tun_passive, conn, _, err := GetLocalTCPConn(l, dialer, &addr, conn_type, count)
 		if err != nil {
 			Release(tun_active, tun_passive)
 			return err
@@ -211,7 +196,7 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 		}()
 
 		m_local_state = 2
-		tun.ProcessHealth(health)
+		//tun2.ProcessHealth(health)
 		if m_local_state != 0 {
 			m_local_state = 1
 		}

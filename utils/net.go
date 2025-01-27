@@ -20,13 +20,14 @@ func GetUDPLocalIPPort(level string) (string, int) {
 	return conn.LocalAddr().(*net.UDPAddr).IP.String(), conn.LocalAddr().(*net.UDPAddr).Port
 }
 
-func GetTCPWanIPv4Port() (string, int) {
+func GetTCPWanIPv4Port(dialer *net.Dialer) (string, int) {
 	var res []byte
 	var err error
 	var resp *http.Response
 
 	client := &http.Client{
 		Transport: &http.Transport{
+			DialContext: dialer.DialContext,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, // 跳过证书验证
 			},
