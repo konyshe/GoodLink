@@ -63,6 +63,21 @@ func Init() error {
 		return err
 	}
 
+	/*
+		var StunList []string
+		StunList = append(StunList, "stun.easyvoip.com:3478")
+		StunList = append(StunList, "stun.voipbuster.com:3478")
+		StunList = append(StunList, "stun.voipstunt.com:3478")
+		StunList = append(StunList, "stun.internetcalls.com:3478")
+		//StunList = append(StunList, "goodlink.kony.vip:3478")
+		configInfo.StunList = StunList
+
+		body, _ := json.Marshal(configInfo)
+		temp3 := aes.Encrypt(body, "goodlink")
+		gogo.Utils().FileDel("config.json")
+		gogo.Utils().FileAppend("config.json", []byte(temp3))
+	*/
+
 	return nil
 }
 
