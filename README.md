@@ -18,7 +18,7 @@
 
 ![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
 
-# 介绍
+# 重点
 
 1. 本程序即支持命令行方式, 也支持 docker 方式, windows 版本也新增了 UI 使用更简单。以下举例仅作参考, 可随意切换
 
