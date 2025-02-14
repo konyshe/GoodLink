@@ -42,7 +42,9 @@
 
 11. 该项目刚刚起步, 可能不太稳定, 欢迎到 Issues 上提出问题和建议, 帮忙测试的同学将保证永久免费使用
 
-12. UI版本是从1.4才开发（goodlink-windows-amd64-ui.zip），但1.4不兼容1.3，也未提交Docker(停留在1.3), 因此1.4暂时不能搭配Docker使用，直到这一行文字被删除
+12. Docker目前最新版本是1.4，不能搭配1.3以下和1.5以上版本使用，切记！！！
+
+13. UI版本是从1.4才开发（goodlink-windows-amd64-ui.zip），cmd是命令行版本
 
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
