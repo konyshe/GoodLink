@@ -72,7 +72,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, coun
 
 				redisJson.LocalAddr = *addr
 
-				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount)
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, 2*time.Millisecond)
 				tun_passive.Start()
 
 				redisJson.State = 2
@@ -85,7 +85,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, coun
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr)
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, 7*time.Millisecond)
 				tun_active.Start()
 
 				redisJson.State = 2

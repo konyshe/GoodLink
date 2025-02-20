@@ -85,7 +85,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *t
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr)
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 7*time.Millisecond)
 				tun_active_chain = tun_active.GetChain()
 
 				redisJson.State = 1
@@ -102,7 +102,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *t
 				}
 				tun_active = nil
 
-				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100)
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, 2*time.Millisecond)
 				tun_passive.Start()
 
 				tun_passive_chain = tun_passive.GetChain()
