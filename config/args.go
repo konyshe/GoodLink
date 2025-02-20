@@ -8,19 +8,21 @@ import (
 )
 
 var (
-	Arg_pprof_addr      string
-	Arg_tun_local_addr  string
-	Arg_tun_remote_addr string
-	Arg_redis_addr      string
-	Arg_redis_pass      string
-	Arg_redis_id        int
-	Arg_tun_key         string
-	Arg_stun_test       *bool
-	Arg_p2p_timeout     int
-	Arg_conn_type       int
-	Arg_conn_n0         int
-	Arg_conn_n1         int
-	Arg_stun_svr_addr   string
+	Arg_pprof_addr             string
+	Arg_tun_local_addr         string
+	Arg_tun_remote_addr        string
+	Arg_redis_addr             string
+	Arg_redis_pass             string
+	Arg_redis_id               int
+	Arg_tun_key                string
+	Arg_stun_test              *bool
+	Arg_p2p_timeout            int
+	Arg_conn_type              int
+	Arg_conn_n0                int
+	Arg_conn_n1                int
+	Arg_conn_active_send_time  int
+	Arg_conn_passive_send_time int
+	Arg_stun_svr_addr          string
 )
 
 func Help() {
@@ -43,6 +45,8 @@ func Help() {
 
 	flag.IntVar(&Arg_conn_n0, "n0", 256, "dev n0")
 	flag.IntVar(&Arg_conn_n1, "n1", 4, "dev n1")
+	flag.IntVar(&Arg_conn_active_send_time, "n2", 7, "dev n0")
+	flag.IntVar(&Arg_conn_passive_send_time, "n3", 2, "dev n1")
 
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")

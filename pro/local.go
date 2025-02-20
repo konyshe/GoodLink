@@ -2,6 +2,7 @@ package pro
 
 import (
 	"fmt"
+	"goodlink/config"
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/utils"
@@ -72,7 +73,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, coun
 
 				redisJson.LocalAddr = *addr
 
-				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, 2*time.Millisecond)
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond)
 				tun_passive.Start()
 
 				redisJson.State = 2
@@ -85,7 +86,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, coun
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, 7*time.Millisecond)
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond)
 				tun_active.Start()
 
 				redisJson.State = 2

@@ -40,15 +40,10 @@ func main2() {
 
 		switch len(config.Arg_tun_local_addr) {
 		case 0:
-			pro.RunRemote(config.Arg_tun_remote_addr,
-				config.Arg_tun_key,
-				time.Duration(config.Arg_p2p_timeout)*time.Second)
+			pro.RunRemote(config.Arg_tun_remote_addr, config.Arg_tun_key)
 
 		default:
-			if err := pro.RunLocal(config.Arg_conn_type,
-				config.Arg_tun_local_addr,
-				config.Arg_tun_key); err != nil {
-
+			if err := pro.RunLocal(config.Arg_conn_type, config.Arg_tun_local_addr, config.Arg_tun_key); err != nil {
 				log.Println(err)
 				os.Exit(0)
 			}

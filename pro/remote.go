@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"goodlink/config"
 	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/utils"
@@ -18,7 +19,7 @@ var (
 	m_remote_stats int
 )
 
-func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream) {
+func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 	var udp_conn *net.UDPConn
@@ -66,7 +67,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *t
 			return udp_conn, tun_active, tun_passive, nil, nil
 		}
 
-		redisJson.SocketTimeOut = time_out
+		redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
 		redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 
 		switch redisJson.State {
@@ -85,7 +86,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *t
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 7*time.Millisecond)
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond)
 				tun_active_chain = tun_active.GetChain()
 
 				redisJson.State = 1
@@ -102,7 +103,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *t
 				}
 				tun_active = nil
 
-				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, 2*time.Millisecond)
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond)
 				tun_passive.Start()
 
 				tun_passive_chain = tun_passive.GetChain()
@@ -141,7 +142,7 @@ func GetRemoteQuicConn(time_out time.Duration) (*net.UDPConn, *tun.TunActive, *t
 				}
 				return udp_conn, tun_active, tun_passive, nil, nil
 
-			case <-time.After(time_out):
+			case <-time.After(time.Duration(config.Arg_p2p_timeout) * time.Second):
 				redisJson.State = 4
 				utils.Log().Debug("对端连接超时")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
@@ -197,7 +198,7 @@ func StopRemote() error {
 	return nil
 }
 
-func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error {
+func RunRemote(remote_addr string, tun_key string) error {
 	var wg sync.WaitGroup
 
 	tun_active_list = make([]*tun.TunActive, 0)
@@ -211,7 +212,7 @@ func RunRemote(remote_addr string, tun_key string, time_out time.Duration) error
 
 	for m_remote_stats == 1 {
 
-		udp_conn, tun_active, tun_passive, quic_conn, health := GetRemoteQuicConn(time_out)
+		udp_conn, tun_active, tun_passive, quic_conn, health := GetRemoteQuicConn()
 		if quic_conn == nil {
 			Release(tun_active, tun_passive)
 			continue

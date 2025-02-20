@@ -169,7 +169,7 @@ func start_button_click() {
 			m_mg_start.Add(1)
 			go func() {
 				defer m_mg_start.Done()
-				if err := pro.RunRemote(remote_addr, m_validated_key.Text, time.Duration(config.Arg_p2p_timeout)*time.Second); err != nil {
+				if err := pro.RunRemote(remote_addr, m_validated_key.Text); err != nil {
 					SetLogLabel(err.Error())
 				}
 				m_stats_start_button = 0
