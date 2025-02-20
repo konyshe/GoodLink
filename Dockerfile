@@ -23,7 +23,7 @@ RUN --mount=target=. \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     make clean && \
-    make linux-amd64 BINDIR= ${TARGETOS}-${TARGETARCH}${TARGETVARIANT} && \
+    make ${TARGETOS}-${TARGETARCH}-cmd BINDIR=  && \
     mv /goodlink* /goodlink
 
 COPY upx /usr/bin/
@@ -45,7 +45,7 @@ COPY --from=builder /goodlink /home/
 WORKDIR /home/
 
 #ENTRYPOINT 运行命令+固定参数
-ENTRYPOINT ["./goodlink", "--gogo-restart-delay=2000"]
+ENTRYPOINT ["./goodlink"]
 
 #CMD 可变参数, 会被docker run带入的参数替换
 CMD ["--h"]
