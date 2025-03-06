@@ -35,6 +35,13 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 		time.Sleep(5 * time.Second)
 	}
 
+	redisJson.RemoteVersion = config.M_version
+
+	if redisJson.LocalVersion != config.M_version {
+		RedisSet(redisJson.SocketTimeOut*3, &redisJson)
+		return udp_conn, tun_active, tun_passive, nil, nil
+	}
+
 	SessionID := redisJson.SessionID
 	log.Printf("会话ID: %s", SessionID)
 

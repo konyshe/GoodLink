@@ -68,6 +68,8 @@ func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
 }
 
 type RedisJsonType struct {
+	LocalVersion  string        `bson:"local_version" json:"local_version"`
+	RemoteVersion string        `bson:"remote_version" json:"remote_version"`
 	SessionID     string        `bson:"session_id" json:"session_id"`
 	State         int           `bson:"state" json:"state"`
 	SocketTimeOut time.Duration `bson:"socket_time_out" json:"socket_time_out"`

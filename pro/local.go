@@ -27,6 +27,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type2 int, cou
 	utils.Log().DebugF("会话ID: %s", SessionID)
 
 	redisJson := RedisJsonType{
+		LocalVersion: config.M_version,
 		State:        0,
 		SessionID:    SessionID,
 		ConnectCount: count,
@@ -53,6 +54,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type2 int, cou
 
 		if RedisGet(&redisJson) != nil {
 			log.Println("会话超时")
+			return tun_active, tun_passive, nil, nil, nil
+		}
+
+		if redisJson.RemoteVersion != config.M_version {
+			utils.Log().Debug("和Remote端的版本不一致")
 			return tun_active, tun_passive, nil, nil, nil
 		}
 
