@@ -19,14 +19,14 @@ func (n *portEntry) Keyboard() mobile.KeyboardType {
 }
 
 func (n *portEntry) ResetPlaceHolder() {
-	n.SetPlaceHolder("范围: 1024-65535")
+	n.SetPlaceHolder("范围: 1-65535")
 }
 
 func NewPortEntry(port string) *portEntry {
 	e := &portEntry{}
 	e.ExtendBaseWidget(e)
 	e.Validator = func(port string) error {
-		if n, err := strconv.Atoi(port); err == nil && n >= 1024 && n <= 65535 {
+		if n, err := strconv.Atoi(port); err == nil && n >= 1 && n <= 65535 {
 			return nil
 		}
 		return errors.New("请输入正确的端口号")

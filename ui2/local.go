@@ -53,8 +53,8 @@ func (c *LocalUI) GetLocalAddr() (string, error) {
 
 func (c *LocalUI) GetContainer() *fyne.Container {
 	return container.NewVBox(
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接方式: "), c.radio_conn_type),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("访问权限: "), c.radio1),
+		//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接方式: "), c.radio_conn_type),
+		//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("访问权限: "), c.radio1),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("访问端口: "), c.box_local_port),
 	)
 }

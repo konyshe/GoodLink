@@ -19,7 +19,7 @@ var (
 	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
 )
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type2 int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
@@ -30,6 +30,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type int, coun
 		State:        0,
 		SessionID:    SessionID,
 		ConnectCount: count,
+	}
+
+	conn_type := 0 // 被动连接
+	if addr.WanPort1 == addr.WanPort2 {
+		conn_type = 1 // 主动连接
 	}
 
 	switch conn_type {

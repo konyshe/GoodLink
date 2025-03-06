@@ -57,7 +57,6 @@ func start_button_click() {
 
 	var err error
 	var remote_addr string
-	var local_addr string
 
 	//先对需要填写的数据进行校验
 	switch m_stats_start_button {
@@ -68,8 +67,8 @@ func start_button_click() {
 		}
 		switch m_radio_work_type.Selected {
 		case "Local":
-			if local_addr, err = m_ui_local.GetLocalAddr(); err != nil {
-				SetLogLabel(err.Error())
+			if m_ui_local.GetLocalPort() == "" {
+				SetLogLabel("请填写访问端口号")
 				return
 			}
 		case "Remote":
@@ -143,7 +142,7 @@ func start_button_click() {
 			m_mg_start.Add(1)
 			go func() {
 				defer m_mg_start.Done()
-				if err := pro.RunLocal(m_ui_local.GetConnType(), local_addr, m_validated_key.Text); err != nil {
+				if err := pro.RunLocal(m_ui_local.GetConnType(), "0.0.0.0:"+m_ui_local.GetLocalPort(), m_validated_key.Text); err != nil {
 					SetLogLabel(err.Error())
 				}
 				m_stats_start_button = 0

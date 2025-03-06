@@ -169,32 +169,48 @@ func getStunIpPort2(conn *net.UDPConn, addr string) (string, int, int, error) {
 	if err != nil {
 		return "", 0, 0, err
 	}
+	/*
+		var change_ip, wan_ip2 string
+		var change_port, wan_port2 int
 
-	var change_ip, wan_ip2 string
-	var change_port, wan_port2 int
-
-	change_ip, change_port, err = getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
-	if err == nil {
-		response, n, err = getStunResponse(conn, fmt.Sprintf("%s:%d", change_ip, change_port), buf)
+		change_ip, change_port, err = getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
 		if err == nil {
-			wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
-			if err != nil {
-				wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
-			}
+			response, n, err = getStunResponse(conn, fmt.Sprintf("%s:%d", change_ip, change_port), buf)
 			if err == nil {
-				if wan_ip1 != wan_ip2 {
-					utils.Log().ErrorF("wan_ip: %s, %s", wan_ip1, wan_ip2)
+				wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
+				if err != nil {
+					wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
 				}
-				return wan_ip1, wan_port1, wan_port2, nil
+				if err == nil {
+					if wan_ip1 != wan_ip2 {
+						utils.Log().ErrorF("wan_ip: %s, %s", wan_ip1, wan_ip2)
+					}
+					return wan_ip1, wan_port1, wan_port2, nil
+				}
 			}
+			return wan_ip1, wan_port1, 0, err
 		}
-		return wan_ip1, wan_port1, 0, err
-	}
-
+	*/
 	return wan_ip1, wan_port1, 0, nil
 }
 
-func GetWanIpPort2(conn *net.UDPConn) (string, int, int) {
+func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port1 int, wan_port2 int) {
+	utils.Log().Debug("获取本端地址")
+
+	for {
+		wan_ip, wan_port1, _, _ = getStunIpPort2(conn, "stun.easyvoip.com:3478")
+		time.Sleep(10 * time.Millisecond)
+		_, wan_port2, _, _ = getStunIpPort2(conn, "stun.easyvoip.com:3479")
+		if wan_port1 != 0 && wan_port2 != 0 {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	return
+}
+
+func GetWanIpPort2_2(conn *net.UDPConn) (string, int, int) {
 	utils.Log().Debug("获取本端地址")
 
 	n2 := 0
@@ -236,6 +252,18 @@ func GetWanIpPort() (string, int, int) {
 }
 
 func TestStun() {
+	conn4, _ := net.ListenUDP("udp4", nil)
+
+	wan_ip, wan_port1, wan_port2, _ := getStunIpPort2(conn4, "stun.easyvoip.com:3478")
+	log.Printf("wan_ip: %s, wan_port1: %d, wan_port2: %d\n", wan_ip, wan_port1, wan_port2)
+	time.Sleep(10 * time.Millisecond)
+
+	wan_ip, wan_port1, wan_port2, _ = getStunIpPort2(conn4, "stun.easyvoip.com:3479")
+	log.Printf("wan_ip: %s, wan_port1: %d, wan_port2: %d\n", wan_ip, wan_port1, wan_port2)
+	time.Sleep(10 * time.Millisecond)
+}
+
+func TestStun2() {
 	conn4, _ := net.ListenUDP("udp4", nil)
 
 	for c := 0; c < 100; c++ {
