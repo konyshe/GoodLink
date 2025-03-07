@@ -126,7 +126,7 @@ func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 		}
 
 		addr.LocalPort = conn.LocalAddr().(*net.UDPAddr).Port
-		addr.WanIPv4, addr.WanPort1, addr.WanPort2 = stun2.GetWanIpPort2(conn)
+		addr.WanIPv4, addr.WanPort1, addr.WanPort2, addr.WanPort3 = stun2.GetWanIpPort2(conn)
 		conn.Close()
 
 		conn, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})

@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"errors"
 	"fmt"
 	"goodlink/config"
 	"goodlink/md5"
@@ -58,8 +59,8 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type2 int, cou
 		}
 
 		if redisJson.RemoteVersion != config.M_version {
-			utils.Log().Debug("和Remote端的版本不一致")
-			return tun_active, tun_passive, nil, nil, nil
+			utils.Log().Debug("两端版本不一致")
+			return tun_active, tun_passive, nil, nil, errors.New("两端版本不一致")
 		}
 
 		//log.Printf("状态消息: %v", redisJson)

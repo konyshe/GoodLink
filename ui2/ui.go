@@ -71,12 +71,11 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		case "Remote":
 			localUI_Container.Hide()
 			remoteUI_Container.Show()
-			(*myWindow).Resize((*myWindow).Content().MinSize())
 		default:
 			remoteUI_Container.Hide()
 			localUI_Container.Show()
-			(*myWindow).Resize((*myWindow).Content().MinSize())
 		}
+		(*myWindow).Resize((*myWindow).Content().MinSize())
 	}
 	if configInfo.WorkType == "" {
 		configInfo.WorkType = "Local"
