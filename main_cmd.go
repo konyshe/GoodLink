@@ -20,11 +20,6 @@ import (
 )
 
 func main2() {
-	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
-		stun2.TestStun()
-		os.Exit(0)
-	}
-
 	go func() {
 		if config.Arg_pprof_addr != "" { // 性能监测，开发使用选项
 			log.Println(http.ListenAndServe(config.Arg_pprof_addr, nil))
@@ -67,6 +62,11 @@ func main() {
 	}()
 
 	config.Help()
+
+	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
+		stun2.TestStun()
+		os.Exit(0)
+	}
 
 	if config.Arg_tun_key == "" {
 		flag.Usage()
