@@ -58,11 +58,6 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type2 int, cou
 			return tun_active, tun_passive, nil, nil, nil
 		}
 
-		if redisJson.RemoteVersion != config.M_version {
-			utils.Log().Debug("两端版本不一致")
-			return tun_active, tun_passive, nil, nil, errors.New("两端版本不一致")
-		}
-
 		//log.Printf("状态消息: %v", redisJson)
 
 		utils.Log().SetDebugSate(redisJson.State)
@@ -75,6 +70,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type2 int, cou
 		switch redisJson.State {
 		case 1:
 			utils.Log().DebugF("收到对端地址: %v", redisJson.RemoteAddr)
+
+			if redisJson.RemoteVersion != config.M_version {
+				utils.Log().DebugF("两端版本不兼容: %v", redisJson)
+				return tun_active, tun_passive, nil, nil, errors.New("两端版本不兼容")
+			}
 
 			switch conn_type {
 			case 0:

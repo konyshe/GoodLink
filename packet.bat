@@ -1,7 +1,3 @@
-#!/usr/bin/env bash
-
-#set -x
-
 make clean
 make
 cd bin

@@ -29,7 +29,7 @@ PLATFORM_LIST = \
 	windows-amd64-cmd \
 	windows-arm64-cmd
 
-all: clean $(PLATFORM_LIST) strip
+all: $(PLATFORM_LIST) strip
 
 linux-386-cmd:
 	GOARCH=386 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@

@@ -22,29 +22,29 @@
 
 1. 本程序即支持命令行方式, 也支持 docker 方式, windows 版本也新增了 UI 使用更简单。以下举例仅作参考, 可随意切换
 
-2. 两端主机运行同一个程序, 一端主机使用--remote 选项(以下称 remote 端), 另一端主机使用--local 选项(以下称 local 端)
+2. 两端主机运行同一个程序 / Docker, 一端主机使用--remote 选项(以下称 remote 端), 另一端主机使用--local 选项(以下称 local 端)
 
-3. local 端和 remote 端之间是直连的, 不经过第三方服务器
+3. 使用前, 请保证两端版本一致, 切记 !!!
 
-4. 可以在 local 端访问 remote 端, 但是反过来不可以
+4. local 端和 remote 端之间是直连的, 不经过第三方服务器
 
-5. 可以多个 local 端连接同一个 remote 端, 但一个 local 端不能同时连接多个 remote 端。通过相同的密钥(--key)确认连接关系
+5. 可以在 local 端访问 remote 端, 但是反过来不可以
 
-6. 如果需要连接多个 remote 端, 可以启动多个local端
+6. 可以无限个 local 端连接同一个 remote 端, 但一个 local 端不能同时连接多个 remote 端。通过相同的密钥(--key)确认连接关系
 
-7. 由于直连过程复杂, 会出现反复重试, 通常 10 分钟内成功。如果长时间无法连接, 点[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
+7. 如果需要连接多个 remote 端, 可以启动多个local端
 
-8. windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒。本程序已开源, 可放心食用
+8. 由于直连过程复杂, 会出现反复重试, 通常 10 分钟内成功。如果长时间无法连接, 点[反馈我解决](https://gitee.com/konyshe/goodlink/issues)
 
-9. 以下举例说明中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机一个 16-24 字节长度的密钥
+9. windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒。本程序已开源, 可放心食用
 
-10. 1024 以下是操作系统的保留端口, 基本都被占用了, local 端请使用 1024 以上端口。linux 系统可使用命令 `netstat -anp|grep 22` 判断 22 端口是否已被占用
+10. 以下举例说明中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机一个 16-24 字节长度的密钥
 
-11. 该项目刚刚起步, 可能不太稳定, 欢迎到 Issues 上提出问题和建议, 帮忙测试的同学将保证永久免费使用
+11. UI版本从1.4版本开发（goodlink-windows-amd64-ui.zip）, cmd是命令行版本
 
-12. Docker目前最新版本是1.4，不能搭配1.3以下和1.5以上版本使用，切记！！！
+12. Linux平台需要赋予可执行权限, 例如 `chmod +x goodlink-linux-amd64-cmd`
 
-13. UI版本是从1.4才开发（goodlink-windows-amd64-ui.zip），cmd是命令行版本
+13. 该项目刚刚起步, 可能不太稳定, 欢迎到 Issues 上提出问题和建议, 帮忙测试的同学将保证永久免费使用
 
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
