@@ -23,7 +23,7 @@ var (
 	Arg_conn_active_send_time  int
 	Arg_conn_passive_send_time int
 	Arg_stun_svr_addr          string
-	M_version                  = "1.5"
+	M_version                  = "1.6"
 )
 
 func Help() {
