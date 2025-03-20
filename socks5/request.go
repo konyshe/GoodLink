@@ -2,6 +2,7 @@ package socks5
 
 import (
 	"fmt"
+	"goodlink/pool"
 	"io"
 	"net"
 	"strconv"
@@ -357,7 +358,10 @@ type closeWriter interface {
 // proxy is used to suffle data from src to destination, and sends errors
 // down a dedicated channel
 func proxy(dst io.Writer, src io.Reader, errCh chan error) {
-	_, err := io.Copy(dst, src)
+	buf := pool.Malloc(1500)
+	defer pool.Free(buf)
+
+	_, err := io.CopyBuffer(dst, src, buf)
 	if tcpConn, ok := dst.(closeWriter); ok {
 		tcpConn.CloseWrite()
 	}
