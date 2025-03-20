@@ -38,7 +38,6 @@ func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection
 
 	for {
 		if _, err := io.CopyBuffer(tc, qc, buf); err != nil {
-			tc.Close()
 			break
 		}
 	}
@@ -54,7 +53,6 @@ func stunQ2TProcess1(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection
 
 	for {
 		if _, err := io.CopyBuffer(qc, tc, buf); err != nil {
-			qc.Close()
 			break
 		}
 	}
