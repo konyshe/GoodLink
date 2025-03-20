@@ -8,25 +8,23 @@
 
 # 特点
 
-1. 两台主机之间直连！直连！直连！不经过第三方服务器, 不用担心数据隐私泄露
+1. 两台主机之间直连！直连！直连！不经过第三方服务器, 不用担心数据泄露
 
 2. 一条命令搞定, 无需安装、无需注册, 无需公网 IP, 无需配置文件
 
 3. 直连基于 QUIC, 高性能, 已加密
 
-注: 1.1.6 版本开始加强了通信安全, 因此和老版本不兼容
-
 ![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
 
 # 重点
 
-1. 本程序即支持命令行方式, 也支持 docker 方式, windows 版本也新增了 UI 使用更简单。以下举例仅作参考, 可随意切换
+1. 本程序即支持命令行方式, 也支持 docker 方式, windows 版本还新增了UI版本, 使用更简单。以下举例仅作参考, 可随意切换
 
 2. 两端主机运行同一个程序 / Docker, 一端主机使用--remote 选项(以下称 remote 端), 另一端主机使用--local 选项(以下称 local 端)
 
 3. 使用前, 请保证两端版本一致, 切记 !!!
 
-4. local 端和 remote 端之间是直连的, 不经过第三方服务器
+4. local 端和 remote 端之间直连, 不经过第三方服务器
 
 5. 可以在 local 端访问 remote 端, 但是反过来不可以
 
@@ -40,7 +38,7 @@
 
 10. 以下举例说明中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机一个 16-24 字节长度的密钥
 
-11. UI版本从1.4版本开发（goodlink-windows-amd64-ui.zip）, cmd是命令行版本
+11. UI版本始于1.4（goodlink-windows-amd64-ui.zip）, cmd是命令行版本
 
 12. Linux平台需要赋予可执行权限, 例如 `chmod +x goodlink-linux-amd64-cmd`
 
@@ -48,10 +46,9 @@
 
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
-	<tr><td>NAT1-3</td><td>NAT1-3</td><td>YES</td></tr>
-	<tr><td>NAT1-2</td><td>NAT4</td><td>YES</td></tr>
-	<tr><td>NAT4</td><td>NAT1-2</td><td>YES</td></tr>
-	<tr><td>NAT3-4</td><td>NAT3-4</td><td>由于运营商算法调整，不保证100%</td></tr>
+	<tr><td>NAT1-3</td><td>NAT4</td><td>YES</td></tr>
+      <tr><td>NAT4</td><td>NAT1-3</td><td>YES</td></tr>
+	<tr><td>NAT4</td><td>NAT4</td><td>由于运营商算法调整，不保证100%</td></tr>
   </table>
 
 # 简单使用
@@ -226,13 +223,10 @@ Usage of bin/goodlink-linux-amd64:
   --local string
         local端监听的地址端口
   --key string
-        用于加密通信的密钥, 自己随便定义, local端和remote端必须一致。建议16-24个字节长度, 防止冲突: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
-  --conn int
-        由于remote和local两端默认使用的算法不一样, 如果出现超过10分钟无法连接的情况, 可能是其中一端和默认的算法不兼容,
-        此时可在local端增加 "--conn=1" 选项, 以调换两端的算法, 就能连接了
+        用于加密通信的密钥, 自己随便定义, local端和remote端必须一致。且必须16-24个字节长度, 防止冲突: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
 ```
 
-# 感谢名单
+# 感谢支持
 
   danshiyuan
 
