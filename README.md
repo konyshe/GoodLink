@@ -46,8 +46,8 @@
 
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
-	<tr><td>NAT1-3</td><td>NAT4</td><td>YES</td></tr>
-      <tr><td>NAT4</td><td>NAT1-3</td><td>YES</td></tr>
+	<tr><td>NAT1-3</td><td>NAT1-4</td><td>YES</td></tr>
+      <tr><td>NAT1-4</td><td>NAT1-3</td><td>YES</td></tr>
 	<tr><td>NAT4</td><td>NAT4</td><td>由于运营商算法调整，不保证100%</td></tr>
   </table>
 
