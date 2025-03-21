@@ -5,10 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"goodlink/config"
 	"goodlink/utils"
 	"log"
-	"math/big"
 	"net"
 	"time"
 )
@@ -121,7 +119,7 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 	return response, n, nil
 }
 
-func getStunIpPort2(conn *net.UDPConn, addr string, change bool) (string, int, int, error) {
+func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCookie []byte, transactionID []byte) (string, int, string, int) {
 
 	// https://www.rfc-editor.org/rfc/rfc5389.html#section-6
 	// STUN Message Structure
@@ -137,19 +135,10 @@ func getStunIpPort2(conn *net.UDPConn, addr string, change bool) (string, int, i
 	// |                                                               |
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-	// STUN message header
-	buf := new(bytes.Buffer)
-	// Start with fixed 0x00, message type: 0x01, message length: 0x0000
-	buf.Write([]byte{0x00, 0x01, 0x00, 0x00})
-	magicCookie := []byte{0x21, 0x12, 0xA4, 0x42}
-	buf.Write(magicCookie)
-	transactionID := make([]byte, 12)
-	rand.Read(transactionID)
-	buf.Write(transactionID)
-
 	response, n, err := getStunResponse(conn, addr, buf)
 	if err != nil {
-		return "", 0, 0, err
+		log.Printf("getStunResponse error: %v", err)
+		return "", 0, "", 0
 	}
 
 	// https://www.rfc-editor.org/rfc/rfc5389.html#section-15
@@ -167,35 +156,22 @@ func getStunIpPort2(conn *net.UDPConn, addr string, change bool) (string, int, i
 		wan_ip1, wan_port1, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
 	}
 	if err != nil {
-		return "", 0, 0, err
+		log.Printf("getStunIpPort4 error: %v", err)
+		return "", 0, "", 0
 	}
 
-	if change {
-		var change_ip, wan_ip2 string
-		var change_port, wan_port2 int
-
-		change_ip, change_port, err = getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
-		if err == nil {
-			response, n, err = getStunResponse(conn, fmt.Sprintf("%s:%d", change_ip, change_port), buf)
-			if err == nil {
-				wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
-				if err != nil {
-					wan_ip2, wan_port2, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
-				}
-				if err == nil {
-					if wan_ip1 != wan_ip2 {
-						utils.Log().ErrorF("wan_ip: %s, %s", wan_ip1, wan_ip2)
-					}
-					return wan_ip1, wan_port1, wan_port2, nil
-				}
-			}
-			return wan_ip1, wan_port1, 0, err
-		}
+	change_ip, change_port, err := getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
+	if err != nil {
+		log.Printf("getStunIpPort4 error: %v", err)
 	}
-	return wan_ip1, wan_port1, 0, nil
+
+	return wan_ip1, wan_port1, change_ip, change_port
 }
 
-func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
+func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
+	var change_ip string
+	var change_port int
+
 	utils.Log().Debug("获取本端地址")
 
 	ips, err := net.LookupIP("stun.easyvoip.com")
@@ -204,71 +180,47 @@ func GetWanIpPort2(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 		return
 	}
 
+	// STUN message header
+	var buf bytes.Buffer
+	// Start with fixed 0x00, message type: 0x01, message length: 0x0000
+	buf.Write([]byte{0x00, 0x01, 0x00, 0x00})
+	magicCookie := []byte{0x21, 0x12, 0xA4, 0x42}
+	buf.Write(magicCookie)
+	transactionID := make([]byte, 12)
+	rand.Read(transactionID)
+	buf.Write(transactionID)
+
 	for {
 		for _, ip := range ips {
-			wan_ip, wan_port1, wan_port3, _ = getStunIpPort2(conn, ip.String()+":3478", true)
-			time.Sleep(10 * time.Millisecond)
-			_, wan_port2, _, _ = getStunIpPort2(conn, ip.String()+":3479", false)
-			if wan_port1 != 0 && wan_port2 != 0 && wan_port3 != 0 {
-				goto RET
-			}
-			time.Sleep(1 * time.Second)
-		}
-	}
-
-RET:
-	return
-}
-
-func GetWanIpPort2_2(conn *net.UDPConn) (string, int, int) {
-	utils.Log().Debug("获取本端地址")
-
-	n2 := 0
-	var stun_svr string
-
-	for {
-		switch len(config.Arg_stun_svr_addr) {
-		case 0:
-			n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(config.GetConfig().StunList))))
-			stun_svr = config.GetConfig().StunList[n.Int64()]
-
-		default:
-			stun_svr = config.Arg_stun_svr_addr
-		}
-
-		wan_ip, wan_port1, wan_port2, err := getStunIpPort2(conn, stun_svr, true)
-		//log.Printf("stun_svr: %s, wan_ip: %s, wan_port1: %d, wan_port2: %d, err: %v", stun_svr, wan_ip, wan_port1, wan_port2, err)
-		if err != nil {
-			log.Printf("   stun_svr: %s, err: %v", stun_svr, err)
-			/*if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "closed") {
+			wan_ip, wan_port1, change_ip, change_port = getStunIpPort2(conn, ip.String()+":3478", &buf, magicCookie, transactionID)
+			if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 {
 				time.Sleep(1 * time.Second)
-			}*/
-		}
-		if wan_ip != "" && wan_port1 > 0 {
-			return wan_ip, wan_port1, wan_port2
-		}
-		n2++
-		if n2 >= len(config.GetConfig().StunList) {
-			time.Sleep(3 * time.Second)
-			n2 = 0
-		}
-	}
-}
+				continue
+			}
 
-func GetWanIpPort() (string, int, int, int) {
-	conn4, _ := net.ListenUDP("udp4", nil)
-	defer conn4.Close()
-	return GetWanIpPort2(conn4)
+			_, wan_port3, _, _ = getStunIpPort2(conn, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
+			if wan_port3 == 0 {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			_, wan_port2, _, _ = getStunIpPort2(conn, ip.String()+":3479", &buf, magicCookie, transactionID)
+			if wan_port2 == 0 {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			return
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func TestStun() {
 	conn4, _ := net.ListenUDP("udp4", nil)
+	defer conn4.Close()
 
-	wan_ip, wan_port1, wan_port2, _ := getStunIpPort2(conn4, "stun.easyvoip.com:3478", true)
-	log.Printf("wan_ip: %s, wan_port1: %d, wan_port2: %d\n", wan_ip, wan_port1, wan_port2)
-	time.Sleep(10 * time.Millisecond)
-
-	_, wan_port3, _, _ := getStunIpPort2(conn4, "stun.easyvoip.com:3479", false)
-	log.Printf("wan_ip: %s, wan_port1: %d, wan_port2: %d, wan_port3: %d\n", wan_ip, wan_port1, wan_port2, wan_port3)
-	time.Sleep(10 * time.Millisecond)
+	wan_ip, wan_port1, wan_port2, wan_port3 := GetStunIpPort(conn4)
+	log.Printf("wan_ip: %s, wan_port1: %d, wan_port2: %d, wan_port3: %d", wan_ip, wan_port1, wan_port2, wan_port3)
 }
