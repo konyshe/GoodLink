@@ -11,9 +11,10 @@ import (
 )
 
 type RedisInfo struct {
-	Addr   string `bson:"addr" json:"addr"`
-	Passwd string `bson:"passwd" json:"passwd"`
-	Id     int    `bson:"id" json:"id"`
+	Addr    string `bson:"addr" json:"addr"`
+	TlsAddr string `bson:"tls_addr" json:"tls_addr"`
+	Passwd  string `bson:"passwd" json:"passwd"`
+	Id      int    `bson:"id" json:"id"`
 }
 
 type ConfigInfo struct {
@@ -66,18 +67,15 @@ func Init() error {
 	/*
 		var StunList []string
 		StunList = append(StunList, "stun.easyvoip.com:3478")
-		StunList = append(StunList, "stun.voipbuster.com:3478")
-		StunList = append(StunList, "stun.voipstunt.com:3478")
-		StunList = append(StunList, "stun.internetcalls.com:3478")
-		//StunList = append(StunList, "goodlink.kony.vip:3478")
 		configInfo.StunList = StunList
+
+		configInfo.Redis.TlsAddr = "goodlink.kony.vip:16378"
 
 		body, _ := json.Marshal(configInfo)
 		temp3 := aes.Encrypt(body, "goodlink")
 		gogo.Utils().FileDel("config.json")
 		gogo.Utils().FileAppend("config.json", []byte(temp3))
 	*/
-
 	return nil
 }
 
