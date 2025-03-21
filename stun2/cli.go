@@ -198,14 +198,14 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 				continue
 			}
 
-			_, wan_port3, _, _ = getStunIpPort2(conn, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
-			if wan_port3 == 0 {
+			_, wan_port2, _, _ = getStunIpPort2(conn, ip.String()+":3479", &buf, magicCookie, transactionID)
+			if wan_port2 == 0 {
 				time.Sleep(1 * time.Second)
 				continue
 			}
 
-			_, wan_port2, _, _ = getStunIpPort2(conn, ip.String()+":3479", &buf, magicCookie, transactionID)
-			if wan_port2 == 0 {
+			_, wan_port3, _, _ = getStunIpPort2(conn, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
+			if wan_port3 == 0 {
 				time.Sleep(1 * time.Second)
 				continue
 			}
