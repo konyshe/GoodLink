@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,7 +23,7 @@ var (
 	m_md5_tun_key string
 )
 
-func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
+func Init() error {
 	utils.Log().Debug("初始化配置中")
 	for {
 		if err := config.Init(); err != nil {
@@ -34,20 +35,40 @@ func Init(m_cli_redis_addr, m_cli_redis_pass string, m_cli_redis_id int) error {
 	}
 	utils.Log().Debug("初始化配置完成")
 
-	if m_cli_redis_addr == "" {
-		m_cli_redis_addr = config.GetAddr()
-		m_cli_redis_pass = config.GetPasswd()
-		m_cli_redis_id = config.GetID()
+	var redis_addr string
+	var redis_pass string
+	var redis_id int
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true, // 如果使用自签名证书，设置为true跳过证书验证（仅用于测试
+		//Certificates:       []tls.Certificate{cert},
+		ClientAuth: tls.NoClientCert, // 验证模式：请求并验证客户端证书
+	}
+
+	if config.Arg_redis_addr == "" && config.Arg_redis_tls_addr == "" {
+		redis_addr = config.GetAddr()
+		redis_pass = config.GetPasswd()
+		redis_id = config.GetID()
+
+	} else if config.Arg_redis_tls_addr != "" {
+		redis_addr = config.Arg_redis_tls_addr
+		redis_pass = config.Arg_redis_pass
+		redis_id = config.Arg_redis_id
+
+	} else {
+		redis_addr = config.Arg_redis_addr
+		redis_pass = config.Arg_redis_pass
+		redis_id = config.Arg_redis_id
+		tlsConfig = nil
 	}
 
 	m_redis_db = redis.NewClient(&redis.Options{
-		Addr:     m_cli_redis_addr,
-		Password: m_cli_redis_pass,
-		DB:       m_cli_redis_id,
-		//MaxRetries:   99,
+		Addr:         redis_addr,
+		Password:     redis_pass,
+		DB:           redis_id,
 		DialTimeout:  5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
+		TLSConfig:    tlsConfig,
 	})
 	if m_redis_db == nil {
 		return errors.New("Redis失败, 请重启程序")

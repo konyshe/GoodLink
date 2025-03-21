@@ -87,7 +87,7 @@ func GetConfig() ConfigInfo {
 }
 
 func GetAddr() string {
-	return GetConfig().Redis.Addr
+	return GetConfig().Redis.TlsAddr
 }
 
 func GetPasswd() string {

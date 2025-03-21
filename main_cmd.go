@@ -28,7 +28,7 @@ func main2() {
 
 	// 第三方集成, 关注以下代码即可
 	go func() {
-		if err := pro.Init(config.Arg_redis_addr, config.Arg_redis_pass, config.Arg_redis_id); err != nil {
+		if err := pro.Init(); err != nil {
 			log.Println(err)
 			return
 		}

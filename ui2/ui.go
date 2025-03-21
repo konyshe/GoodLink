@@ -91,7 +91,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	m_button_start.Resize(fyne.NewSize(100, 40))
 	m_button_start.Disable()
 	go func() {
-		if err := pro.Init(config.Arg_redis_addr, config.Arg_redis_pass, config.Arg_redis_id); err != nil {
+		if err := pro.Init(); err != nil {
 			UILogPrintF(err.Error())
 			return
 		}
