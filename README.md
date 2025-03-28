@@ -221,18 +221,6 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --key=nas_202412140928 --local
 ```
 
-# 选项说明
-
-```
-root@VM-4-9-ubuntu:~/go/src/goodlink# ./bin/goodlink-linux-amd64 -h
-Usage of bin/goodlink-linux-amd64:
-  --remote string
-        remote端所处网络中, 需要被远程访问的主机地址端口。若不加这个选项, 就是代理模式
-  --local string
-        local端监听的地址端口
-  --key string
-        用于加密通信的密钥, 自己随便定义, local端和remote端必须一致。且必须16-24个字节长度, 防止冲突: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928
-```
 
 # 感谢支持
 
