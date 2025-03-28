@@ -23,6 +23,10 @@ var (
 	m_md5_tun_key string
 )
 
+const (
+	m_version = "2.0"
+)
+
 func Init() error {
 	utils.Log().Debug("初始化配置中")
 	for {

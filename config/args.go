@@ -23,7 +23,6 @@ var (
 	Arg_conn_n1                int
 	Arg_conn_active_send_time  int
 	Arg_conn_passive_send_time int
-	M_version                  = "1.6"
 )
 
 func Help() {

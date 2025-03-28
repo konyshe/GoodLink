@@ -35,11 +35,12 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 		time.Sleep(5 * time.Second)
 	}
 
-	redisJson.RemoteVersion = config.M_version
+	redisJson.RemoteVersion = m_version
 
-	if redisJson.LocalVersion != config.M_version {
+	if redisJson.LocalVersion != m_version {
 		utils.Log().DebugF("两端版本不兼容: %v", redisJson)
 		RedisSet(redisJson.SocketTimeOut*3, &redisJson)
+		time.Sleep(3 * time.Second)
 		return udp_conn, tun_active, tun_passive, nil, nil
 	}
 
@@ -53,7 +54,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 			log.Println("会话超时")
 			return udp_conn, tun_active, tun_passive, nil, nil
 		}
-		redisJson.RemoteVersion = config.M_version
+		redisJson.RemoteVersion = m_version
 
 		//log.Printf("状态消息: %v", redisJson)
 
