@@ -207,7 +207,7 @@ func StopRemote() error {
 	return nil
 }
 
-func RunRemote(remote_addr string, tun_key string) error {
+func RunRemote(tun_key string) error {
 	var wg sync.WaitGroup
 
 	tun_active_list = make([]*tun.TunActive, 0)
@@ -240,7 +240,7 @@ func RunRemote(remote_addr string, tun_key string) error {
 		lock_remote.Unlock()
 
 		wg.Add(1)
-		go func(tun_active2 *tun.TunActive, tun_passive2 *tun.TunPassive, remote_addr2 string, quic_conn2 quic.Connection) {
+		go func(tun_active2 *tun.TunActive, tun_passive2 *tun.TunPassive, quic_conn2 quic.Connection) {
 			defer func() {
 				Release(tun_active2, tun_passive2)
 				wg.Done()
@@ -249,13 +249,12 @@ func RunRemote(remote_addr string, tun_key string) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				proxy.ProcessProxyServer(remote_addr2, quic_conn2)
+				proxy.ProcessProxyServer(quic_conn2)
 			}()
 
 			tun.ProcessHealth(health)
 			utils.Log().DebugF("释放连接: %v", quic_conn2.LocalAddr())
-		}(tun_active, tun_passive, remote_addr, quic_conn)
-
+		}(tun_active, tun_passive, quic_conn)
 	}
 
 	wg.Wait()

@@ -33,15 +33,13 @@ func main2() {
 			return
 		}
 
-		switch len(config.Arg_tun_local_addr) {
-		case 0:
-			pro.RunRemote(config.Arg_tun_remote_addr, config.Arg_tun_key)
-
-		default:
-			if err := pro.RunLocal(config.Arg_conn_type, config.Arg_tun_local_addr, config.Arg_tun_key); err != nil {
+		if *config.Arg_tun_local {
+			if err := pro.RunLocal(config.Arg_tun_key); err != nil {
 				log.Println(err)
 				os.Exit(0)
 			}
+		} else if *config.Arg_tun_remote {
+			pro.RunRemote(config.Arg_tun_key)
 		}
 	}()
 

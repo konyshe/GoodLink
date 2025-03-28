@@ -2,10 +2,9 @@ package pro
 
 import (
 	"errors"
-	"fmt"
 	"goodlink/config"
 	"goodlink/md5"
-	"goodlink/proxy"
+	"goodlink/netstack"
 	"goodlink/utils"
 	"goodlink2/tun"
 	"log"
@@ -20,7 +19,7 @@ var (
 	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
 )
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, conn_type2 int, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
@@ -148,21 +147,8 @@ func StopLocal() error {
 	return nil
 }
 
-func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
+func RunLocal(tun_key string) error {
 	m_local_state = 1
-
-	utils.Log().DebugF("绑定端口: %v", tun_local_addr)
-
-	chain := make(chan int, 1)
-
-	listener, err := net.Listen("tcp", tun_local_addr)
-	if listener == nil || err != nil {
-		return fmt.Errorf("绑定端口失败: %v", tun_local_addr)
-	}
-	defer func() {
-		listener.Close()
-		close(chain)
-	}()
 
 	m_tun_key = tun_key
 	m_md5_tun_key = md5.Encode(tun_key)
@@ -171,6 +157,10 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 
 	var udp_conn *net.UDPConn
 	var addr tun.AddrType
+
+	if err := netstack.Start(); err != nil {
+		return err
+	}
 
 	for m_local_state == 1 {
 
@@ -183,7 +173,7 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 
 		count++
 
-		tun_active, tun_passive, quic_conn, health, err := GetLocalQuicConn(udp_conn, &addr, conn_type, count)
+		tun_active, tun_passive, quic_conn, health, err := GetLocalQuicConn(udp_conn, &addr, count)
 		if err != nil {
 			Release(tun_active, tun_passive)
 			return err
@@ -196,10 +186,9 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 		m_tun_active = tun_active
 		m_tun_passive = tun_passive
 
-		go func() {
-			proxy.ProcessProxyClient(listener, quic_conn)
-			chain <- 1
-		}()
+		netstack.SetForWarder(quic_conn)
+		utils.Log().DebugF("对端IP: %s", netstack.GetRemoteIP())
+		log.Printf("对端IP: %s", netstack.GetRemoteIP())
 
 		m_local_state = 2
 		tun.ProcessHealth(health)
@@ -209,12 +198,7 @@ func RunLocal(conn_type int, tun_local_addr string, tun_key string) error {
 		utils.Log().DebugF("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive)
 
-		if tcp_client_conn, err := net.Dial("tcp", tun_local_addr); tcp_client_conn != nil && err == nil {
-			tcp_client_conn.Write([]byte("hello"))
-			tcp_client_conn.Close() // 关闭连接
-		}
-
-		<-chain
+		netstack.SetForWarder(nil)
 		count = 0
 	}
 

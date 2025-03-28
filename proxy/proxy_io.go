@@ -8,7 +8,7 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
+func ForwardT2Q(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
 	buf := pool.Malloc(1500)
 
 	defer func() {
@@ -20,7 +20,7 @@ func stunT2QProcess1(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection
 	io.CopyBuffer(tc, qc, buf)
 }
 
-func stunQ2TProcess1(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
+func ForwardQ2T(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
 	buf := pool.Malloc(1500)
 
 	defer func() {

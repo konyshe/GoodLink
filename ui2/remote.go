@@ -7,7 +7,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -53,9 +52,9 @@ func (c *RemoteUI) GetRemoteAddr() (string, error) {
 
 func (c *RemoteUI) GetContainer() *fyne.Container {
 	return container.NewVBox(
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作模式: "), c.radio),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标地址: "), c.box_remote_ip),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标端口: "), c.box_remote_port),
+	//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作模式: "), c.radio),
+	//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标地址: "), c.box_remote_ip),
+	//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标端口: "), c.box_remote_port),
 	)
 }
 

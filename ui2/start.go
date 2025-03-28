@@ -55,9 +55,6 @@ func start_button_click() {
 	m_lock_start.Lock()
 	defer m_lock_start.Unlock()
 
-	var err error
-	var remote_addr string
-
 	//先对需要填写的数据进行校验
 	switch m_stats_start_button {
 	case 0:
@@ -68,18 +65,13 @@ func start_button_click() {
 		switch m_radio_work_type.Selected {
 		case "Local":
 			if m_ui_local.GetLocalPort() == "" {
-				SetLogLabel("请填写访问端口号")
-				return
+				//SetLogLabel("请填写访问端口号")
+				//return
 			}
 		case "Remote":
 			switch m_ui_remote.GetRemoteType() {
 			case "代理模式":
-				remote_addr = "" //代理模式, 这里必须设置为空
 			case "转发模式":
-				if remote_addr, err = m_ui_remote.GetRemoteAddr(); err != nil {
-					SetLogLabel(err.Error())
-					return
-				}
 			}
 		}
 
@@ -142,7 +134,7 @@ func start_button_click() {
 			m_mg_start.Add(1)
 			go func() {
 				defer m_mg_start.Done()
-				if err := pro.RunLocal(m_ui_local.GetConnType(), "0.0.0.0:"+m_ui_local.GetLocalPort(), m_validated_key.Text); err != nil {
+				if err := pro.RunLocal(m_validated_key.Text); err != nil {
 					SetLogLabel(err.Error())
 				}
 				m_stats_start_button = 0
@@ -168,7 +160,7 @@ func start_button_click() {
 			m_mg_start.Add(1)
 			go func() {
 				defer m_mg_start.Done()
-				if err := pro.RunRemote(remote_addr, m_validated_key.Text); err != nil {
+				if err := pro.RunRemote(m_validated_key.Text); err != nil {
 					SetLogLabel(err.Error())
 				}
 				m_stats_start_button = 0
