@@ -49,18 +49,18 @@ func NewTcpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *tcp.Forwar
 			r.Complete(true) // 拒绝连接
 			return
 		}
+		/*
+			log.Printf("forward tcp request: %s:%d->%s:%d",
+				id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort)
 
-		log.Printf("forward tcp request: %s:%d->%s:%d",
-			id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort)
-
-		// 延迟处理错误日志
-		defer func() {
-			if err != nil {
-				log.Printf("forward tcp request: %s:%d->%s:%d: %s",
-					id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
-			}
-		}()
-
+			// 延迟处理错误日志
+			defer func() {
+				if err != nil {
+					log.Printf("forward tcp request: %s:%d->%s:%d: %s",
+						id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
+				}
+			}()
+		*/
 		// 执行TCP三次握手
 		ep, err = r.CreateEndpoint(&wq)
 		if err != nil {

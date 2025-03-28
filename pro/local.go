@@ -188,7 +188,6 @@ func RunLocal(tun_key string) error {
 
 		netstack.SetForWarder(quic_conn)
 		utils.Log().DebugF("对端IP: %s", netstack.GetRemoteIP())
-		log.Printf("对端IP: %s", netstack.GetRemoteIP())
 
 		m_local_state = 2
 		tun.ProcessHealth(health)
