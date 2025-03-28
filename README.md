@@ -201,7 +201,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注: 当最下方的按钮变成绿色, 表示已连接成功
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/v2/1.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/1.png "使用说明")
 
 #### ( linux, Docker )
 
