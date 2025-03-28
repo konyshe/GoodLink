@@ -55,27 +55,31 @@
 
 ## 工作模式 - 介绍
 
+注：以下两个模式同时存在, 无需选择
+
 #### TUN模式
 
-    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示对端IP(目前固定: 192.17.19.1)
+    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: 对端IP
 
-    不限端口，访问对端IP(目前固定: 192.17.19.1)的任意端口，都相当于访问Remote端本机的任意端口
+    不限端口，访问对端IP的任意端口，都相当于访问Remote端本机的任意端口
 
-    注: 仅支持TCP协议, 因此无法 ping 对端IP
+    对端地址目前固定为: 192.17.19.1
+
+    注: 目前仅支持TCP协议, 因此无法 ping 对端IP。
 
 #### 代理模式
 
-    代理地址端口: socket5://192.17.19.1:1080
+    代理端口目前固定为: 1080
 
-    对端地址目前固定为: 192.17.19.1, 端口目前固定为: 1080
+    代理地址端口: socket5://对端IP:1080
 
     local端需要在系统或者软件中配置Socket5代理, 访问任意主机端口, 相当于Remote端自己在访问
 
-    注: 仅支持TCP代理
+    注: 目前仅支持TCP代理
 
-## 代理模式 - 举例 1
+## 举例 1
 
-目标: 在家里电脑(或出差电脑)浏览器上配置代理: socks5://127.0.0.1:18080, 访问公司所有内网 WEB, 和在公司无异
+目标: 在家里电脑(或出差电脑)浏览器上配置代理: socks5://对端IP:1080, 访问公司所有内网 WEB, 和在公司无异
 
 注: 浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理, 可以百度搜索
 
@@ -95,28 +99,28 @@
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/4.png "使用说明")
 
-## 代理模式 - 举例 2
+## 举例 2
 
-目标: 在公司电脑上配置代理: socks5://127.0.0.1:18080, 访问家里包括 NAS 在内的所有主机端口
+目标: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
 
 ### remote 端运行在家里的 NAS
 
 #### ( linux, Docker )
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=nas_202412140928
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=nas_202412140928 --remote
 ```
 
 #### ( linux, 命令行 )
 
 ```
-./goodlink-linux-amd64 --key=nas_202412140928
+./goodlink-linux-amd64 --key=nas_202412140928 --remote
 ```
 
 #### ( windows, 命令行 )
 
 ```
-.\goodlink-windows-amd64.exe --key=nas_202412140928
+.\goodlink-windows-amd64.exe --key=nas_202412140928 --remote
 ```
 
 ### local 端运行在公司电脑
@@ -130,26 +134,26 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 #### ( linux, Docker )
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --local=127.0.0.1:18080 --key=nas_202412140928
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
 ```
 
 #### ( linux, 命令行 )
 
 ```
-./goodlink-linux-amd64 --local=127.0.0.1:18080 --key=nas_202412140928
+./goodlink-linux-amd64 --key=nas_202412140928 --local
 ```
 
 #### (windows, 命令行)
 
 ```
-.\goodlink-windows-amd64.exe --local=127.0.0.1:18080 --key=nas_202412140928
+.\goodlink-windows-amd64.exe --key=nas_202412140928 --local
 ```
 
 ## 转发模式 - 举例 1
 
-目标: 在家里电脑(或出差电脑), 打开 windows 远程桌面, 连接 127.0.0.1:13389, 访问公司电脑的远程桌面
+目标: 在家里电脑(或出差电脑), 打开 windows 远程桌面, 配置 对端IP:3389, 即可访问公司电脑的远程桌面
 
-注: 不是所有软件都支持 Socket5 代理, 比如 windows 自带远程桌面, 这时可用转发模式, 将公司电脑的 3389 端口和家里电脑(或出差电脑)的 13389 端口绑定（本机远程桌面服务已占用 3389 端口）。还有一个场景，出于安全考虑, 只希望 Remote 端指定的主机端口能被访问
+注: 不是所有软件都支持 Socket5 代理, 比如 windows 自带远程桌面, 这时可用TUN模式
 
 ### remote 端运行在公司电脑
 
@@ -169,26 +173,26 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 ## 转发模式 - 举例 2
 
-目标: 在公司访问 http://127.0.0.1:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
+目标: 在公司访问 http://对端IP:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
 
 ### remote 端运行在家里的 NAS
 
 #### (linux, Docker)
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --remote=192.168.3.2:9999 --key=nas_202412140928
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --remote
 ```
 
 #### ( linux, 命令行 )
 
 ```
-./goodlink-linux-amd64 --remote=192.168.3.2:9999 --key=nas_202412140928
+./goodlink-linux-amd64 --key=nas_202412140928 --remote
 ```
 
 #### (windows, 命令行)
 
 ```
-.\goodlink-windows-amd64.exe --remote=192.168.3.2:9999 --key=nas_202412140928
+.\goodlink-windows-amd64.exe --key=nas_202412140928 --remote
 ```
 
 ### local 端运行在公司电脑
@@ -202,19 +206,19 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 #### (linux, Docker)
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --local=127.0.0.1:9999 --key=nas_202412140928
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
 ```
 
 #### ( linux, 命令行 )
 
 ```
-./goodlink-linux-amd64 --local=127.0.0.1:9999 --key=nas_202412140928
+./goodlink-linux-amd64 --key=nas_202412140928 --local
 ```
 
 #### (windows, 命令行)
 
 ```
-.\goodlink-windows-amd64.exe --local=127.0.0.1:9999 --key=nas_202412140928
+.\goodlink-windows-amd64.exe --key=nas_202412140928 --local
 ```
 
 # 选项说明
