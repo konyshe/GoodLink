@@ -63,9 +63,9 @@
 
     不限端口，访问对端IP的任意端口，都相当于访问Remote端本机的任意端口
 
-    对端IP目前固定为: 192.17.19.1 , 具体以界面或者输出日志为准
+    对端IP目前固定为: 192.17.19.1 , 具体以界面或者日志显示为准
 
-    注: 目前仅支持TCP协议, 因此无法 ping 对端IP。
+    注: 目前仅支持TCP协议, 因此无法 ping 对端IP
 
 #### 代理模式
 
@@ -77,79 +77,7 @@
 
     注: 目前仅支持TCP代理
 
-## 举例 1
-
-目标: 在家里电脑(或出差电脑)浏览器上配置代理: socks5://对端IP:1080, 访问公司所有内网 WEB, 和在公司无异
-
-注: 浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理, 可以百度搜索
-
-### remote 端运行在公司电脑
-
-#### (windows, UI)
-
-注: 当最下方的按钮变成绿色, 表示启动成功
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/3.png "使用说明")
-
-### local 端运行在家里电脑(或出差电脑)
-
-#### (windows, UI)
-
-注: 当最下方的按钮变成绿色, 表示连接成功。如果超过 10 分钟无法连接, 按照下图先“点击关闭”, 然后选择“主动连接”, 再“点击启动”
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/4.png "使用说明")
-
-## 举例 2
-
-目标: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
-
-### remote 端运行在家里的 NAS
-
-#### ( linux, Docker )
-
-```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=nas_202412140928 --remote
-```
-
-#### ( linux, 命令行 )
-
-```
-./goodlink-linux-amd64 --key=nas_202412140928 --remote
-```
-
-#### ( windows, 命令行 )
-
-```
-.\goodlink-windows-amd64.exe --key=nas_202412140928 --remote
-```
-
-### local 端运行在公司电脑
-
-#### (windows, UI)
-
-注: 当最下方的按钮变成绿色, 表示已连接成功
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/1.png "使用说明")
-
-#### ( linux, Docker )
-
-```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
-```
-
-#### ( linux, 命令行 )
-
-```
-./goodlink-linux-amd64 --key=nas_202412140928 --local
-```
-
-#### (windows, 命令行)
-
-```
-.\goodlink-windows-amd64.exe --key=nas_202412140928 --local
-```
-
-## 转发模式 - 举例 1
+## TUN模式 - 举例 1
 
 目标: 在家里电脑(或出差电脑), 打开 windows 远程桌面, 配置 对端IP:3389, 即可访问公司电脑的远程桌面
 
@@ -171,7 +99,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/6.png "使用说明")
 
-## 转发模式 - 举例 2
+## TUN模式 - 举例 2
 
 目标: 在公司访问 http://对端IP:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
 
@@ -204,6 +132,78 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/2.png "使用说明")
 
 #### (linux, Docker)
+
+```
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
+```
+
+#### ( linux, 命令行 )
+
+```
+./goodlink-linux-amd64 --key=nas_202412140928 --local
+```
+
+#### (windows, 命令行)
+
+```
+.\goodlink-windows-amd64.exe --key=nas_202412140928 --local
+```
+
+## 代理模式 - 举例 1
+
+目标: 在家里电脑(或出差电脑)浏览器上配置代理: socks5://对端IP:1080, 访问公司所有内网 WEB, 和在公司无异
+
+注: 浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理, 可以百度搜索
+
+### remote 端运行在公司电脑
+
+#### (windows, UI)
+
+注: 当最下方的按钮变成绿色, 表示启动成功
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/3.png "使用说明")
+
+### local 端运行在家里电脑(或出差电脑)
+
+#### (windows, UI)
+
+注: 当最下方的按钮变成绿色, 表示连接成功。如果超过 10 分钟无法连接, 按照下图先“点击关闭”, 然后选择“主动连接”, 再“点击启动”
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/4.png "使用说明")
+
+## 代理模式 - 举例 2
+
+目标: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
+
+### remote 端运行在家里的 NAS
+
+#### ( linux, Docker )
+
+```
+docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=nas_202412140928 --remote
+```
+
+#### ( linux, 命令行 )
+
+```
+./goodlink-linux-amd64 --key=nas_202412140928 --remote
+```
+
+#### ( windows, 命令行 )
+
+```
+.\goodlink-windows-amd64.exe --key=nas_202412140928 --remote
+```
+
+### local 端运行在公司电脑
+
+#### (windows, UI)
+
+注: 当最下方的按钮变成绿色, 表示已连接成功
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/1.png "使用说明")
+
+#### ( linux, Docker )
 
 ```
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
