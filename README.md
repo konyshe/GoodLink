@@ -167,7 +167,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 #### (windows, UI)
 
-注: 当最下方的按钮变成绿色, 表示连接成功。如果超过 10 分钟无法连接, 按照下图先“点击关闭”, 然后选择“主动连接”, 再“点击启动”
+注: 当最下方的按钮变成绿色, 表示连接成功
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/4.png "使用说明")
 
