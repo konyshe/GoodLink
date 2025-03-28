@@ -89,7 +89,7 @@
 
 注: 当最下方的按钮变成绿色, 表示启动成功
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/5.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
 
 ### local 端运行在家里电脑(或者出差笔记本)
 
@@ -97,7 +97,7 @@
 
 注: 当最下方的按钮变成绿色, 表示连接成功。如果超过 10 分钟无法连接, 按照下图先“点击关闭”, 然后选择“主动连接”, 再“点击启动”
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/6.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
 
 ## TUN模式 - 举例 2
 
@@ -129,7 +129,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注: 当最下方的按钮变成绿色, 表示已连接成功
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/2.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/2.png "使用说明")
 
 #### (linux, Docker)
 
@@ -161,7 +161,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注: 当最下方的按钮变成绿色, 表示启动成功
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/3.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/3.png "使用说明")
 
 ### local 端运行在家里电脑(或出差电脑)
 
@@ -169,7 +169,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注: 当最下方的按钮变成绿色, 表示连接成功。如果超过 10 分钟无法连接, 按照下图先“点击关闭”, 然后选择“主动连接”, 再“点击启动”
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/4.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/4.png "使用说明")
 
 ## 代理模式 - 举例 2
 
@@ -201,7 +201,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 注: 当最下方的按钮变成绿色, 表示已连接成功
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/1.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/v2/1.png "使用说明")
 
 #### ( linux, Docker )
 
