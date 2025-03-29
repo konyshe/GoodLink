@@ -65,7 +65,7 @@
 
     举例: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
 
-    注: 目前仅支持TCP代理，浏览器可商店安装插件 SwitchyOmega。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理
+    注: 目前仅支持TCP代理，浏览器可安装插件 SwitchyOmega。其他 GIT, SVN, SSH 等等, 都支持socks5代理
 
 # 简单使用
 
@@ -73,7 +73,7 @@
 
 ### remote 端运行
 
-#### (windows, UI)
+#### windows, UI
 
 注: 当最下方的按钮变成绿色, 表示启动成功
 
@@ -81,9 +81,9 @@
 
 ### local 端运行
 
-#### (windows, UI)
+#### windows, UI
 
-注: 当最下方的按钮变成绿色, 表示连接成功。如果超过 10 分钟无法连接, 按照下图先“点击关闭”, 然后选择“主动连接”, 再“点击启动”
+注: 当最下方的按钮变成绿色, 表示连接成功
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
 
@@ -91,19 +91,19 @@
 
 ### remote 端运行
 
-#### ( linux, Docker )
+#### linux, Docker
 
 ```
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=nas_202412140928 --remote
 ```
 
-#### ( linux, 命令行 )
+#### linux, 命令行
 
 ```
 ./goodlink-linux-amd64 --key=nas_202412140928 --remote
 ```
 
-#### ( windows, 命令行 )
+#### windows, 命令行
 
 ```
 .\goodlink-windows-amd64.exe --key=nas_202412140928 --remote
@@ -111,19 +111,19 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 
 ### local 端运行
 
-#### ( linux, Docker )
+#### linux, Docker
 
 ```
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
 ```
 
-#### ( linux, 命令行 )
+#### linux, 命令行
 
 ```
 ./goodlink-linux-amd64 --key=nas_202412140928 --local
 ```
 
-#### (windows, 命令行)
+#### windows, 命令行
 
 ```
 .\goodlink-windows-amd64.exe --key=nas_202412140928 --local
