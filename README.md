@@ -18,7 +18,7 @@
 
 # 重点
 
-1. 本程序即支持命令行方式, 也支持 docker 方式, windows 版本还新增了UI版本, 适合新手。以下举例仅作参考, 可随意切换
+1. 本程序即支持命令行方式, 也支持 docker 方式, windows 版本还新增了UI版本, 适合新手。以下举例仅作参考, 可随意搭配
 
 2. 两端主机运行同一个程序 / Docker, 一端使用--remote 选项(以下称 remote 端), 另一端使用--local 选项(以下称 local 端)
 
@@ -87,31 +87,7 @@
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
 
-## 代理模式 - 举例 1
-
-目标: 在家里电脑(或出差电脑)浏览器上配置代理: socks5://对端IP:1080, 访问公司所有内网 WEB, 和在公司无异
-
-注: 浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理, 可以百度搜索
-
-### remote 端运行在公司电脑
-
-#### (windows, UI)
-
-注: 当最下方的按钮变成绿色, 表示启动成功
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/3.png "使用说明")
-
-### local 端运行在家里电脑(或出差电脑)
-
-#### (windows, UI)
-
-注: 当最下方的按钮变成绿色, 表示连接成功
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/4.png "使用说明")
-
-## 代理模式 - 举例 2
-
-目标: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
+## 举例 2
 
 ### remote 端运行在家里的 NAS
 
