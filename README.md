@@ -53,9 +53,9 @@
 
     对端IP目前固定为: 192.17.19.1 , 具体以界面或者日志显示为准
 
-    注: 目前仅支持TCP协议, 因此无法 ping 对端IP
-
     举例: 在家里电脑(或出差电脑), 打开 windows 远程桌面, 配置 对端IP:3389, 即可访问公司电脑的远程桌面
+
+    注: 目前仅支持TCP协议, 因此无法 ping 对端IP
 
 #### 代理模式
 
@@ -65,7 +65,9 @@
 
     local端需要在系统或者软件中配置Socket5代理, 访问任意主机端口, 相当于Remote端自己在访问
 
-    注: 目前仅支持TCP代理
+    举例: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
+
+    注: 目前仅支持TCP代理，浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理, 可以百度搜索
 
 ## 举例 1
 
@@ -84,56 +86,6 @@
 注: 当最下方的按钮变成绿色, 表示连接成功。如果超过 10 分钟无法连接, 按照下图先“点击关闭”, 然后选择“主动连接”, 再“点击启动”
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
-
-## TUN模式 - 举例 2
-
-目标: 在公司访问 http://对端IP:9999 , 等于访问家里的 NAS 管理页面http://192.168.3.2:9999
-
-### remote 端运行在家里的 NAS
-
-#### (linux, Docker)
-
-```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --remote
-```
-
-#### ( linux, 命令行 )
-
-```
-./goodlink-linux-amd64 --key=nas_202412140928 --remote
-```
-
-#### (windows, 命令行)
-
-```
-.\goodlink-windows-amd64.exe --key=nas_202412140928 --remote
-```
-
-### local 端运行在公司电脑
-
-#### (windows, UI)
-
-注: 当最下方的按钮变成绿色, 表示已连接成功
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/2.png "使用说明")
-
-#### (linux, Docker)
-
-```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
-```
-
-#### ( linux, 命令行 )
-
-```
-./goodlink-linux-amd64 --key=nas_202412140928 --local
-```
-
-#### (windows, 命令行)
-
-```
-.\goodlink-windows-amd64.exe --key=nas_202412140928 --local
-```
 
 ## 代理模式 - 举例 1
 
