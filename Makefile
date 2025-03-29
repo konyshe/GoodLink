@@ -24,8 +24,6 @@ PLATFORM_LIST = \
 	linux-mips64-cmd \
 	linux-riscv64-cmd \
 	linux-mips64le-cmd \
-	darwin-amd64-cmd \
-	darwin-arm64-cmd \
 	windows-amd64-cmd \
 	windows-arm64-cmd
 
