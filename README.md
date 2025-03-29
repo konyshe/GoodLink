@@ -71,7 +71,7 @@
 
 ## 举例 1
 
-###  **remote 端运行** 
+###  **启动 remote端** 
 
 #### windows, UI
 
@@ -79,7 +79,7 @@
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
 
-###  **local 端运行** 
+###  **启动 local端** 
 
 #### windows, UI
 
@@ -89,7 +89,7 @@
 
 ## 举例 2
 
-###  **remote 端运行** 
+###  **启动 remote端** 
 
 #### linux, Docker
 
@@ -109,7 +109,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 .\goodlink-windows-amd64.exe --key=nas_202412140928 --remote
 ```
 
-###  **local 端运行** 
+###  **启动 local端** 
 
 #### linux, Docker
 
