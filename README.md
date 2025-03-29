@@ -67,7 +67,7 @@
 
     举例: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
 
-    注: 目前仅支持TCP代理，浏览器可商店安装插件 SwitchyOmega 配置 socks5 代理。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理, 可以百度搜索
+    注: 目前仅支持TCP代理，浏览器可商店安装插件 SwitchyOmega。其他 GIT, SVN, SSH 等等, 也都支持 socks5 代理
 
 ## 举例 1
 
@@ -110,12 +110,6 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 ```
 
 ### local 端运行在公司电脑
-
-#### (windows, UI)
-
-注: 当最下方的按钮变成绿色, 表示已连接成功
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/1.png "使用说明")
 
 #### ( linux, Docker )
 
