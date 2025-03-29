@@ -14,8 +14,6 @@
 
 2. 一条命令搞定, 无需安装、无需注册, 无需公网 IP, 无需配置文件
 
-3. 直连基于 QUIC, 高性能, 已加密
-
 4. 新增TUN模式, IP直连，不限端口
 
 ![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
@@ -35,14 +33,6 @@
 6. windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒。本程序已开源, 可放心食用
 
 7. 以下举例说明中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机一个 16-24 字节长度的密钥
-
-8. UI版本始于1.4（goodlink-windows-amd64-ui.zip）, cmd是命令行版本
-
-9. Linux平台需要赋予可执行权限, 例如 `chmod +x goodlink-linux-amd64-cmd`
-
-10. Local端要求管理员权限, windows平台需管理员身份运行, Linux端需使用root用户或搭配 `sudo` 命令
-
-11. 该项目刚刚起步, 可能不太稳定, 欢迎到 Issues 上提出问题和建议, 帮忙测试的同学将保证永久免费使用
 
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
@@ -80,8 +70,6 @@
 ## TUN模式 - 举例 1
 
 目标: 在家里电脑(或出差电脑), 打开 windows 远程桌面, 配置 对端IP:3389, 即可访问公司电脑的远程桌面
-
-注: 不是所有软件都支持 Socket5 代理, 比如 windows 自带远程桌面, 这时可用TUN模式
 
 ### remote 端运行在公司电脑
 
