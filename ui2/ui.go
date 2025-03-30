@@ -59,24 +59,26 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	})
 
 	m_ui_local = NewLocalUI(myWindow, &configInfo)
-	localUI_Container := m_ui_local.GetContainer()
+	//localUI_Container := m_ui_local.GetContainer()
 
 	m_ui_remote = NewRemoteUI(myWindow, &configInfo)
-	remoteUI_Container := m_ui_remote.GetContainer()
+	//remoteUI_Container := m_ui_remote.GetContainer()
 
 	m_radio_work_type = widget.NewRadioGroup([]string{"Remote", "Local"}, nil)
 	m_radio_work_type.Horizontal = true
-	m_radio_work_type.OnChanged = func(value string) {
-		switch value {
-		case "Remote":
-			localUI_Container.Hide()
-			remoteUI_Container.Show()
-		default:
-			remoteUI_Container.Hide()
-			localUI_Container.Show()
+	/*
+		m_radio_work_type.OnChanged = func(value string) {
+			switch value {
+			case "Remote":
+				localUI_Container.Hide()
+				remoteUI_Container.Show()
+			default:
+				remoteUI_Container.Hide()
+				localUI_Container.Show()
+			}
+			(*myWindow).Resize((*myWindow).Content().MinSize())
 		}
-		(*myWindow).Resize((*myWindow).Content().MinSize())
-	}
+	*/
 	if configInfo.WorkType == "" {
 		configInfo.WorkType = "Local"
 	}
@@ -102,7 +104,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作端侧: "), m_radio_work_type),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), m_validated_key),
 		container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste),
-		localUI_Container, remoteUI_Container,
+		//localUI_Container, remoteUI_Container,
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新状态: "), NewLogLabel("等待启动")),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新时间: "), &m_view_time),
 		container.NewStack(m_button_start, m_activity_start_button))
