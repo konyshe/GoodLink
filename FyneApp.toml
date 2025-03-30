@@ -5,4 +5,4 @@ Website = "https://goodlink.kony.vip"
   Name = "goodlink-windows-amd64-ui"
   ID = "goodlink.kony.vip"
   Version = "2.0.1"
-  Build = 0
+  Build = 1
