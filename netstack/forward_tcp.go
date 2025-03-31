@@ -74,7 +74,7 @@ func NewTcpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *tcp.Forwar
 		}
 		defer r.Complete(false)
 
-		err = setSocketOptions(s, ep)
+		setSocketOptions(s, ep)
 
 		conn := &TcpConn{
 			TCPConn: gonet.NewTCPConn(&wq, ep),
