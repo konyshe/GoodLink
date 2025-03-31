@@ -106,6 +106,10 @@ func InitWintunDll() error {
 	return nil
 }
 
+const (
+	tunIP = "192.17.19.1"
+)
+
 func Start() error {
 	InitWintunDll()
 
@@ -113,7 +117,6 @@ func Start() error {
 		return nil
 	}
 
-	// 创建新的协议栈实例，配置网络层和传输层协议
 	netstack_stack = stack.New(stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol},
@@ -124,7 +127,7 @@ func Start() error {
 		return fmt.Errorf("请管理员权限运行")
 	}
 
-	SetWinTunIP(&wintunEP, "192.17.19.1", 32)
+	SetWinTunIP(&wintunEP, tunIP, 32)
 
 	// 将TUN设备注册到协议栈中，使用NIC ID 1
 	nicID := tcpip.NICID(1)
@@ -145,5 +148,5 @@ func SetForWarder(stun_quic_conn quic.Connection) {
 }
 
 func GetRemoteIP() string {
-	return "192.17.19.1"
+	return tunIP
 }
