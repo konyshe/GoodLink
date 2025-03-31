@@ -32,6 +32,10 @@
 
 7. 以下举例说明中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机一个 16-24 字节长度的密钥
 
+8. 对于有安全疑问，或者想进阶使用的同学，可以看: [私有部署](https://gitee.com/konyshe/goodlink/issues/IBCT7S)
+
+9. 该项目刚刚起步, 可能不太稳定, 欢迎到 Issues 上提出问题和建议, 帮忙测试的同学将保证永久免费使用
+
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
 	<tr><td>NAT1-3</td><td>NAT1-4</td><td>YES</td></tr>

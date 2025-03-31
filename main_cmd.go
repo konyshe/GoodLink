@@ -40,6 +40,9 @@ func main2() {
 			}
 		} else if *config.Arg_tun_remote {
 			pro.RunRemote(config.Arg_tun_key)
+		} else {
+			log.Println("参数错误")
+			os.Exit(0)
 		}
 	}()
 
