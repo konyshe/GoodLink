@@ -24,7 +24,7 @@ var (
 )
 
 const (
-	m_version = "2.0.2"
+	m_version = "2.1.1"
 )
 
 func Init() error {
