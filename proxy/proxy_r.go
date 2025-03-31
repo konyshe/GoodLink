@@ -15,7 +15,7 @@ import (
 )
 
 func ProcessProxyServer(stun_quic_conn quic.Connection) {
-	head_len := 2
+	head_len := 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
 	buf := pool2.Malloc(head_len)
 	defer pool2.Free(buf)
 
@@ -39,20 +39,35 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 			new_quic_stream.Close()
 			goto fewfgwegwe
 		}
-		remotePort := binary.BigEndian.Uint16(buf[:head_len])
+		remotePort := binary.BigEndian.Uint16(buf[head_len-2 : head_len])
 
-		switch remotePort {
-		case 1080:
-			go func() {
-				remoteAddr := stun_quic_conn.RemoteAddr().(*net.UDPAddr)
-				socks5_svr.ServeConnQuic(new_quic_stream, remoteAddr.IP, remoteAddr.Port)
-			}()
-		default:
-			remoteAddr := fmt.Sprintf("127.0.0.1:%d", remotePort)
-			new_tcp_conn, err := net.Dial("tcp", remoteAddr)
-			if err == nil {
-				go ForwardT2Q(new_tcp_conn, new_quic_stream, stun_quic_conn)
-				go ForwardQ2T(new_quic_stream, new_tcp_conn, stun_quic_conn)
+		switch buf[0] {
+		case 0x00:
+			switch remotePort {
+			case 1080:
+				go func() {
+					remoteAddr := stun_quic_conn.RemoteAddr().(*net.UDPAddr)
+					socks5_svr.ServeConnQuic(new_quic_stream, remoteAddr.IP, remoteAddr.Port)
+				}()
+			default:
+				remoteAddr := fmt.Sprintf("127.0.0.1:%d", remotePort)
+				new_conn, err := net.Dial("tcp", remoteAddr)
+				if err == nil {
+					go ForwardT2Q(new_conn, new_quic_stream, stun_quic_conn)
+					go ForwardQ2T(new_quic_stream, new_conn, stun_quic_conn)
+				}
+			}
+		case 0x01:
+			switch remotePort {
+			case 1080:
+
+			default:
+				remoteAddr := fmt.Sprintf("127.0.0.1:%d", remotePort)
+				new_conn, err := net.Dial("udp", remoteAddr)
+				if err == nil {
+					go ForwardT2Q(new_conn, new_quic_stream, stun_quic_conn)
+					go ForwardQ2T(new_quic_stream, new_conn, stun_quic_conn)
+				}
 			}
 		}
 	}

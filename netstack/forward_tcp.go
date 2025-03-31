@@ -25,6 +25,11 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn quic.Connection) {
 		return
 	}
 
+	new_quic_stream.Write([]byte{0x00})
+
+	ipv4Bytes := originConn.ID().LocalAddress.As4()
+	new_quic_stream.Write(ipv4Bytes[:]) // 添加[:]转换为切片
+
 	portBytes := pool2.Malloc(2)
 	defer pool2.Free(portBytes)
 
@@ -35,7 +40,6 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn quic.Connection) {
 	go proxy.ForwardT2Q(originConn, new_quic_stream, stun_quic_conn)
 }
 
-// 创建TCP转发器，处理新的TCP连接请求
 func NewTcpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *tcp.Forwarder {
 	return tcp.NewForwarder(s, 0, 2048, func(r *tcp.ForwarderRequest) {
 		var (
@@ -70,10 +74,8 @@ func NewTcpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *tcp.Forwar
 		}
 		defer r.Complete(false)
 
-		// 设置TCP套接字选项
 		err = setSocketOptions(s, ep)
 
-		// 创建TCP连接对象并调用处理器
 		conn := &TcpConn{
 			TCPConn: gonet.NewTCPConn(&wq, ep),
 			id:      id,
