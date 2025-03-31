@@ -79,6 +79,9 @@ windows-amd64-ui:
 #	go build -ldflags -H=windowsgui
 	mkdir bin; fyne package; mv *.exe bin/
 
+uac:
+	rsrc -manifest nac.manifest -o nac.syso
+
 strip:
 	upx $(BINDIR)/*
 

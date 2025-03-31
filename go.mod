@@ -27,6 +27,7 @@ require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/Dreamacro/go-shadowsocks2 v0.1.8 // indirect
+	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/bmizerany/pq v0.0.0-20131128184720-da2b95e392c1 // indirect
 	github.com/cloudflare/circl v1.6.0 // indirect
