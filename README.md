@@ -1,10 +1,10 @@
 <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
 
-由于经常外出办公, 对于市面上的远程桌面工具, 无论画面、适配等, 都不如 windows 自带的远程桌面, 但外出如何使用 windows远程桌面呢？
+由于经常异地办公, 对于市面上的远程桌面工具, 无论速度、画面等, 都不如 windows 自带的远程桌面, 但异地如使用 windows远程桌面呢？
 
-是否可以无需远程桌面, 直接访问公司的内网 WEB, GIT, SSH 等？
+是否可以无需远程桌面, 直接浏览器访问公司的内网 WEB, GIT, SSH 等, 和在公司一模一样？
 
-**注: 该项目仅用于学习研究, 目前无商业合作，更无恶意行为。如果未来有广告之类盈利的行为，会郑重告知大家。另外声明：严禁用于违法行为！！！**
+**注: 该项目仅用于学习研究, 目前没有任何商业合作，更没有任何恶意行为。如果未来有广告之类盈利的行为，会郑重告知大家。另外声明：严禁用于违法行为！！！**
 
 [切换回1.6版文档](https://gitee.com/konyshe/goodlink/blob/v1.6/README.md)
 
@@ -32,10 +32,6 @@
 
 7. 以下举例说明中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机一个 16-24 字节长度的密钥
 
-8. 对于有安全疑问，或者想进阶使用的同学，可以看: [使用GoodLink 是否足够安全？](https://gitee.com/konyshe/goodlink/issues/IBFKC2)
-
-9. 该项目刚刚起步, 可能不太稳定, 欢迎到 Issues 上提出问题和建议, 帮忙测试的同学将保证永久免费使用
-
  <table>
 	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
 	<tr><td>NAT1-3</td><td>NAT1-4</td><td>YES</td></tr>
@@ -51,11 +47,11 @@
 
     Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: 对端IP
 
-    不限端口，访问对端IP的任意端口，相当于访问Remote端本机的任意端口
+    不限端口，访问对端IP的任意端口，都相当于访问Remote端本机的任意端口
 
     对端IP目前固定为: 192.17.19.1 , 具体以界面或者日志显示为准
 
-    举例: 在Local端打开 windows 远程桌面, 填写对端IP, 即可访问Remote端的远程桌面
+    举例: 在家里电脑(或出差电脑), 打开 windows 远程桌面, 填写对端IP, 即可访问公司电脑的远程桌面
 
     注: 目前仅支持TCP协议, 下一版本将支持UDP协议
 
@@ -65,7 +61,9 @@
 
     代理地址端口: socket5://对端IP:1080
 
-    举例: 在Local端配置代理: socks5://对端IP:1080, 即可通过Remote端访问所有的网络资源
+    local端需要在系统或者软件中配置Socket5代理, 访问任意主机端口, 相当于Remote端自己在访问
+
+    举例: 在公司电脑上配置代理: socks5://对端IP:1080, 访问家里包括 NAS 在内的所有主机端口
 
     注: 目前仅支持TCP代理，浏览器可安装插件 SwitchyOmega。其他 GIT, SVN, SSH 等, 都支持socks5代理
 
@@ -95,6 +93,8 @@
 
 #### linux, Docker
 
+注：2.0版还未提交Docker
+
 ```
 docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=nas_202412140928 --remote
 ```
@@ -116,7 +116,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 #### linux, Docker
 
 ```
-docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink  --key=nas_202412140928 --local
+由于Local端需要创建虚拟网卡，Docker中并不支持，因此Local端不支持Docker部署
 ```
 
 #### linux, 命令行
