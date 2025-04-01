@@ -1,5 +1,5 @@
-// Package iobased provides the implementation of io.ReadWriter
-// based data-link layer endpoints.
+//go:build windows
+
 package netstack
 
 import (

@@ -11,8 +11,7 @@ GOBUILD=GO111MODULE=on \
     	-X "gogo.BuildTime=$(BuildTime)" \
 		-w -s -buildid='
 
-PLATFORM_LIST = \
-	windows-amd64-ui \
+LINUX_PLATFORM_LIST = \
 	linux-386-cmd \
 	linux-amd64-cmd \
 	linux-arm-cmd \
@@ -23,11 +22,14 @@ PLATFORM_LIST = \
 	linux-mipsle-cmd \
 	linux-mips64-cmd \
 	linux-riscv64-cmd \
-	linux-mips64le-cmd \
+	linux-mips64le-cmd
+
+WINDOWS_PLATFORM_LIST = \
+	windows-amd64-ui \
 	windows-amd64-cmd \
 	windows-arm64-cmd
 
-all: $(PLATFORM_LIST) strip
+all: $(WINDOWS_PLATFORM_LIST) rm_uac $(LINUX_PLATFORM_LIST) strip
 
 linux-386-cmd:
 	GOARCH=386 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
@@ -79,8 +81,11 @@ windows-amd64-ui:
 #	go build -ldflags -H=windowsgui
 	mkdir bin; fyne package; mv *.exe bin/
 
-uac:
+create_uac:
 	rsrc -manifest nac.manifest -o nac.syso
+
+rm_uac:
+	rm -rf nac.syso
 
 strip:
 	upx $(BINDIR)/*

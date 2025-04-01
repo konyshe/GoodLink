@@ -10,20 +10,7 @@ import (
 	"sync"
 
 	"golang.zx2c4.com/wireguard/tun"
-	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
-
-// Device is the interface that implemented by network layer devices (e.g. tun),
-// and easy to use as stack.LinkEndpoint.
-type Device interface {
-	stack.LinkEndpoint
-
-	// Name returns the current name of the device.
-	Name() string
-
-	// Type returns the driver type of the device.
-	Type() string
-}
 
 // 常量定义
 const (
@@ -59,6 +46,8 @@ type TUN struct {
 //   - Device: 实现了Device接口的TUN设备
 //   - error: 创建过程中的错误信息
 func Open(name string, mtu uint32) (_ Device, err error) {
+	InitWintunDll()
+
 	// 使用defer和recover处理可能的panic，确保错误被正确捕获和包装
 	defer func() {
 		if r := recover(); r != nil {
