@@ -30,7 +30,7 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 	fewfgwegwe:
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
 		if err != nil {
-			continue
+			return
 		}
 
 		_, err = io.ReadFull(new_quic_stream, buf[:head_len])

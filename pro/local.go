@@ -40,11 +40,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 	switch conn_type {
 	case 0:
-		utils.Log().Debug("请求连接对端")
+		utils.Log().Debug("请求连接Remote端")
 
 	default:
 		redisJson.LocalAddr = *addr
-		utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)
+		utils.Log().DebugF("发送Local端地址: %v", redisJson.LocalAddr)
 	}
 
 	RedisSet(15*time.Second, &redisJson)
@@ -74,7 +74,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 				return tun_active, tun_passive, nil, nil, errors.New("两端版本不兼容")
 			}
 
-			utils.Log().DebugF("收到对端地址: %v", redisJson.RemoteAddr)
+			utils.Log().DebugF("收到Remote端地址: %v", redisJson.RemoteAddr)
 
 			switch conn_type {
 			case 0:
@@ -89,7 +89,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 				tun_passive.Start()
 
 				redisJson.State = 2
-				utils.Log().DebugF("发送本端地址: %v", redisJson.LocalAddr)
+				utils.Log().DebugF("发送Local端地址: %v", redisJson.LocalAddr)
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 			default:
@@ -126,7 +126,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 			return tun_active, tun_passive, nil, nil, nil
 
 		default:
-			utils.Log().DebugF("等待对端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
+			utils.Log().DebugF("等待Remote端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
 
@@ -170,7 +170,7 @@ func RunLocal(tun_key string) error {
 		}
 		udp_conn, addr = GetUDPAddr()
 
-		log.Printf("本端地址: %v", addr)
+		log.Printf("Local端地址: %v", addr)
 
 		count++
 
@@ -188,7 +188,7 @@ func RunLocal(tun_key string) error {
 		m_tun_passive = tun_passive
 
 		netstack.SetForWarder(quic_conn)
-		utils.Log().DebugF("对端IP: %s", netstack.GetRemoteIP())
+		utils.Log().DebugF("Remote端IP: %s", netstack.GetRemoteIP())
 
 		m_local_state = 2
 		tun.ProcessHealth(health)

@@ -75,7 +75,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 
 		switch redisJson.State {
 		case 0:
-			utils.Log().DebugF("收到对端请求: %v", redisJson)
+			utils.Log().DebugF("收到Local端请求: %v", redisJson)
 
 			redisJson.State = 1
 
@@ -90,7 +90,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 			switch redisJson.LocalAddr.WanPort1 {
 			case 0:
 				conn_type = 0
-				utils.Log().Debug("对端未发来IP")
+				utils.Log().Debug("Local端未发来IP")
 
 				if tun_active != nil {
 					tun_active.Release()
@@ -103,7 +103,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 				redisJson.SendPortCount = 0x100
 
 			default:
-				utils.Log().DebugF("对端有发来IP: %v", redisJson.LocalAddr)
+				utils.Log().DebugF("Local端有发来IP: %v", redisJson.LocalAddr)
 				conn_type = 1
 
 				if tun_passive != nil {
@@ -117,23 +117,23 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 				tun_passive_chain = tun_passive.GetChain()
 			}
 
-			utils.Log().DebugF("发送本端地址: %v", redisJson.RemoteAddr)
+			utils.Log().DebugF("发送Remote端地址: %v", redisJson.RemoteAddr)
 			RedisSet(redisJson.RedisTimeOut, &redisJson)
 
 		case 2:
 			switch conn_type {
 			case 0:
-				utils.Log().DebugF("收到对端地址: %v", redisJson.LocalAddr)
+				utils.Log().DebugF("收到Local端地址: %v", redisJson.LocalAddr)
 				tun_active.Start()
 
 			case 1:
-				utils.Log().DebugF("收到对端地址, 等待连接: %v", redisJson.LocalAddr)
+				utils.Log().DebugF("收到Local端地址, 等待连接: %v", redisJson.LocalAddr)
 			}
 
 			select {
 			case <-tun_active_chain:
 				redisJson.State = 3
-				utils.Log().Debug("对端被动连接成功")
+				utils.Log().Debug("Local端被动连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if tun_active != nil {
 					return udp_conn, tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream
@@ -142,7 +142,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 
 			case <-tun_passive_chain:
 				redisJson.State = 3
-				utils.Log().Debug("对端主动连接成功")
+				utils.Log().Debug("Local端主动连接成功")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				if tun_passive != nil {
 					return udp_conn, tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream
@@ -151,7 +151,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 
 			case <-time.After(time.Duration(config.Arg_p2p_timeout) * time.Second):
 				redisJson.State = 4
-				utils.Log().Debug("对端连接超时")
+				utils.Log().Debug("Local端连接超时")
 				RedisSet(redisJson.RedisTimeOut, &redisJson)
 				return udp_conn, tun_active, tun_passive, nil, nil
 			}
@@ -159,7 +159,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 		case 3, 4:
 
 		default:
-			utils.Log().DebugF("等待对端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
+			utils.Log().DebugF("等待Local端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 
 		last_state = redisJson.State

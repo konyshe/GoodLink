@@ -49,23 +49,17 @@
 
 ### TUN模式
 
-    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: 对端IP
+    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP
 
-    不限端口，访问对端IP的任意端口，相当于访问Remote端本机的任意端口
-
-    对端IP目前固定为: 192.17.19.1 , 具体以界面或者日志显示为准
-
-    举例: 在Local端打开 windows 远程桌面, 填写对端IP, 即可访问Remote端的远程桌面
+    举例: 在Local端打开 windows 远程桌面, 填写Remote端IP, 即可访问Remote端的远程桌面
 
 ### 代理模式
 
-    代理端口目前固定为: 1080
+    代理地址端口: socket5://Remote端IP:1080
 
-    代理地址端口: socket5://对端IP:1080
+    举例: 在Local端配置socket5代理: socks5://Remote端IP:1080, 即可利用Remote端做跳板, 访问所有的网络资源
 
-    举例: 在Local端配置代理: socks5://对端IP:1080, 即可通过Remote端访问所有的网络资源
-
-    注: 目前仅支持TCP代理，浏览器可安装插件 SwitchyOmega。其他 GIT, SVN, SSH 等, 都支持socks5代理
+    注: 目前仅支持TCP代理，浏览器可安装插件 SwitchyOmega。其他 GIT, SVN, SSH 等, 都支持socket5代理
 
 # 简单使用
 

@@ -15,5 +15,5 @@ goodlink.json
 config.json
 *.upx
 debug.sh
-wintun.dll
-nac.syso
+*.dll
+*.syso
