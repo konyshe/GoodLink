@@ -22,11 +22,13 @@ const (
 )
 
 func main() {
-	config.Help()
+	pro.SetVersion(GetVersion())
+
+	config.Help(GetVersion())
 
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
-	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + pro.GetVersion()) //myApp.Metadata().Version)
+	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + GetVersion()) //myApp.Metadata().Version)
 
 	if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu(M_APP_TITLE,

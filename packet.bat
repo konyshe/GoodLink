@@ -1,5 +1,5 @@
 make clean
-make
+make all
 cd bin
 zip goodlink-linux-amd64-cmd.zip goodlink-linux-amd64-cmd
 zip goodlink-linux-arm64-cmd.zip goodlink-linux-arm64-cmd

@@ -21,10 +21,15 @@ var (
 	m_redis_db    *redis.Client
 	m_tun_key     string
 	m_md5_tun_key string
+	m_version     string
 )
 
+func SetVersion(v string) {
+	m_version = v
+}
+
 func GetVersion() string {
-	return "2.1.2"
+	return m_version
 }
 
 func Init() error {

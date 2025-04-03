@@ -12,7 +12,6 @@ GOBUILD=GO111MODULE=on \
 		-w -s -buildid='
 
 PLATFORM_LIST = \
-	windows-arm64-cmd \
 	linux-386-cmd \
 	linux-amd64-cmd \
 	linux-arm-cmd \
@@ -23,11 +22,14 @@ PLATFORM_LIST = \
 	linux-mipsle-cmd \
 	linux-mips64-cmd \
 	linux-riscv64-cmd \
-	linux-mips64le-cmd
+	linux-mips64le-cmd \
+	windows-arm64-cmd
 
 NAC_PLATFORM_LIST = \
 	windows-amd64-ui \
 	windows-amd64-cmd \
+
+debug: create_nac windows-amd64-ui rm_nac linux-amd64-cmd strip
 
 all: create_nac $(NAC_PLATFORM_LIST) rm_nac $(PLATFORM_LIST) strip
 

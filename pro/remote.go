@@ -219,7 +219,7 @@ func RunRemote(tun_key string) error {
 
 	for m_remote_stats == 1 {
 
-		udp_conn, tun_active, tun_passive, quic_conn, health := GetRemoteQuicConn()
+		udp_conn, tun_active, tun_passive, quic_conn, _ := GetRemoteQuicConn()
 		if quic_conn == nil {
 			Release(tun_active, tun_passive)
 			continue
@@ -244,13 +244,7 @@ func RunRemote(tun_key string) error {
 				wg.Done()
 			}()
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				proxy.ProcessProxyServer(quic_conn2)
-			}()
-
-			tun.ProcessHealth(health)
+			proxy.ProcessProxyServer(quic_conn2)
 			utils.Log().DebugF("释放连接: %v", quic_conn2.LocalAddr())
 		}(tun_active, tun_passive, quic_conn)
 	}

@@ -25,7 +25,7 @@ var (
 	Arg_conn_passive_send_time int
 )
 
-func Help() {
+func Help(ver string) {
 	v := flag.Bool("v", false, "查看版本信息")
 
 	Arg_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
@@ -53,6 +53,7 @@ func Help() {
 	flag.Parse()
 
 	if *v {
+		fmt.Printf("Version: %s\n", ver)
 		fmt.Print(gogo.BuildVersion())
 		os.Exit(0)
 	}

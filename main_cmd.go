@@ -62,7 +62,9 @@ func main() {
 		}
 	}()
 
-	config.Help()
+	pro.SetVersion(GetVersion())
+
+	config.Help(GetVersion())
 
 	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
 		stun2.TestStun()
