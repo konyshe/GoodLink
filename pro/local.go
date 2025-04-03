@@ -27,7 +27,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	utils.Log().DebugF("会话ID: %s", SessionID)
 
 	redisJson := RedisJsonType{
-		LocalVersion: m_version,
+		LocalVersion: GetVersion(),
 		State:        0,
 		SessionID:    SessionID,
 		ConnectCount: count,
@@ -68,7 +68,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 		switch redisJson.State {
 		case 1:
-			if redisJson.RemoteVersion != m_version {
+			if redisJson.RemoteVersion != GetVersion() {
 				utils.Log().DebugF("两端版本不兼容: %v", redisJson)
 				RedisDel()
 				return tun_active, tun_passive, nil, nil, errors.New("两端版本不兼容")

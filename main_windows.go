@@ -4,6 +4,7 @@ package main
 
 import (
 	"goodlink/config"
+	"goodlink/pro"
 	_ "goodlink/pro"
 	"goodlink/theme"
 	"goodlink/ui2"
@@ -25,12 +26,10 @@ func main() {
 
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
-	icon, _ := fyne.LoadResourceFromPath("./theme/favicon.png")
-	myApp.SetIcon(icon)
-	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + myApp.Metadata().Version)
+	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + pro.GetVersion()) //myApp.Metadata().Version)
 
 	if desk, ok := myApp.(desktop.App); ok {
-		m := fyne.NewMenu(M_APP_TITLE+"  v"+myApp.Metadata().Version,
+		m := fyne.NewMenu(M_APP_TITLE,
 			fyne.NewMenuItem("打开主程序", func() {
 				myWindow.Show()
 			}))

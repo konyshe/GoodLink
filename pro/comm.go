@@ -23,9 +23,9 @@ var (
 	m_md5_tun_key string
 )
 
-const (
-	m_version = "2.1.2"
-)
+func GetVersion() string {
+	return "2.1.2"
+}
 
 func Init() error {
 	utils.Log().Debug("初始化配置中")
