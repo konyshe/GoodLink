@@ -3,7 +3,6 @@ package proxy
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	pool2 "goodlink/pool"
 	"goodlink/socks5"
 	"goodlink/utils"
@@ -50,8 +49,10 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 					socks5_svr.ServeConnQuic(new_quic_stream, remoteAddr.IP, remoteAddr.Port)
 				}()
 			default:
-				remoteAddr := fmt.Sprintf("127.0.0.1:%d", remotePort)
-				new_conn, err := net.Dial("tcp", remoteAddr)
+				new_conn, err := net.DialTCP("tcp4", nil, &net.TCPAddr{
+					IP:   net.IPv4(127, 0, 0, 1),
+					Port: int(remotePort),
+				})
 				if err == nil {
 					go ForwardT2Q(new_conn, new_quic_stream, stun_quic_conn)
 					go ForwardQ2T(new_quic_stream, new_conn, stun_quic_conn)
@@ -59,11 +60,13 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 			}
 		case 0x01:
 			switch remotePort {
-			case 1080:
+			//case 1080:
 
 			default:
-				remoteAddr := fmt.Sprintf("127.0.0.1:%d", remotePort)
-				new_conn, err := net.Dial("udp", remoteAddr)
+				new_conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{
+					IP:   net.IPv4(127, 0, 0, 1),
+					Port: int(remotePort),
+				})
 				if err == nil {
 					go ForwardT2Q(new_conn, new_quic_stream, stun_quic_conn)
 					go ForwardQ2T(new_quic_stream, new_conn, stun_quic_conn)

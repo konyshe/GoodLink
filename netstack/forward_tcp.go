@@ -51,21 +51,17 @@ func NewTcpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *tcp.Forwar
 			r.Complete(true) // 拒绝连接
 			return
 		}
-		/*
-			log.Printf("forward tcp request: %s:%d->%s:%d",
-				id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort)
 
-			// 延迟处理错误日志
-			defer func() {
-				if err != nil {
-					log.Printf("forward tcp request: %s:%d->%s:%d: %s",
-						id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
-				}
-			}()
-		*/
-		// 执行TCP三次握手
+		if id.LocalPort == 31337 {
+			// 31337端口仅用于UDP
+			return
+		}
+
+		// 开始三次握手
 		ep, err = r.CreateEndpoint(&wq)
 		if err != nil {
+			log.Printf("forward tcp request: %s:%d->%s:%d: %s", id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
+
 			// 发送RST：防止潜在的半开TCP连接泄漏
 			r.Complete(true)
 			return
@@ -74,10 +70,9 @@ func NewTcpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *tcp.Forwar
 
 		setSocketOptions(s, ep)
 
-		conn := &TcpConn{
+		ForwardTCPConn(&TcpConn{
 			TCPConn: gonet.NewTCPConn(&wq, ep),
 			id:      id,
-		}
-		ForwardTCPConn(conn, stun_quic_conn)
+		}, stun_quic_conn)
 	})
 }

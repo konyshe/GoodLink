@@ -42,8 +42,13 @@ func Start() error {
 	}
 
 	netstack_stack = stack.New(stack.Options{
-		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol},
-		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol},
+		NetworkProtocols: []stack.NetworkProtocolFactory{
+			ipv4.NewProtocol,
+		},
+		TransportProtocols: []stack.TransportProtocolFactory{
+			tcp.NewProtocol,
+			udp.NewProtocol,
+		},
 	})
 
 	wintunEP, err := Open(GetName(), 1490) //因为要加自定义头，防止超出1500

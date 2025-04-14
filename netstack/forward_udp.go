@@ -43,19 +43,22 @@ func NewUdpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *udp.Forwar
 			wq waiter.Queue
 			id = r.ID()
 		)
+
+		if stun_quic_conn == nil {
+			return
+		}
+
 		// 创建UDP端点
 		ep, err := r.CreateEndpoint(&wq)
 		if err != nil {
 			// 记录UDP转发请求错误
-			log.Printf("forward udp request: %s:%d->%s:%d: %s",
-				id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
+			log.Printf("forward udp request: %s:%d->%s:%d: %s", id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
 			return
 		}
 
-		conn := &udpConn{
+		ForwardUdpConn(&udpConn{
 			UDPConn: gonet.NewUDPConn(&wq, ep),
 			id:      id,
-		}
-		ForwardUdpConn(conn, stun_quic_conn)
+		}, stun_quic_conn)
 	})
 }
