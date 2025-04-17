@@ -111,10 +111,13 @@ func (e *Endpoint) dispatchLoop(cancel context.CancelFunc) {
 	// 获取配置参数：数据偏移量和MTU值
 	offset, mtu := e.offset, int(e.mtu)
 
+	// 创建带偏移量的接收缓冲区（用于TUN设备头）
+	data := make([]byte, offset+mtu)
+
 	// 数据包接收主循环
 	for {
 		// 创建带偏移量的接收缓冲区（用于TUN设备头）
-		data := make([]byte, offset+mtu)
+		// data := make([]byte, offset+mtu)
 
 		// 从IO接口读取原始数据
 		n, err := e.rw.Read(data)

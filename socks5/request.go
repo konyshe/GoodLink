@@ -2,7 +2,7 @@ package socks5
 
 import (
 	"fmt"
-	"goodlink/pool"
+	"goodlink/pool2"
 	"io"
 	"net"
 	"strconv"
@@ -267,14 +267,16 @@ func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 	// Handle on a per type basis
 	switch addrType[0] {
 	case ipv4Address:
-		addr := make([]byte, 4)
+		addr := pool2.Malloc(4) //make([]byte, 4)
+		defer pool2.Free(addr)
 		if _, err := io.ReadAtLeast(r, addr, len(addr)); err != nil {
 			return nil, err
 		}
 		d.IP = net.IP(addr)
 
 	case ipv6Address:
-		addr := make([]byte, 16)
+		addr := pool2.Malloc(16) //make([]byte, 16)
+		defer pool2.Free(addr)
 		if _, err := io.ReadAtLeast(r, addr, len(addr)); err != nil {
 			return nil, err
 		}
@@ -285,7 +287,8 @@ func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 			return nil, err
 		}
 		addrLen := int(addrType[0])
-		fqdn := make([]byte, addrLen)
+		fqdn := pool2.Malloc(addrLen) //make([]byte, addrLen)
+		defer pool2.Free(fqdn)
 		if _, err := io.ReadAtLeast(r, fqdn, addrLen); err != nil {
 			return nil, err
 		}
@@ -337,7 +340,8 @@ func sendReply(w io.Writer, resp uint8, addr *AddrSpec) error {
 	}
 
 	// Format the message
-	msg := make([]byte, 6+len(addrBody))
+	msg := pool2.Malloc(6 + len(addrBody)) //make([]byte, 6+len(addrBody))
+	defer pool2.Free(msg)
 	msg[0] = socks5Version
 	msg[1] = resp
 	msg[2] = 0 // Reserved
@@ -358,10 +362,7 @@ type closeWriter interface {
 // proxy is used to suffle data from src to destination, and sends errors
 // down a dedicated channel
 func proxy(dst io.Writer, src io.Reader, errCh chan error) {
-	buf := pool.Malloc(1500)
-	defer pool.Free(buf)
-
-	_, err := io.CopyBuffer(dst, src, buf)
+	_, err := io.Copy(dst, src)
 	if tcpConn, ok := dst.(closeWriter); ok {
 		tcpConn.CloseWrite()
 	}

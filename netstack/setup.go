@@ -51,7 +51,7 @@ func Start() error {
 		},
 	})
 
-	wintunEP, err := Open(GetName(), 1490) //因为要加自定义头，防止超出1500
+	wintunEP, err := Open(GetName(), 0)
 	if err != nil {
 		return fmt.Errorf("请管理员权限运行")
 	}

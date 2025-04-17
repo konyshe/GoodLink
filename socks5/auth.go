@@ -2,6 +2,7 @@ package socks5
 
 import (
 	"fmt"
+	"goodlink/pool2"
 	"io"
 )
 
@@ -88,7 +89,8 @@ func (a UserPassAuthenticator) Authenticate(reader io.Reader, writer io.Writer) 
 
 	// Get the password
 	passLen := int(header[0])
-	pass := make([]byte, passLen)
+	pass := pool2.Malloc(passLen) //make([]byte, passLen)
+	defer pool2.Free(pass)
 	if _, err := io.ReadAtLeast(reader, pass, passLen); err != nil {
 		return nil, err
 	}
