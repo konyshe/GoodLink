@@ -90,7 +90,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 #### windows, 命令行
 
 ```
-.\goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
 ###  **启动 local端** 
@@ -114,7 +114,7 @@ docker rm goodlink -f; docker run -d --name=goodlink --net=host --restart=always
 #### windows, 命令行
 
 ```
-.\goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
 
