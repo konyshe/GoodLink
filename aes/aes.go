@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"goodlink/md5"
-	"goodlink/pool2"
 )
 
 func getKey(key string) []byte {
@@ -34,8 +33,7 @@ func Encrypt(origData []byte, key string) string {
 	blockSize := block.BlockSize()
 	origData = PKCS7Padding(origData, blockSize)
 	blockMode := cipher.NewCBCEncrypter(block, k[:blockSize])
-	cryted := pool2.Malloc(len(origData)) //make([]byte, len(origData))
-	defer pool2.Free(cryted)
+	cryted := make([]byte, len(origData))
 	blockMode.CryptBlocks(cryted, origData)
 	return base64.StdEncoding.EncodeToString(cryted)
 }
@@ -52,8 +50,7 @@ func Decrypt(cryted []byte, key string) []byte {
 	block, _ := aes.NewCipher(k)
 	blockSize := block.BlockSize()
 	blockMode := cipher.NewCBCDecrypter(block, k[:blockSize])
-	orig := pool2.Malloc(len(crytedByte)) //make([]byte, len(crytedByte))
-	defer pool2.Free(orig)
+	orig := make([]byte, len(crytedByte))
 	blockMode.CryptBlocks(orig, crytedByte)
 	return PKCS7UnPadding(orig)
 }
