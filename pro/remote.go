@@ -31,7 +31,20 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 	var tun_active_chain chan quic.Connection
 	var tun_passive_chain chan quic.Connection
 
-	for RedisGet(&redisJson) != nil && m_remote_stats == 1 {
+	for {
+		if m_remote_stats != 1 {
+			//如果UI上点了停止，则退出
+			return nil, nil, nil, nil, nil
+		}
+
+		if RedisGet(&redisJson) == nil {
+			// 如果收到Local端的请求
+			if redisJson.State == 0 {
+				// 收到的第一个请求，状态应该是0，否则是异常
+				break
+			}
+		}
+
 		time.Sleep(5 * time.Second)
 	}
 
@@ -80,7 +93,7 @@ func GetRemoteQuicConn() (*net.UDPConn, *tun.TunActive, *tun.TunPassive, quic.Co
 			redisJson.State = 1
 
 			if redisJson.LocalVersion != GetVersion() {
-				utils.Log().DebugF("两端版本不兼容: %v", redisJson)
+				utils.Log().DebugF("两端版本不兼容: Local: %v => Remote: %v", redisJson.LocalVersion, GetVersion())
 				RedisSet(redisJson.SocketTimeOut*3, &redisJson)
 				return udp_conn, tun_active, tun_passive, nil, nil
 			}
