@@ -8,6 +8,8 @@
 
 v2版本使用更加简单，和v1版本区别较大，如需使用v1版本，[切换回1.6版文档](https://gitee.com/konyshe/goodlink/blob/v1.6/README.md)
 
+[版本发布下载](https://gitee.com/konyshe/goodlink/releases)
+
 # 特点
 
 1. 两台主机之间直连！直连！直连！不经过第三方服务器, 不用担心数据泄露
