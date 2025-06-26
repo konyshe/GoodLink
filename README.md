@@ -40,12 +40,13 @@
 
 10. 该项目刚刚起步, 可能不太稳定, 欢迎提出ISSUES, 帮忙测试的同学将保证永久免费使用
 
- <table>
-	<th>Remote端</th><th>Local端</th><th>P2P成功</th>
-	<tr><td>NAT1-3</td><td>NAT1-4</td><td>YES</td></tr>
-      <tr><td>NAT1-4</td><td>NAT1-3</td><td>YES</td></tr>
-	<tr><td>NAT4</td><td>NAT4</td><td>由于运营商算法调整，不保证100%</td></tr>
-  </table>
+<table>
+    <th>Remote端</th><th>Local端</th><th>P2P成功</th>
+    <tr><td>NAT1-3</td><td>NAT1-4</td><td>YES</td></tr>
+    <tr><td>NAT1-4</td><td>NAT1-3</td><td>YES</td></tr>
+    <tr><td>NAT4</td><td>NAT4</td><td>不保证</td></tr>
+    <tr><td>2G-5G网络</td><td>2G-5G网络</td><td>不支持</td></tr>
+</table>
 
 # 工作模式
 
