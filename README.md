@@ -42,8 +42,8 @@
 
 <table>
     <th>Remote端</th><th>Local端</th><th>P2P成功</th>
-    <tr><td>NAT1-3</td><td>NAT1-4</td><td>YES</td></tr>
-    <tr><td>NAT1-4</td><td>NAT1-3</td><td>YES</td></tr>
+    <tr><td>NAT1-3</td><td>NAT1-4</td><td>支持</td></tr>
+    <tr><td>NAT1-4</td><td>NAT1-3</td><td>支持</td></tr>
     <tr><td>NAT4</td><td>NAT4</td><td>不保证</td></tr>
     <tr><td>2G-5G网络</td><td>2G-5G网络</td><td>不支持</td></tr>
 </table>
