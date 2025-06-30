@@ -6,7 +6,7 @@
 
 **注: 该项目仅用于学习研究, 目前无商业合作，更无恶意行为。如果未来有广告之类盈利的行为，会郑重告知大家。另外声明：严禁用于违法行为！！！**
 
-当前已是v2版本，使用更加简单，和v1版本区别较大，如需使用v1版本，[切换回1.6版文档](https://gitee.com/konyshe/goodlink/blob/v1.6/README.md)
+该项目已被GitCode招纳为孵化项目，欢迎在[GitCode上提问](https://gitcode.com/konyshe/goodlink/issues)，我会优先回复
 
 [版本发布下载](https://gitee.com/konyshe/goodlink/releases)
 
