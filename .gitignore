@@ -17,3 +17,4 @@ config.json
 debug.sh
 *.dll
 *.syso
+.claude

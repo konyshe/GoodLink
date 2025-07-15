@@ -29,11 +29,13 @@ type TUN struct {
 	name   string         // TUN 设备名称，用于系统识别
 	offset int            // 数据包偏移量，用于处理TUN_PI头
 
-	rSizes []int      // 读取数据包大小数组，用于存储每个数据包的实际大小
-	rBuffs [][]byte   // 读取缓冲区数组，用于存储接收到的数据包
-	wBuffs [][]byte   // 写入缓冲区数组，用于存储待发送的数据包
-	rMutex sync.Mutex // 读取互斥锁，保护并发读取操作
-	wMutex sync.Mutex // 写入互斥锁，保护并发写入操作
+	// 使用读写锁替代互斥锁，允许并发读取
+	rMutex sync.RWMutex // 读取读写锁，优化并发读取性能
+	wMutex sync.Mutex   // 写入互斥锁，保护并发写入操作
+	
+	// 为每个goroutine分配独立的缓冲区池避免竞争
+	rBuffPool sync.Pool // 读取缓冲区池
+	wBuffPool sync.Pool // 写入缓冲区池
 }
 
 // Open 创建一个新的 TUN 设备
@@ -60,9 +62,21 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 		name:   name,              // 设置设备名称
 		mtu:    mtu,               // 设置MTU值
 		offset: offset,            // 设置数据包偏移量
-		rSizes: make([]int, 1),    // 初始化大小为1的数组，用于存储单个数据包大小
-		rBuffs: make([][]byte, 1), // 初始化大小为1的数组，用于存储单个接收缓冲区
-		wBuffs: make([][]byte, 1), // 初始化大小为1的数组，用于存储单个发送缓冲区
+	}
+	
+	// 初始化缓冲区池
+	t.rBuffPool.New = func() interface{} {
+		return &struct {
+			buffs [][]byte
+			sizes []int
+		}{
+			buffs: make([][]byte, 1),
+			sizes: make([]int, 1),
+		}
+	}
+	
+	t.wBuffPool.New = func() interface{} {
+		return make([][]byte, 1)
 	}
 
 	// 设置 MTU，如果指定了MTU则使用指定值，否则使用系统默认值
@@ -104,11 +118,16 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 //   - int: 读取的字节数
 //   - error: 读取过程中的错误信息
 func (t *TUN) Read(packet []byte) (int, error) {
-	t.rMutex.Lock() // 加锁保护并发读取
-	defer t.rMutex.Unlock()
-	t.rBuffs[0] = packet                              // 设置接收缓冲区，将传入的缓冲区设置为读取目标
-	_, err := t.nt.Read(t.rBuffs, t.rSizes, t.offset) // 从TUN设备读取数据，rSizes[0]将被设置为实际读取的字节数
-	return t.rSizes[0], err                           // 返回读取的字节数和错误
+	// 从池中获取缓冲区结构
+	bufStruct := t.rBuffPool.Get().(*struct {
+		buffs [][]byte
+		sizes []int
+	})
+	defer t.rBuffPool.Put(bufStruct)
+	
+	bufStruct.buffs[0] = packet                                   // 设置接收缓冲区
+	_, err := t.nt.Read(bufStruct.buffs, bufStruct.sizes, t.offset) // 从TUN设备读取数据
+	return bufStruct.sizes[0], err                                // 返回读取的字节数和错误
 }
 
 // Name 返回 TUN 设备的名称
@@ -136,10 +155,12 @@ func (t *TUN) Close() {
 //   - int: 写入的字节数
 //   - error: 写入过程中的错误信息
 func (t *TUN) Write(packet []byte) (int, error) {
-	t.wMutex.Lock() // 加锁保护并发写入
-	defer t.wMutex.Unlock()
-	t.wBuffs[0] = packet                  // 设置发送缓冲区，将待发送的数据包放入缓冲区
-	return t.nt.Write(t.wBuffs, t.offset) // 向TUN设备写入数据，offset用于处理TUN_PI头
+	// 从池中获取写入缓冲区
+	buffs := t.wBuffPool.Get().([][]byte)
+	defer t.wBuffPool.Put(buffs)
+	
+	buffs[0] = packet                 // 设置发送缓冲区
+	return t.nt.Write(buffs, t.offset) // 向TUN设备写入数据
 }
 
 // Type 返回设备类型，用于标识这是一个TUN设备

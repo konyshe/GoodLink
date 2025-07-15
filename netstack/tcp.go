@@ -5,27 +5,33 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
-	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
 	// defaultWndSize 如果设置为零，则使用默认的接收窗口缓冲区大小
-	defaultWndSize = 0
+	defaultWndSize = 64 * 1024
 
 	// maxConnAttempts 指定最大并发TCP连接尝试数
-	maxConnAttempts = 2 << 10
+	maxConnAttempts = 2 << 12
+
+	// 优化的缓冲区大小配置
+	minSendBufferSize = 64 * 1024
+	maxSendBufferSize = 4 * 1024 * 1024
+	defaultSendBufferSize = 256 * 1024
+
+	minReceiveBufferSize = 64 * 1024
+	maxReceiveBufferSize = 8 * 1024 * 1024
+	defaultReceiveBufferSize = 512 * 1024
 
 	// tcpKeepaliveCount 在放弃并关闭连接之前发送的最大TCP保活探测次数
-	// 如果在另一端没有收到响应
-	tcpKeepaliveCount = 9
+	tcpKeepaliveCount = 6
 
-	// tcpKeepaliveIdle 指定在发送第一个TCP保活数据包之前连接必须保持空闲的时间
-	// 一旦达到这个时间，就使用tcpKeepaliveInterval选项
-	tcpKeepaliveIdle = 60 * time.Second
+	// tcpKeepaliveIdle 减少保活空闲时间以更快检测断开连接
+	tcpKeepaliveIdle = 30 * time.Second
 
-	// tcpKeepaliveInterval 指定发送TCP保活数据包之间的间隔时间
-	tcpKeepaliveInterval = 30 * time.Second
+	// tcpKeepaliveInterval 减少探测间隔
+	tcpKeepaliveInterval = 10 * time.Second
 )
 
 // setSocketOptions 设置TCP套接字选项
@@ -51,17 +57,19 @@ func setSocketOptions(s *stack.Stack, ep tcpip.Endpoint) tcpip.Error {
 		}
 	}
 	{ /* TCP接收/发送缓冲区大小 */
-		// 设置发送缓冲区大小
-		var ss tcpip.TCPSendBufferSizeRangeOption
-		if err := s.TransportProtocolOption(header.TCPProtocolNumber, &ss); err == nil {
-			ep.SocketOptions().SetSendBufferSize(int64(ss.Default), false)
-		}
+		// 设置优化的发送缓冲区大小
+		ep.SocketOptions().SetSendBufferSize(int64(defaultSendBufferSize), false)
 
-		// 设置接收缓冲区大小
-		var rs tcpip.TCPReceiveBufferSizeRangeOption
-		if err := s.TransportProtocolOption(header.TCPProtocolNumber, &rs); err == nil {
-			ep.SocketOptions().SetReceiveBufferSize(int64(rs.Default), false)
-		}
+		// 设置优化的接收缓冲区大小
+		ep.SocketOptions().SetReceiveBufferSize(int64(defaultReceiveBufferSize), false)
+	}
+	{ /* TCP性能优化选项 */
+		// 启用延迟ACK以减少网络流量
+		ep.SocketOptions().SetDelayOption(true)
+
+		// 启用重用地址和端口
+		ep.SocketOptions().SetReuseAddress(true)
+		ep.SocketOptions().SetReusePort(true)
 	}
 	return nil
 }
