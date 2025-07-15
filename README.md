@@ -8,7 +8,7 @@
 
 [版本发布下载](https://gitee.com/konyshe/goodlink/releases)
 
- **特别通知：该项目已入选【GitCode百大项目提名】，帮忙助力有机会获得奖品，[点击这里提个咨询问题or需求即可助力](https://gitcode.com/konyshe/goodlink/issues) 。同时我会尽力满足助力同学一次深度问题or需求, 再次感谢支持！** 
+ **特别通知：该项目被邀请【GitCode百大项目】提名，帮忙助力有机会获得奖品，[点击这里提个咨询问题or需求即可助力](https://gitcode.com/konyshe/goodlink/issues) 。同时我会尽力满足助力同学一次深度问题or需求, 再次感谢支持！** 
 
 <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/gitcode.png">
 
