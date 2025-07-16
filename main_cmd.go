@@ -14,6 +14,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/debug"
 	"syscall"
 	"time"
@@ -55,6 +56,9 @@ func main2() {
 }
 
 func main() {
+	// 新增系统级调优
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	debug.SetGCPercent(10) // 降低GC频率
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Recovered from panic:", r)
