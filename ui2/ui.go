@@ -4,7 +4,7 @@ package ui2
 
 import (
 	"encoding/json"
-	"gogo"
+	"gotools"
 	"log"
 
 	"goodlink/config"
@@ -37,7 +37,7 @@ const (
 
 func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	var configInfo config.ConfigInfo
-	json.Unmarshal(gogo.Utils().FileReadAll("goodlink.json"), &configInfo)
+	json.Unmarshal(gotools.Utils().FileReadAll("goodlink.json"), &configInfo)
 	log.Println(configInfo)
 
 	m_validated_key = widget.NewEntry()

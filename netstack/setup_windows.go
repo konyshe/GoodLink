@@ -5,11 +5,12 @@ package netstack
 import (
 	"crypto/tls"
 	"fmt"
-	"gogo"
 	"goodlink/winipcfg"
+	"gotools"
 	"io"
 	"net/http"
 	"net/netip"
+	"os"
 	"time"
 )
 
@@ -44,7 +45,7 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 }
 
 func InitWintunDll() error {
-	if gogo.Utils().FileExist("wintun.dll") {
+	if _, err := os.Stat("wintun.dll"); os.IsExist(err) {
 		return nil
 	}
 
@@ -69,7 +70,7 @@ func InitWintunDll() error {
 		return err
 	}
 
-	gogo.Utils().FileAppend("wintun.dll", res)
+	gotools.Utils().FileAppend("wintun.dll", res)
 
 	return nil
 }

@@ -4,8 +4,9 @@ package ui2
 
 import (
 	"encoding/json"
-	"gogo"
+	"gotools"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -87,8 +88,8 @@ func start_button_click() {
 			RemotePort: m_ui_remote.GetRemotePort(),
 		})
 		log.Println(string(configByte))
-		gogo.Utils().FileDel("goodlink.json")
-		gogo.Utils().FileAppend("goodlink.json", configByte)
+		os.Remove("goodlink.json")
+		gotools.Utils().FileAppend("goodlink.json", configByte)
 	}
 
 	switch m_stats_start_button {

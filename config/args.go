@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
-	"gogo"
+	"gotools"
 	"os"
 )
 
@@ -54,7 +54,7 @@ func Help(ver string) {
 
 	if *v {
 		fmt.Printf("Version: %s\n", ver)
-		fmt.Print(gogo.BuildVersion())
+		fmt.Print(gotools.BuildVersion())
 		os.Exit(0)
 	}
 }

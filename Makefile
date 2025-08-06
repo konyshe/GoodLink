@@ -6,9 +6,9 @@ BuildTime=$(shell date +'%Y-%m-%d %H:%M:%S')
 GOBUILD=GO111MODULE=on \
 		GOPROXY="https://goproxy.cn,direct" \
 		go build -trimpath -ldflags \
-		'-X "gogo.GitCommitLog=$(GitCommitLog)" \
-    	-X "gogo.GitStatus=$(GitStatus)" \
-    	-X "gogo.BuildTime=$(BuildTime)" \
+		'-X "gotools.GitCommitLog=$(GitCommitLog)" \
+    	-X "gotools.GitStatus=$(GitStatus)" \
+    	-X "gotools.BuildTime=$(BuildTime)" \
 		-w -s -buildid='
 
 PLATFORM_LIST = \
