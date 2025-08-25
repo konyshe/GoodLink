@@ -1,8 +1,7 @@
 <div align="center">
   <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
   
-  <h1>GoodLink</h1>
-  
+ 
   <p><strong>基于P2P的安全内网穿透工具</strong></p>
   
   <p>
