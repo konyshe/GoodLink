@@ -2,7 +2,7 @@
   <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
   
  
-  <p><strong>基于P2P的安全内网穿透工具</strong></p>
+  <p><strong>是全网最简单、零成本的内网穿透</strong></p>
   
   <p>
     <a href="https://gitee.com/konyshe/goodlink/releases">
@@ -21,7 +21,7 @@
 
 ## 🎯 项目简介
 
-**GoodLink** 是一个基于P2P技术的内网穿透工具，专为解决远程办公中的网络访问问题而设计。
+**GoodLink** 是全网最简单、零成本的内网穿透，一条命令将互联网任意两台主机直连！无需公网IP中转、无需安装、无需注册。IP直连，不限端口。
 
 ### 💡 解决的问题
 - 外出办公时如何使用Windows自带的远程桌面？
