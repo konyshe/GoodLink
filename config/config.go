@@ -3,8 +3,8 @@ package config
 import (
 	"crypto/tls"
 	"encoding/json"
+	"go2"
 	"goodlink/aes"
-	"gotools"
 	"io"
 	"net/http"
 	"time"
@@ -38,7 +38,7 @@ func Init() error {
 	var err error
 	var resp *http.Response
 
-	if res = gotools.Utils().FileReadAll("config.json"); res == nil {
+	if res = go2.Utils().FileReadAll("config.json"); res == nil {
 		client := &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -70,8 +70,8 @@ func Init() error {
 
 		body, _ := json.Marshal(configInfo)
 		temp3 := aes.Encrypt(body, "goodlink")
-		gotools.Utils().FileDel("config.json")
-		gotools.Utils().FileAppend("config.json", []byte(temp3))
+		go2.Utils().FileDel("config.json")
+		go2.Utils().FileAppend("config.json", []byte(temp3))
 	*/
 	return nil
 }

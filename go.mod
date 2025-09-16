@@ -17,7 +17,7 @@ require (
 	golang.org/x/sys v0.34.0
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb
 	goodlink2 v0.0.0
-	gotools v0.0.0
+	go2 v0.0.0
 	gvisor.dev/gvisor v0.0.0-20250806010417-2099bc1c6a2e
 )
 
@@ -92,7 +92,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace gotools => ../gotools
+replace go2 => ../go2
 
 replace goodlink2 => ../goodlink2
 

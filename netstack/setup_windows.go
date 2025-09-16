@@ -5,8 +5,8 @@ package netstack
 import (
 	"crypto/tls"
 	"fmt"
+	"go2"
 	"goodlink/winipcfg"
-	"gotools"
 	"io"
 	"net/http"
 	"net/netip"
@@ -70,7 +70,7 @@ func InitWintunDll() error {
 		return err
 	}
 
-	gotools.Utils().FileAppend("wintun.dll", res)
+	go2.Utils().FileAppend("wintun.dll", res)
 
 	return nil
 }

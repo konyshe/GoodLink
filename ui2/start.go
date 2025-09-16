@@ -4,7 +4,7 @@ package ui2
 
 import (
 	"encoding/json"
-	"gotools"
+	"go2"
 	"log"
 	"os"
 	"sync"
@@ -89,7 +89,7 @@ func start_button_click() {
 		})
 		log.Println(string(configByte))
 		os.Remove("goodlink.json")
-		gotools.Utils().FileAppend("goodlink.json", configByte)
+		go2.Utils().FileAppend("goodlink.json", configByte)
 	}
 
 	switch m_stats_start_button {

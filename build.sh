@@ -2,8 +2,8 @@
 
 set -x
 
-rm -rf gotools goodlink2
-cp -r ../gotools .
+rm -rf go2 goodlink2
+cp -r ../go2 .
 cp -r ../goodlink2 .
 
 if [ -e "/usr/bin/upx" ]; then
@@ -26,7 +26,7 @@ docker pull tonistiigi/xx:golang
 
 docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
 
-rm -rf gotools goodlink2 upx
+rm -rf go2 goodlink2 upx
 
 sed -i "/$BUILD_TIME/s/$BUILD_TIME/111111111111/g" Dockerfile
 

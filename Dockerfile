@@ -16,7 +16,7 @@ COPY --from=tonistiigi/xx:golang / /
 ARG TARGETOS TARGETARCH TARGETVARIANT
 
 RUN echo 111111111111
-COPY gotools /go/src/gotools
+COPY go2 /go/src/go2
 COPY goodlink2 /go/src/goodlink2
 
 RUN --mount=target=. \

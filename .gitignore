@@ -5,7 +5,7 @@ __debug_bin*
 *.pdf
 bin
 upx
-gotools
+go2
 *.exe
 fyne_metadata_init.go
 fyne.syso
