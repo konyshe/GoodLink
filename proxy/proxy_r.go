@@ -41,7 +41,7 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 		remotePort := binary.BigEndian.Uint16(buf[head_len-2 : head_len])
 
 		switch buf[0] {
-		case 0x00:
+		case 0x00: // TCP
 			switch remotePort {
 			case 1080:
 				go func() {
@@ -49,6 +49,9 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 					socks5_svr.ServeConnQuic(new_quic_stream, remoteAddr.IP, remoteAddr.Port)
 				}()
 			default:
+				if remotePort == 13389 {
+					remotePort = 3389
+				}
 				new_conn, err := net.DialTCP("tcp4", nil, &net.TCPAddr{
 					IP:   net.IPv4(127, 0, 0, 1),
 					Port: int(remotePort),
@@ -58,7 +61,7 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 					go ForwardQ2T(new_quic_stream, new_conn, stun_quic_conn)
 				}
 			}
-		case 0x01:
+		case 0x01: // UDP
 			switch remotePort {
 			//case 1080:
 
