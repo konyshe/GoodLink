@@ -49,6 +49,8 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 					socks5_svr.ServeConnQuic(new_quic_stream, remoteAddr.IP, remoteAddr.Port)
 				}()
 			default:
+				// 用户反馈无法连接3389端口，修改端口后可以连接
+				// 这里是为了方便用户，直接访问13389端口就可以连接到3389端口
 				if remotePort == 13389 {
 					remotePort = 3389
 				}
