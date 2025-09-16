@@ -38,7 +38,7 @@ func Init() error {
 	var err error
 	var resp *http.Response
 
-	if res = go2.Utils().FileReadAll("config.json"); res == nil {
+	if res = go2.FileReadAll("config.json"); res == nil {
 		client := &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{

@@ -70,7 +70,7 @@ func InitWintunDll() error {
 		return err
 	}
 
-	go2.Utils().FileAppend("wintun.dll", res)
+	go2.FileAppend("wintun.dll", res)
 
 	return nil
 }
