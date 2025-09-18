@@ -3,12 +3,11 @@ package proxy
 import (
 	"context"
 	"encoding/binary"
+	"go2/log"
 	pool2 "go2/pool"
-	"goodlink/socks5"
-	"goodlink/utils"
 	"io"
-	"log"
 	"net"
+	proxy_handle "proxy/handle"
 
 	"github.com/quic-go/quic-go"
 )
@@ -18,12 +17,8 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 	buf := pool2.Malloc(head_len)
 	defer pool2.Free(buf)
 
-	socks5_svr, err := socks5.New(&socks5.Config{})
-	if err != nil {
-		utils.Log().DebugF("代理模式: %v\n", err)
-		return
-	}
-	log.Println("开启代理模式")
+	proxy_handle.Init()
+	log.Info("开启代理模式")
 
 	for {
 	fewfgwegwe:
@@ -34,7 +29,7 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 
 		_, err = io.ReadFull(new_quic_stream, buf[:head_len])
 		if err != nil {
-			log.Println("read quic head: ", err)
+			log.Error("read quic head: ", err)
 			new_quic_stream.Close()
 			goto fewfgwegwe
 		}
@@ -45,8 +40,9 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 			switch remotePort {
 			case 1080:
 				go func() {
+					defer new_quic_stream.Close()
 					remoteAddr := stun_quic_conn.RemoteAddr().(*net.UDPAddr)
-					socks5_svr.ServeConnQuic(new_quic_stream, remoteAddr.IP, remoteAddr.Port)
+					proxy_handle.Serve(new_quic_stream, remoteAddr.String())
 				}()
 			default:
 				// 用户反馈无法连接3389端口，修改端口后可以连接

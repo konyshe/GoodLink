@@ -1,6 +1,6 @@
 module goodlink
 
-go 1.25.0
+go 1.25.1
 
 require (
 	fyne.io/fyne v1.4.3
@@ -14,11 +14,11 @@ require (
 	github.com/quic-go/quic-go v0.54.0
 	github.com/sirupsen/logrus v1.9.3
 	go2 v0.0.0
-	golang.org/x/net v0.44.0
 	golang.org/x/sys v0.36.0
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb
 	goodlink2 v0.0.0
 	gvisor.dev/gvisor v0.0.0-20250915223456-0bb00ae3d273
+	proxy v0.0.0
 )
 
 require (
@@ -71,6 +71,7 @@ require (
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
 	golang.org/x/image v0.31.0 // indirect
 	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.13.0 // indirect
@@ -82,6 +83,8 @@ require (
 replace go2 => ../go2
 
 replace goodlink2 => ../goodlink2
+
+replace proxy => ../proxy
 
 replace github.com/quic-go/quic-go => github.com/quic-go/quic-go v0.50.1
 
