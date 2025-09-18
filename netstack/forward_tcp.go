@@ -3,7 +3,7 @@ package netstack
 import (
 	"context"
 	"encoding/binary"
-	"goodlink/pool2"
+	pool2 "go2/pool"
 	"goodlink/proxy"
 	"log"
 

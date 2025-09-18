@@ -3,7 +3,7 @@ package proxy
 import (
 	"context"
 	"encoding/binary"
-	"goodlink/pool2"
+	pool2 "go2/pool"
 	"goodlink/socks5"
 	"goodlink/utils"
 	"io"

@@ -2,7 +2,7 @@ package socks5
 
 import (
 	"fmt"
-	"goodlink/pool2"
+	pool2 "go2/pool"
 	"io"
 	"net"
 	"strconv"

@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"goodlink/pool2"
+	pool2 "go2/pool"
 	"io"
 	"net"
 
