@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+	go2log "go2/log"
 	"goodlink/config"
 	"goodlink/pro"
 	_ "goodlink/pro"
@@ -84,7 +85,7 @@ func main() {
 		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
 		if err != nil {
 			log.Printf("   异常退出: %v", err)
-			utils.DingF("error: %v", err)
+			go2log.Dingf("error: %v", err)
 		}
 	})
 }
