@@ -141,9 +141,19 @@ func RedisDel() {
 	m_redis_db.Del(m_md5_tun_key)
 }
 
+func GetUDPLocalIPPort(level string) (string, int) {
+	conn, err := net.Dial(level, "ifconfig.co:80")
+	if err != nil {
+		return "", 0
+	}
+	defer conn.Close()
+
+	return conn.LocalAddr().(*net.UDPAddr).IP.String(), conn.LocalAddr().(*net.UDPAddr).Port
+}
+
 func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
-	addr.LocalIPv4, _ = utils.GetUDPLocalIPPort("udp4")
-	addr.IPv6, _ = utils.GetUDPLocalIPPort("udp6")
+	addr.LocalIPv4, _ = GetUDPLocalIPPort("udp4")
+	addr.IPv6, _ = GetUDPLocalIPPort("udp6")
 
 	var err error
 

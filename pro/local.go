@@ -23,7 +23,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
-	SessionID := string(utils.RandomBytes(24))
+	SessionID := string(go2.RandomBytes(24))
 	utils.Log().DebugF("会话ID: %s", SessionID)
 
 	redisJson := RedisJsonType{
