@@ -1,8 +1,8 @@
 package pro
 
 import (
+	"go2"
 	"goodlink/config"
-	"goodlink/md5"
 	"goodlink/proxy"
 	"goodlink/utils"
 	"goodlink2/tun"
@@ -228,7 +228,7 @@ func RunRemote(tun_key string) error {
 	m_remote_stats = 1
 
 	m_tun_key = tun_key
-	m_md5_tun_key = md5.Encode(tun_key)
+	m_md5_tun_key = go2.Md5Encode(tun_key)
 
 	for m_remote_stats == 1 {
 

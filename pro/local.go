@@ -2,8 +2,8 @@ package pro
 
 import (
 	"errors"
+	"go2"
 	"goodlink/config"
-	"goodlink/md5"
 	"goodlink/netstack"
 	"goodlink/utils"
 	"goodlink2/tun"
@@ -152,7 +152,7 @@ func RunLocal(tun_key string) error {
 	m_local_state = 1
 
 	m_tun_key = tun_key
-	m_md5_tun_key = md5.Encode(tun_key)
+	m_md5_tun_key = go2.Md5Encode(tun_key)
 
 	count := 0
 

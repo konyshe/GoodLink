@@ -6,7 +6,6 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"fmt"
-	"goodlink/md5"
 )
 
 func getKey(key string) []byte {
@@ -57,9 +56,6 @@ func Decrypt(cryted []byte, key string) []byte {
 
 func AesTest() {
 	text := []byte("hello world")
-
-	temp0 := md5.Encode(string(text))
-	fmt.Printf("md5后: %s\n", temp0)
 
 	key := "1234567812345677777777777781238"
 	temp1 := Encrypt(text, key)
