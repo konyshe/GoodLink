@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"go2"
-	"goodlink/aes"
+	go2aes "go2/aes"
 	"io"
 	"net/http"
 	"time"
@@ -57,7 +57,7 @@ func Init() error {
 		}
 	}
 
-	if err = json.Unmarshal(aes.Decrypt(res, "goodlink"), &configInfo); err != nil {
+	if err = json.Unmarshal(go2aes.Decrypt7(res, "goodlink"), &configInfo); err != nil {
 		return err
 	}
 

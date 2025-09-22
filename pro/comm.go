@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"goodlink/aes"
+	go2aes "go2/aes"
 	"goodlink/config"
 	"goodlink/stun2"
 	"goodlink/utils"
@@ -115,7 +115,7 @@ func RedisSet(time_out time.Duration, redisJson *RedisJsonType) error {
 		return errors.New("Redis为初始化")
 	}
 	if jsonByte, err := json.Marshal(*redisJson); err == nil {
-		m_redis_db.Set(m_md5_tun_key, aes.Encrypt(jsonByte, m_tun_key), time_out)
+		m_redis_db.Set(m_md5_tun_key, go2aes.Encrypt7(jsonByte, m_tun_key), time_out)
 	}
 	return nil
 }
@@ -130,7 +130,7 @@ func RedisGet(redisJson *RedisJsonType) error {
 		return fmt.Errorf("获取信令数据失败: %v", err)
 	}
 
-	if err = json.Unmarshal(aes.Decrypt(aes_res, m_tun_key), redisJson); err != nil {
+	if err = json.Unmarshal(go2aes.Decrypt7(aes_res, m_tun_key), redisJson); err != nil {
 		return fmt.Errorf("解析信令数据失败: %v", err)
 	}
 
