@@ -3,7 +3,7 @@ package netstack
 import (
 	"context"
 	"encoding/binary"
-	pool2 "go2/pool"
+	go2pool "go2/pool"
 	"goodlink/proxy"
 	"log"
 
@@ -28,8 +28,8 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn quic.Connection) {
 	ipv4Bytes := originConn.ID().LocalAddress.As4()
 	new_quic_stream.Write(ipv4Bytes[:]) // 添加[:]转换为切片
 
-	portBytes := pool2.Malloc(2)
-	defer pool2.Free(portBytes)
+	portBytes := go2pool.Malloc(2)
+	defer go2pool.Free(portBytes)
 
 	binary.BigEndian.PutUint16(portBytes, originConn.ID().LocalPort)
 	new_quic_stream.Write(portBytes)

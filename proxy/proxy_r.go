@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"go2/log"
-	pool2 "go2/pool"
+	go2pool "go2/pool"
 	"io"
 	"net"
 	proxy_handle "proxy/handle"
@@ -14,8 +14,8 @@ import (
 
 func ProcessProxyServer(stun_quic_conn quic.Connection) {
 	head_len := 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
-	buf := pool2.Malloc(head_len)
-	defer pool2.Free(buf)
+	buf := go2pool.Malloc(head_len)
+	defer go2pool.Free(buf)
 
 	proxy_handle.Init()
 	log.Info("开启代理模式")
