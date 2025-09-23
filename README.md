@@ -110,7 +110,7 @@ git config --global https.proxy http://127.0.0.1:1080
 ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:1080 %h %p' user@target_host
 ```
 
-**浏览器配置**
+**浏览器代理配置**
 - Chrome/Edge：推荐使用 [SwitchyOmega](https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif) 插件
 - Firefox：内置代理设置支持
 
