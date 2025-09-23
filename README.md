@@ -1,12 +1,29 @@
-<img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
+<div align="center">
+  <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
+
+
+  <p><strong>是全网最简单、零成本的内网穿透</strong></p>
+
+  <p>
+    <a href="https://gitee.com/konyshe/goodlink/releases">
+      <img src="https://img.shields.io/badge/release-最新版本-blue" alt="Release">
+    </a>
+    <a href="https://github.com/konyshe/goodlink/blob/master/LICENSE">
+      <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+    </a>
+    <a href="https://gitee.com/konyshe/goodlink/stargazers">
+      <img src="https://gitee.com/konyshe/goodlink/badge/star.svg" alt="Stars">
+    </a>
+  </p>
+
+  <p>📥 <a href="https://gitee.com/konyshe/goodlink/releases"><strong>下载最新版本</strong></a></p>
+</div>
 
 由于经常外出办公, 对于市面上的远程桌面工具, 无论画面、适配等, 都不如 windows 自带的远程桌面, 但外出如何使用 windows远程桌面呢？
 
 是否可以无需远程桌面, 直接访问公司的内网 WEB, GIT, SSH 等？
 
 注: 该项目仅用于学习研究, 目前无商业合作，更无恶意行为。如果未来有广告之类盈利的行为，会郑重告知大家。另外声明：严禁用于违法行为！！！
-
-[版本发布下载](https://gitee.com/konyshe/goodlink/releases)
 
  **特别通知：该项目被邀请【GitCode百大项目】提名，帮忙助力有机会获得奖品，[点击这里提个咨询问题or需求即可助力](https://gitcode.com/konyshe/goodlink/issues) 。同时我会尽力满足助力同学一次深度问题or需求, 再次感谢支持！**
 
