@@ -52,11 +52,11 @@
 
 7. 由于Local端需要创建虚拟网卡，因此一个PC端只能运行一个 local 端，确定右下角任务栏只能一个GoodLink图标
 
-8. windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒。本程序已开源, 可放心食用
+8. windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒。本程序已开源, 放心食用
 
-9. 以下举例说明中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机 24 字符长度的密钥
+9. 以下举例中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机 24 字符长度的密钥
 
-10. 对于有安全疑问，或者想进阶使用的同学，可以看: [使用GoodLink 是否足够安全？](https://gitee.com/konyshe/goodlink/issues/IBFKC2)
+10. 如有安全疑问，请看: [使用GoodLink 是否足够安全？](https://gitee.com/konyshe/goodlink/issues/IBFKC2)
 
 11. 该项目刚刚起步, 可能不太稳定, 欢迎提出ISSUES, 帮忙测试的同学将保证永久免费使用
 
