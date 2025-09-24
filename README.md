@@ -36,7 +36,7 @@
 
 ![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
 
-# 重点
+# 一定要看
 
 1. **请关闭路由器防火墙，最好同时设置路由器DMZ为本机**
 
