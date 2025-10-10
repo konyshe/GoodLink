@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+go install github.com/akavel/rsrc@latest
+
 set -x
 
 rm -rf go2 goodlink2
