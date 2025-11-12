@@ -118,6 +118,12 @@ ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:1080 %h %p' user@target_host
 
 ###  **启动 remote端**
 
+#### windows, 命令行
+
+```
+.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+```
+
 #### windows, UI
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
@@ -134,13 +140,13 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
+###  **启动 local端**
+
 #### windows, 命令行
 
 ```
-.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
-
-###  **启动 local端**
 
 #### windows, UI
 
@@ -156,12 +162,6 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 ```
 ./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --local
-```
-
-#### windows, 命令行
-
-```
-.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
 
