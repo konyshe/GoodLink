@@ -2,7 +2,7 @@
   <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
 
 
-  <p><strong>是全网最简单、零成本的内网穿透</strong></p>
+  <p><strong>全网最简单、零成本的内网穿透</strong></p>
 
   <p>
     <a href="https://gitee.com/konyshe/goodlink/releases">
@@ -17,7 +17,7 @@
   </p>
 </div>
 
-由于经常外出办公, 对于市面上的远程桌面工具, 无论画面、适配等, 都不如 windows 自带的远程桌面, 但外出如何使用 windows远程桌面呢？
+外出办公, 对比市面上的远程工具, 无论画质、软件适配, 都不如 windows 自带的远程桌面, 但外出如何使用 windows远程桌面？
 
 是否可以无需远程桌面, 直接访问公司的内网 WEB, GIT, SSH 等？
 
