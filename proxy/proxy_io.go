@@ -8,7 +8,7 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func ForwardT2Q(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
+func ForwardT2Q(tc net.Conn, qc quic.Stream) {
 	defer func() {
 		qc.Close()
 		tc.Close()
@@ -16,10 +16,10 @@ func ForwardT2Q(tc net.Conn, qc quic.Stream, stun_quic_conn quic.Connection) {
 
 	buf := go2pool.Malloc(32 * 1024) // 32KB缓冲区提升吞吐量
 	defer go2pool.Free(buf)
-	io.CopyBuffer(tc, qc, buf)
+	io.CopyBuffer(qc, tc, buf) // 从TCP复制到QUIC
 }
 
-func ForwardQ2T(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
+func ForwardQ2T(qc quic.Stream, tc net.Conn) {
 	defer func() {
 		qc.Close()
 		tc.Close()
@@ -27,5 +27,5 @@ func ForwardQ2T(qc quic.Stream, tc net.Conn, stun_quic_conn quic.Connection) {
 
 	buf := go2pool.Malloc(32 * 1024) // 32KB缓冲区提升吞吐量
 	defer go2pool.Free(buf)
-	io.CopyBuffer(qc, tc, buf)
+	io.CopyBuffer(tc, qc, buf) // 从QUIC复制到TCP
 }

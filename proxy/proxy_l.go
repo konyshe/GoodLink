@@ -13,15 +13,19 @@ func ProcessProxyClient(listener net.Listener, stun_quic_conn quic.Connection) {
 
 	for {
 		new_tcp_conn, err := listener.Accept()
-		if err == nil {
-			new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
-			if err == nil {
-				go ForwardT2Q(new_tcp_conn, new_quic_stream, stun_quic_conn)
-				go ForwardQ2T(new_quic_stream, new_tcp_conn, stun_quic_conn)
-				continue
-			}
+		if err != nil {
+			log.Println("accept error:", err)
 			break
 		}
-		break
+
+		new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
+		if err != nil {
+			log.Println("open stream error:", err)
+			new_tcp_conn.Close()
+			break
+		}
+
+		go ForwardT2Q(new_tcp_conn, new_quic_stream)
+		go ForwardQ2T(new_quic_stream, new_tcp_conn)
 	}
 }

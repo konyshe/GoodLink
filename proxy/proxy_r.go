@@ -14,26 +14,26 @@ import (
 
 func ProcessProxyServer(stun_quic_conn quic.Connection) {
 	head_len := 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
-	buf := go2pool.Malloc(head_len)
-	defer go2pool.Free(buf)
 
 	proxy_handle.Init()
 	log.Info("开启代理模式")
 
 	for {
-	fewfgwegwe:
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
 		if err != nil {
 			return
 		}
 
+		buf := go2pool.Malloc(head_len)
 		_, err = io.ReadFull(new_quic_stream, buf[:head_len])
 		if err != nil {
 			log.Error("read quic head: ", err)
 			new_quic_stream.Close()
-			goto fewfgwegwe
+			go2pool.Free(buf)
+			continue
 		}
 		remotePort := binary.BigEndian.Uint16(buf[head_len-2 : head_len])
+		go2pool.Free(buf)
 
 		switch buf[0] {
 		case 0x00: // TCP
@@ -55,8 +55,11 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 					Port: int(remotePort),
 				})
 				if err == nil {
-					go ForwardT2Q(new_conn, new_quic_stream, stun_quic_conn)
-					go ForwardQ2T(new_quic_stream, new_conn, stun_quic_conn)
+					go ForwardT2Q(new_conn, new_quic_stream)
+					go ForwardQ2T(new_quic_stream, new_conn)
+				} else {
+					log.Error("dial tcp error: ", err)
+					new_quic_stream.Close()
 				}
 			}
 		case 0x01: // UDP
@@ -69,8 +72,11 @@ func ProcessProxyServer(stun_quic_conn quic.Connection) {
 					Port: int(remotePort),
 				})
 				if err == nil {
-					go ForwardT2Q(new_conn, new_quic_stream, stun_quic_conn)
-					go ForwardQ2T(new_quic_stream, new_conn, stun_quic_conn)
+					go ForwardT2Q(new_conn, new_quic_stream)
+					go ForwardQ2T(new_quic_stream, new_conn)
+				} else {
+					log.Error("dial udp error: ", err)
+					new_quic_stream.Close()
 				}
 			}
 		}
