@@ -15,8 +15,6 @@
       <img src="https://gitee.com/konyshe/goodlink/badge/star.svg" alt="Stars">
     </a>
   </p>
-
-  <p>📥 <a href="https://gitee.com/konyshe/goodlink/releases"><strong>下载最新版本</strong></a></p>
 </div>
 
 由于经常外出办公, 对于市面上的远程桌面工具, 无论画面、适配等, 都不如 windows 自带的远程桌面, 但外出如何使用 windows远程桌面呢？
