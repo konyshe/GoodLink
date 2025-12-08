@@ -3,7 +3,6 @@ package netstack
 import (
 	"context"
 	"encoding/binary"
-	go2pool "go2/pool"
 	"goodlink/proxy"
 	"log"
 
@@ -23,16 +22,28 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn quic.Connection) {
 		return
 	}
 
-	new_quic_stream.Write([]byte{0x00})
+	// 使用缓冲池获取头部缓冲区
+	headerBuf := getHeaderBuffer()
+	defer putHeaderBuffer(headerBuf)
 
+	// 批量构建头部数据：协议类型(1字节) + IP地址(4字节) + 端口(2字节)
+	buf := (*headerBuf)[:7]
+	buf[0] = 0x00 // TCP协议标识
+
+	// 写入IPv4地址
 	ipv4Bytes := originConn.ID().LocalAddress.As4()
-	new_quic_stream.Write(ipv4Bytes[:]) // 添加[:]转换为切片
+	copy(buf[1:5], ipv4Bytes[:])
 
-	portBytes := go2pool.Malloc(2)
-	defer go2pool.Free(portBytes)
+	// 写入端口（大端序）
+	binary.BigEndian.PutUint16(buf[5:7], originConn.ID().LocalPort)
 
-	binary.BigEndian.PutUint16(portBytes, originConn.ID().LocalPort)
-	new_quic_stream.Write(portBytes)
+	// 一次性写入所有头部数据
+	if _, err := new_quic_stream.Write(buf); err != nil {
+		log.Println("写入头部失败", err)
+		originConn.Close()
+		new_quic_stream.Close()
+		return
+	}
 
 	go proxy.ForwardQ2T(new_quic_stream, originConn)
 	go proxy.ForwardT2Q(originConn, new_quic_stream)

@@ -25,6 +25,10 @@ func handleConnection(ep tcpip.Endpoint, wq *waiter.Queue) {
 	// 退出时自动取消事件注册
 	defer wq.EventUnregister(&waitEntry)
 
+	// 使用缓冲池获取I/O缓冲区，减少内存分配
+	ioBuf := getIOBuffer()
+	defer putIOBuffer(ioBuf)
+
 	// 连接处理主循环
 	for {
 		var buf bytes.Buffer

@@ -16,13 +16,13 @@ const (
 	maxConnAttempts = 2 << 12
 
 	// 优化的缓冲区大小配置
-	minSendBufferSize = 64 * 1024
-	maxSendBufferSize = 4 * 1024 * 1024
-	defaultSendBufferSize = 256 * 1024
+	minSendBufferSize     = 64 * 1024
+	maxSendBufferSize     = 4 * 1024 * 1024
+	defaultSendBufferSize = 512 * 1024 // 从256KB提升到512KB
 
-	minReceiveBufferSize = 64 * 1024
-	maxReceiveBufferSize = 8 * 1024 * 1024
-	defaultReceiveBufferSize = 512 * 1024
+	minReceiveBufferSize     = 64 * 1024
+	maxReceiveBufferSize     = 8 * 1024 * 1024
+	defaultReceiveBufferSize = 1024 * 1024 // 从512KB提升到1MB
 
 	// tcpKeepaliveCount 在放弃并关闭连接之前发送的最大TCP保活探测次数
 	tcpKeepaliveCount = 6
