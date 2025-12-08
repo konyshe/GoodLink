@@ -33,8 +33,8 @@ func ForwardUdpConn(originConn *udpConn, stun_quic_conn quic.Connection) {
 	binary.BigEndian.PutUint16(portBytes, originConn.ID().LocalPort)
 	new_quic_stream.Write(portBytes)
 
-	go proxy.ForwardQ2T(new_quic_stream, originConn, stun_quic_conn)
-	go proxy.ForwardT2Q(originConn, new_quic_stream, stun_quic_conn)
+	go proxy.ForwardQ2T(new_quic_stream, originConn)
+	go proxy.ForwardT2Q(originConn, new_quic_stream)
 }
 
 func NewUdpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *udp.Forwarder {
