@@ -12,7 +12,7 @@ RUN apt update \
     && apt-get -qq install -y --no-install-recommends ca-certificates
 
 WORKDIR /go/src/goodlink
-COPY --from=tonistiigi/xx:golang / /
+#COPY --from=tonistiigi/xx:golang / /
 ARG TARGETOS TARGETARCH TARGETVARIANT
 
 RUN echo 111111111111
