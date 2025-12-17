@@ -1,7 +1,7 @@
-FROM --platform=${BUILDPLATFORM} golang:latest AS builder
+FROM --platform=${BUILDPLATFORM} golang:bookworm AS builder
 
-RUN echo 'Acquire::http::proxy "http://172.17.0.1:7899";' | tee -a /etc/apt/apt.conf
-RUN echo 'Acquire::https::proxy "http://172.17.0.1:7899";' | tee -a /etc/apt/apt.conf
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN sed -i 's@deb.debian.org@mirrors.ustc.edu.cn@g' /etc/apt/sources.list.d/debian.sources
 RUN export GO111MODULE=on
 RUN export GOPROXY=https://goproxy.cn,direct
 
