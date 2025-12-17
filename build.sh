@@ -21,11 +21,11 @@ make clean
 BUILD_TIME=$(date +'%Y%m%d%H%M')
 sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
 
-docker rmi dev/goodlink:latest -f
 
 docker pull golang:bookworm
 docker pull tonistiigi/xx:golang
 
+docker rmi dev/goodlink:latest -f
 docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
 
 rm -rf go2 goodlink2 upx
