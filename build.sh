@@ -49,6 +49,8 @@ if [ $# -eq 1 ]; then
     docker rm registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest -f
     docker tag dev/goodlink:latest registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
     docker push registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
+
+    docker rmi dev/goodlink:latest -f
 fi
 
 docker images | grep goodlink
