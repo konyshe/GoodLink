@@ -18,6 +18,7 @@ ARG TARGETOS TARGETARCH TARGETVARIANT
 RUN echo 111111111111
 COPY go2 /go/src/go2
 COPY goodlink2 /go/src/goodlink2
+COPY proxy2 /go/src/proxy
 
 RUN --mount=target=. \
     --mount=type=cache,target=/root/.cache/go-build \
