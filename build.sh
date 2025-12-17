@@ -4,9 +4,10 @@ go install github.com/akavel/rsrc@latest
 
 set -x
 
-rm -rf go2 goodlink2
+rm -rf go2 goodlink2 proxy
 cp -r ../go2 .
 cp -r ../goodlink2 .
+cp -r ../proxy .
 
 if [ -e "/usr/bin/upx" ]; then
     cp /usr/bin/upx .
@@ -28,7 +29,7 @@ docker pull tonistiigi/xx:golang
 docker rmi dev/goodlink:latest -f
 docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
 
-rm -rf go2 goodlink2 upx
+rm -rf go2 goodlink2 proxy upx
 
 sed -i "/$BUILD_TIME/s/$BUILD_TIME/111111111111/g" Dockerfile
 
