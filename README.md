@@ -23,7 +23,7 @@
 
 **注: 该项目仅用于学习研究, 目前无商业合作，更无恶意行为。如果未来有广告之类盈利的行为，会郑重告知大家。另外声明：严禁用于违法行为！！！**
 
-<img src="https://gitee.com/konyshe/goodlink/raw/master/assert/gitcode.png">
+<img src="https://gitee.com/konyshe/goodlink/raw/master/assert/gitee.png">
 
 
 # 特点
