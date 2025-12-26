@@ -133,8 +133,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | 参数 | 说明 | 示例 |
 |------|------|------|
 | `--key` | 连接密钥（必须） | `--key=MySecretKey123456` |
-| `--remote` | 运行为Remote端 | `--remote` |
-| `--local` | 运行为Local端 | `--local` |
+| `--remote` | 运行为Remote端（必须） | `--remote` |
+| `--local` | 运行为Local端（必须） | `--local` |
 | `--fork` | 后台运行（Windows） | `--fork` |
 | `--log-level` | 日志级别 | `--log-level=debug` |
 | `--port` | 自定义端口 | `--port=8080` |
