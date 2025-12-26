@@ -184,7 +184,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 ### 🎯 贡献指南
 
-- 🐛 发现Bug？请提交Issue并附上详细日志
+- 🐛 发现Bug？请提交Issue
 - 💡 有新想法？欢迎在Issues中讨论
 - 🔧 想要贡献代码？请先fork项目并提交PR
 - 📖 完善文档？欢迎提交文档改进建议
@@ -192,9 +192,9 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ### 🙏 致谢
 
 **特别感谢以下贡献者：**
-- 所有点了⭐ Star的用户
-- 所有提交Issue和建议的用户
-- 帮助测试和推广的社区成员
+- 所有点了⭐ Star的同学
+- 所有提交Issue和建议的同学
+- 所有帮助测试和推广的同学
 
 ### 📄 许可证
 
