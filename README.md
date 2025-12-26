@@ -177,16 +177,13 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | `--log-level` | 日志级别 | `--log-level=debug` |
 | `--port` | 自定义端口 | `--port=8080` |
 
+### 💬 交流方式
 
-## 📚 更多资源
-
-### 🤝 社区支持
-
-#### 💬 交流方式
 - **GitHub Issues**：[提交问题和建议](https://github.com/konyshe/GoodLink/issues)
 - **Gitee Issues**：[国内用户交流](https://gitee.com/konyshe/goodlink/issues)
 
-#### 🎯 贡献指南
+### 🎯 贡献指南
+
 - 🐛 发现Bug？请提交Issue并附上详细日志
 - 💡 有新想法？欢迎在Issues中讨论
 - 🔧 想要贡献代码？请先fork项目并提交PR
@@ -195,21 +192,13 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ### 🙏 致谢
 
 **特别感谢以下贡献者：**
-- **danshiyuan**
+- 所有点了⭐ Star的用户
 - 所有提交Issue和建议的用户
 - 帮助测试和推广的社区成员
 
 ### 📄 许可证
 
 本项目采用 MIT 许可证开源，详情请查看 [LICENSE](./LICENSE) 文件。
-
-### ⭐ 支持项目
-
-如果这个项目对您有帮助，请：
-- 给项目点个 ⭐ Star
-- 分享给更多需要的朋友
-- 提交使用反馈和建议
-- 参与社区讨论
 
 ---
 
