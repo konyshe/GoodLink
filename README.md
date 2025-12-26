@@ -78,43 +78,7 @@
 | NAT4 | NAT4 | ⚠️ 不保证 | 运营商限制 |
 | 移动网络 | 移动网络 | ❌ 不支持 | 运营商限制 |
 
-# 工作模式
-
-注：以下两个模式同时存在, 无需选择
-
-### TUN模式
-
-    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP
-
-    举例: 在Local端打开 windows 远程桌面, 填写Remote端IP, 即可访问Remote端的远程桌面。如果无法连接，可在IP后面加上:13389
-
-### 代理模式
-
-    socket5代理地址端口: socket5://Remote端IP:1080
-    http代理地址端口: http://Remote端IP:1080
-
-    举例: 在Local端配置socket5代理: socks5://Remote端IP:1080, 即可利用Remote端做跳板, 访问所有的网络资源
-
-**Linux平台代理配置示例**
-```bash
-# 代理地址配置
-export all_proxy="http://127.0.0.1:1080"
-export http_proxy="http://127.0.0.1:1080"
-export https_proxy="http://127.0.0.1:1080"
-
-# Git代理配置
-git config --global http.proxy http://127.0.0.1:1080
-git config --global https.proxy http://127.0.0.1:1080
-
-# SSH代理配置（通过ProxyCommand）
-ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:1080 %h %p' user@target_host
-```
-
-**浏览器代理配置**
-- Chrome/Edge：推荐使用 [SwitchyOmega](https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif) 插件
-- Firefox：内置代理设置支持
-
-# 简单使用
+# 快速使用
 
 ###  **启动 remote端**
 
@@ -164,8 +128,6 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
-
-
 ### 🛠️ 常用参数说明
 
 | 参数 | 说明 | 示例 |
@@ -176,6 +138,42 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | `--fork` | 后台运行（Windows） | `--fork` |
 | `--log-level` | 日志级别 | `--log-level=debug` |
 | `--port` | 自定义端口 | `--port=8080` |
+
+# 工作模式
+
+注：以下两个模式同时存在, 无需选择
+
+### TUN模式
+
+    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP
+
+    举例: 在Local端打开 windows 远程桌面, 填写Remote端IP, 即可访问Remote端的远程桌面。如果无法连接，可在IP后面加上:13389
+
+### 代理模式
+
+    socket5代理地址端口: socket5://Remote端IP:1080
+    http代理地址端口: http://Remote端IP:1080
+
+    举例: 在Local端配置socket5代理: socks5://Remote端IP:1080, 即可利用Remote端做跳板, 访问所有的网络资源
+
+**Linux平台代理配置示例**
+```bash
+# 代理地址配置
+export all_proxy="http://127.0.0.1:1080"
+export http_proxy="http://127.0.0.1:1080"
+export https_proxy="http://127.0.0.1:1080"
+
+# Git代理配置
+git config --global http.proxy http://127.0.0.1:1080
+git config --global https.proxy http://127.0.0.1:1080
+
+# SSH代理配置（通过ProxyCommand）
+ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:1080 %h %p' user@target_host
+```
+
+**浏览器代理配置**
+- Chrome/Edge：推荐使用 [SwitchyOmega](https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif) 插件
+- Firefox：内置代理设置支持
 
 ### 💬 交流方式
 
