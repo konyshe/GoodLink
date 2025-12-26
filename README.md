@@ -180,18 +180,11 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 ## 📚 更多资源
 
-### 📖 文档链接
-- 🔧 [详细使用教程](https://gitee.com/konyshe/goodlink/wikis)
-- 🛡️ [安全性分析](https://gitee.com/konyshe/goodlink/issues/IBFKC2)
-- 🐛 [问题反馈](https://gitee.com/konyshe/goodlink/issues)
-- 💡 [功能建议](https://gitee.com/konyshe/goodlink/issues/new)
-
 ### 🤝 社区支持
 
 #### 💬 交流方式
-- **GitHub Issues**：[提交问题和建议](https://gitee.com/konyshe/goodlink/issues)
+- **GitHub Issues**：[提交问题和建议](https://github.com/konyshe/GoodLink/issues)
 - **Gitee Issues**：[国内用户交流](https://gitee.com/konyshe/goodlink/issues)
-- **项目Wiki**：[查看详细文档](https://gitee.com/konyshe/goodlink/wikis)
 
 #### 🎯 贡献指南
 - 🐛 发现Bug？请提交Issue并附上详细日志
