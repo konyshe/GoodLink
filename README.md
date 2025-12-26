@@ -175,6 +175,12 @@ ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:1080 %h %p' user@target_host
 - Chrome/Edge：推荐使用 [SwitchyOmega](https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif) 插件
 - Firefox：内置代理设置支持
 
+### 🙏 致谢
+
+- 所有点了⭐ Star的同学
+- 所有提交Issue和建议的同学
+- 所有帮助测试和推广的同学
+
 ### 💬 交流方式
 
 - **GitHub Issues**：[提交问题和建议](https://github.com/konyshe/GoodLink/issues)
@@ -186,13 +192,6 @@ ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:1080 %h %p' user@target_host
 - 💡 有新想法？欢迎在Issues中讨论
 - 🔧 想要贡献代码？请先fork项目并提交PR
 - 📖 完善文档？欢迎提交文档改进建议
-
-### 🙏 致谢
-
-**特别感谢以下贡献者：**
-- 所有点了⭐ Star的同学
-- 所有提交Issue和建议的同学
-- 所有帮助测试和推广的同学
 
 ### 📄 许可证
 
