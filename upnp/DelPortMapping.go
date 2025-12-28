@@ -1,7 +1,7 @@
 package upnp
 
 import (
-	"io/ioutil"
+	"io"
 	// "log"
 	"net/http"
 	"strconv"
@@ -15,7 +15,7 @@ type DelPortMapping struct {
 func (this *DelPortMapping) Send(remotePort int, protocol string) bool {
 	request := this.buildRequest(remotePort, protocol)
 	response, _ := http.DefaultClient.Do(request)
-	resultBody, _ := ioutil.ReadAll(response.Body)
+	resultBody, _ := io.ReadAll(response.Body)
 	if response.StatusCode == 200 {
 		// log.Println(string(resultBody))
 		this.resolve(string(resultBody))

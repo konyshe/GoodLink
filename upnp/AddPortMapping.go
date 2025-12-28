@@ -3,7 +3,8 @@ package upnp
 import (
 	// "log"
 	// "fmt"
-	"io/ioutil"
+
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ type AddPortMapping struct {
 func (this *AddPortMapping) Send(localPort, remotePort int, protocol string) bool {
 	request := this.buildRequest(localPort, remotePort, protocol)
 	response, _ := http.DefaultClient.Do(request)
-	resultBody, _ := ioutil.ReadAll(response.Body)
+	resultBody, _ := io.ReadAll(response.Body)
 	if response.StatusCode == 200 {
 		this.resolve(string(resultBody))
 		return true

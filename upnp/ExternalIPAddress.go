@@ -2,7 +2,7 @@ package upnp
 
 import (
 	"encoding/xml"
-	"io/ioutil"
+	"io"
 	// "log"
 	"net/http"
 	"strconv"
@@ -16,7 +16,7 @@ type ExternalIPAddress struct {
 func (this *ExternalIPAddress) Send() bool {
 	request := this.BuildRequest()
 	response, _ := http.DefaultClient.Do(request)
-	resultBody, _ := ioutil.ReadAll(response.Body)
+	resultBody, _ := io.ReadAll(response.Body)
 	if response.StatusCode == 200 {
 		this.resolve(string(resultBody))
 		return true

@@ -2,7 +2,7 @@ package upnp
 
 import (
 	"encoding/xml"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -14,7 +14,7 @@ type DeviceDesc struct {
 func (this *DeviceDesc) Send() bool {
 	request := this.BuildRequest()
 	response, _ := http.DefaultClient.Do(request)
-	resultBody, _ := ioutil.ReadAll(response.Body)
+	resultBody, _ := io.ReadAll(response.Body)
 	if response.StatusCode == 200 {
 		this.resolve(string(resultBody))
 		return true
