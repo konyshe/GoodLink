@@ -53,7 +53,7 @@ func (this *SearchGateway) Send() bool {
 }
 
 func (this *SearchGateway) send(remoteAddr, searchMessage string, c chan string) {
-	//发送组播消息，要带上端口，格式如："239.255.255.250:1900"
+	//发送组播消息，remoteAddr要带上端口，格式如："239.255.255.250:1900"
 	var conn *net.UDPConn
 	defer func() {
 		if r := recover(); r != nil {
