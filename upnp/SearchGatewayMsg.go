@@ -118,9 +118,14 @@ func (this *SearchGateway) resolve(result string) {
 		case "LOCATION":
 			urls := strings.Split(strings.Split(nameValues[1], "//")[1], "/")
 			this.upnp.Gateway.Host = urls[0]
+			log.Println("this.upnp.Gateway.Host:", this.upnp.Gateway.Host)
 			this.upnp.Gateway.DeviceDescUrl = "/" + urls[1]
+			log.Println("this.upnp.Gateway.DeviceDescUrl:", this.upnp.Gateway.DeviceDescUrl)
 		case "SERVER":
 			this.upnp.Gateway.GatewayName = nameValues[1]
+		case "USN":
+			this.upnp.Gateway.USN = nameValues[1]
+			log.Println("this.upnp.Gateway.USN:", this.upnp.Gateway.USN)
 		default:
 		}
 	}
