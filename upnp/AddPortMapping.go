@@ -28,7 +28,7 @@ func (this *AddPortMapping) buildRequest(localPort, remotePort int, protocol str
 	//请求头
 	header := http.Header{}
 	header.Set("Accept", "text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2")
-	header.Set("SOAPAction", `"urn:schemas-upnp-org:service:WANIPConnection:1#AddPortMapping"`)
+	header.Set("SOAPAction", `"`+this.upnp.Gateway.ServiceType+`#AddPortMapping"`)
 	header.Set("Content-Type", "text/xml")
 	header.Set("Connection", "Close")
 	header.Set("Content-Length", "")
@@ -38,7 +38,7 @@ func (this *AddPortMapping) buildRequest(localPort, remotePort int, protocol str
 			"SOAP-ENV:encodingStyle": `"http://schemas.xmlsoap.org/soap/encoding/"`}}
 	childOne := Node{Name: `SOAP-ENV:Body`}
 	childTwo := Node{Name: `m:AddPortMapping`,
-		Attr: map[string]string{"xmlns:m": `"urn:schemas-upnp-org:service:WANIPConnection:1"`}}
+		Attr: map[string]string{"xmlns:m": `"` + this.upnp.Gateway.ServiceType + `"`}}
 
 	childList1 := Node{Name: "NewExternalPort", Content: strconv.Itoa(remotePort)}
 	childList2 := Node{Name: "NewInternalPort", Content: strconv.Itoa(localPort)}

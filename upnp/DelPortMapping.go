@@ -27,7 +27,7 @@ func (this *DelPortMapping) buildRequest(remotePort int, protocol string) *http.
 	//请求头
 	header := http.Header{}
 	header.Set("Accept", "text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2")
-	header.Set("SOAPAction", `"urn:schemas-upnp-org:service:WANIPConnection:1#DeletePortMapping"`)
+	header.Set("SOAPAction", `"`+this.upnp.Gateway.ServiceType+`#DeletePortMapping"`)
 	header.Set("Content-Type", "text/xml")
 	header.Set("Connection", "Close")
 	header.Set("Content-Length", "")
@@ -38,7 +38,7 @@ func (this *DelPortMapping) buildRequest(remotePort int, protocol string) *http.
 			"SOAP-ENV:encodingStyle": `"http://schemas.xmlsoap.org/soap/encoding/"`}}
 	childOne := Node{Name: `SOAP-ENV:Body`}
 	childTwo := Node{Name: `m:DeletePortMapping`,
-		Attr: map[string]string{"xmlns:m": `"urn:schemas-upnp-org:service:WANIPConnection:1"`}}
+		Attr: map[string]string{"xmlns:m": `"` + this.upnp.Gateway.ServiceType + `"`}}
 	childList1 := Node{Name: "NewExternalPort", Content: strconv.Itoa(remotePort)}
 	childList2 := Node{Name: "NewProtocol", Content: protocol}
 	childList3 := Node{Name: "NewRemoteHost"}

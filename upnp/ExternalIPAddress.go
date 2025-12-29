@@ -27,7 +27,7 @@ func (this *ExternalIPAddress) BuildRequest() *http.Request {
 	//请求头
 	header := http.Header{}
 	header.Set("Accept", "text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2")
-	header.Set("SOAPAction", `"urn:schemas-upnp-org:service:WANIPConnection:1#GetExternalIPAddress"`)
+	header.Set("SOAPAction", `"`+this.upnp.Gateway.ServiceType+`#GetExternalIPAddress"`)
 	header.Set("Content-Type", "text/xml")
 	header.Set("Connection", "Close")
 	header.Set("Content-Length", "")
@@ -37,7 +37,7 @@ func (this *ExternalIPAddress) BuildRequest() *http.Request {
 			"SOAP-ENV:encodingStyle": `"http://schemas.xmlsoap.org/soap/encoding/"`}}
 	childOne := Node{Name: `SOAP-ENV:Body`}
 	childTwo := Node{Name: `m:GetExternalIPAddress`,
-		Attr: map[string]string{"xmlns:m": `"urn:schemas-upnp-org:service:WANIPConnection:1"`}}
+		Attr: map[string]string{"xmlns:m": `"` + this.upnp.Gateway.ServiceType + `"`}}
 	childOne.AddChild(childTwo)
 	body.AddChild(childOne)
 

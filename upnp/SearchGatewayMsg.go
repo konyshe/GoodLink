@@ -3,6 +3,7 @@ package upnp
 import (
 	"log"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 	// "net/http"
@@ -112,20 +113,21 @@ func (this *SearchGateway) resolve(result string) {
 		}
 		switch strings.ToUpper(strings.Trim(strings.Split(nameValues[0], ":")[0], " ")) {
 		case "ST":
-			this.upnp.Gateway.ST = nameValues[1]
+			this.upnp.Gateway.ST = strings.TrimSpace(nameValues[1])
 		case "CACHE-CONTROL":
 			this.upnp.Gateway.Cache = nameValues[1]
 		case "LOCATION":
-			urls := strings.Split(strings.Split(nameValues[1], "//")[1], "/")
-			this.upnp.Gateway.Host = urls[0]
-			log.Println("this.upnp.Gateway.Host:", this.upnp.Gateway.Host)
-			this.upnp.Gateway.DeviceDescUrl = "/" + urls[1]
-			log.Println("this.upnp.Gateway.DeviceDescUrl:", this.upnp.Gateway.DeviceDescUrl)
+			// 使用 url.Parse 来正确解析完整 URL
+			locationUrl := strings.TrimSpace(nameValues[1])
+			u, err := url.Parse(locationUrl)
+			if err == nil {
+				this.upnp.Gateway.Host = u.Host
+				this.upnp.Gateway.DeviceDescUrl = u.Path
+			}
 		case "SERVER":
 			this.upnp.Gateway.GatewayName = nameValues[1]
 		case "USN":
 			this.upnp.Gateway.USN = nameValues[1]
-			log.Println("this.upnp.Gateway.USN:", this.upnp.Gateway.USN)
 		default:
 		}
 	}
