@@ -43,13 +43,13 @@ func (this *SearchGateway) Send() bool {
 	if result == "" {
 		//超时了
 		this.upnp.Active = false
-		return false
+		return this.upnp.Active
 	}
 	this.resolve(result)
 
 	this.upnp.Gateway.ServiceType = this.upnp.Gateway.ST //"urn:schemas-upnp-org:service:WANIPConnection:1"
 	this.upnp.Active = true
-	return true
+	return this.upnp.Active
 }
 
 func (this *SearchGateway) send(remoteAddr, searchMessage string, c chan string) {
