@@ -47,7 +47,7 @@ func (this *SearchGateway) Send() bool {
 	}
 	this.resolve(result)
 
-	this.upnp.Gateway.ServiceType = "urn:schemas-upnp-org:service:WANIPConnection:1"
+	this.upnp.Gateway.ServiceType = this.upnp.Gateway.ST //"urn:schemas-upnp-org:service:WANIPConnection:1"
 	this.upnp.Active = true
 	return true
 }
