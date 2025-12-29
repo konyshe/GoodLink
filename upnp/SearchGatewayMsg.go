@@ -21,14 +21,24 @@ type Gateway struct {
 }
 
 type SearchGateway struct {
-	searchMessage string
-	upnp          *Upnp
+	upnp *Upnp
+}
+
+func (this *SearchGateway) buildRequest(serviceType string) string {
+	return "M-SEARCH * HTTP/1.1\r\n" +
+		"HOST: 239.255.255.250:1900\r\n" +
+		"MAN: \"ssdp:discover\"\r\n" +
+		"MX: 6\r\n" +
+		"ST: urn:schemas-upnp-org:service:" + serviceType + ":1\r\n\r\n"
 }
 
 func (this *SearchGateway) Send() bool {
-	this.buildRequest()
 	c := make(chan string)
-	go this.send(c)
+
+	for _, serviceType := range []string{"WANPPPConnection", "WANIPConnection"} {
+		go this.send("239.255.255.250:1900", this.buildRequest(serviceType), c)
+	}
+
 	result := <-c
 	if result == "" {
 		//超时了
@@ -41,7 +51,8 @@ func (this *SearchGateway) Send() bool {
 	this.upnp.Active = true
 	return true
 }
-func (this *SearchGateway) send(c chan string) {
+
+func (this *SearchGateway) send(remoteAddr, searchMessage string, c chan string) {
 	//发送组播消息，要带上端口，格式如："239.255.255.250:1900"
 	var conn *net.UDPConn
 	defer func() {
@@ -60,7 +71,7 @@ func (this *SearchGateway) send(c chan string) {
 		c <- ""
 		conn.Close()
 	}(conn)
-	remotAddr, err := net.ResolveUDPAddr("udp", "239.255.255.250:1900")
+	remotAddr, err := net.ResolveUDPAddr("udp", remoteAddr)
 	if err != nil {
 		log.Println("组播地址格式不正确")
 	}
@@ -70,11 +81,12 @@ func (this *SearchGateway) send(c chan string) {
 		log.Println("本地ip地址格式不正确")
 	}
 	conn, err = net.ListenUDP("udp", locaAddr)
-	defer conn.Close()
-	if err != nil {
+	if conn == nil || err != nil {
 		log.Println("监听udp出错")
 	}
-	_, err = conn.WriteToUDP([]byte(this.searchMessage), remotAddr)
+	defer conn.Close()
+
+	_, err = conn.WriteToUDP([]byte(searchMessage), remotAddr)
 	if err != nil {
 		log.Println("发送msg到组播地址出错")
 	}
@@ -86,12 +98,6 @@ func (this *SearchGateway) send(c chan string) {
 
 	result := string(buf[:n])
 	c <- result
-}
-func (this *SearchGateway) buildRequest() {
-	this.searchMessage = "M-SEARCH * HTTP/1.1\r\n" +
-		"HOST: 239.255.255.250:1900\r\n" +
-		"ST: urn:schemas-upnp-org:service:WANIPConnection:1\r\n" +
-		"MAN: \"ssdp:discover\"\r\n" + "MX: 3\r\n\r\n"
 }
 
 func (this *SearchGateway) resolve(result string) {
