@@ -31,7 +31,11 @@ NAC_PLATFORM_LIST = \
 
 debug: create_nac windows-amd64-cmd rm_nac strip
 
-all: create_nac $(NAC_PLATFORM_LIST) rm_nac $(PLATFORM_LIST) strip
+windows: create_nac $(NAC_PLATFORM_LIST) rm_nac strip
+
+linux: create_nac $(PLATFORM_LIST) rm_nac strip
+
+all: windows linux
 
 linux-386-cmd:
 	GOARCH=386 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
