@@ -66,7 +66,8 @@ func (this *Upnp) deviceDesc() (err error) {
 	device := DeviceDesc{upnp: this}
 	device.Send()
 	this.Active = true
-	// log.Println("获得控制请求url:", this.CtrlUrl)
+	log.Println("获得控制请求url:", this.CtrlUrl)
+
 	return
 }
 
@@ -82,8 +83,9 @@ func (this *Upnp) ExternalIPAddr() (err error) {
 	}
 	eia := ExternalIPAddress{upnp: this}
 	eia.Send()
+	log.Println("获得公网ip地址为：", this.GatewayOutsideIP)
+
 	return nil
-	// log.Println("获得公网ip地址为：", this.GatewayOutsideIP)
 }
 
 func (this *Upnp) Init() (err error) {
