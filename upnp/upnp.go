@@ -31,13 +31,6 @@ type Upnp struct {
 // 得到本地联网的ip地址
 // 得到局域网网关ip
 func (this *Upnp) SearchGateway() (err error) {
-	if this.LocalHost == "" {
-		this.MappingPort = MappingPortStruct{
-			lock: new(sync.Mutex),
-			// mappingPorts: map[string][][]int{},
-		}
-		this.LocalHost = GetLocalIntenetIp()
-	}
 	searchGateway := SearchGateway{upnp: this}
 	if searchGateway.Send() {
 		return nil
@@ -57,29 +50,6 @@ func (this *Upnp) deviceDesc() (err error) {
 	return
 }
 
-// 查看公网ip地址
-func (this *Upnp) ExternalIPAddr() (err error) {
-	if this.GatewayOutsideIP != "" {
-		return nil
-	}
-	if this.GatewayInsideIP == "" {
-		if err := this.SearchGateway(); err != nil {
-			return err
-		}
-	}
-	if this.CtrlUrl == "" {
-		if err := this.deviceDesc(); err != nil {
-			return err
-		}
-		log.Println("获得控制请求url:", this.CtrlUrl)
-	}
-	eia := ExternalIPAddress{upnp: this}
-	eia.Send()
-	log.Println("获得公网ip地址为：", this.GatewayOutsideIP)
-
-	return nil
-}
-
 func (this *Upnp) Init() (err error) {
 	defer func(err error) {
 		if errTemp := recover(); errTemp != nil {
@@ -90,9 +60,28 @@ func (this *Upnp) Init() (err error) {
 
 	log.Println("upnp模块初始化中")
 
-	if err := this.ExternalIPAddr(); err != nil {
-		return err
+	if this.LocalHost == "" {
+		this.MappingPort = MappingPortStruct{
+			lock: new(sync.Mutex),
+		}
+		this.LocalHost = GetLocalIntenetIp()
 	}
+
+	if this.GatewayInsideIP == "" {
+		if err := this.SearchGateway(); err != nil {
+			return err
+		}
+	}
+
+	if this.CtrlUrl == "" {
+		if err := this.deviceDesc(); err != nil {
+			return err
+		}
+		log.Println("获得控制请求url:", this.CtrlUrl)
+	}
+	eia := ExternalIPAddress{upnp: this}
+	eia.Send()
+	log.Println("获得公网ip地址为：", this.GatewayOutsideIP)
 
 	if err := this.CleanMappings(0); err != nil {
 		return err
