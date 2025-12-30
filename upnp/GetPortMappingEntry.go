@@ -27,7 +27,8 @@ type GetPortMappingEntry struct {
 // 当索引超出范围时返回 nil, false
 func (this *GetPortMappingEntry) Send(index int) (*PortMappingEntry, bool) {
 	request := this.buildRequest(index)
-	response, err := http.DefaultClient.Do(request)
+	client := &http.Client{}
+	response, err := client.Do(request)
 	if err != nil {
 		return nil, false
 	}
@@ -107,4 +108,3 @@ func (this *GetPortMappingEntry) resolve(resultStr string) *PortMappingEntry {
 	}
 	return entry
 }
-

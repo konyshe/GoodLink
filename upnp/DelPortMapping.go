@@ -14,7 +14,12 @@ type DelPortMapping struct {
 
 func (this *DelPortMapping) Send(remotePort int, protocol string) bool {
 	request := this.buildRequest(remotePort, protocol)
-	response, _ := http.DefaultClient.Do(request)
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return false
+	}
+	defer response.Body.Close()
 	resultBody, _ := io.ReadAll(response.Body)
 	if response.StatusCode == 200 {
 		// log.Println(string(resultBody))

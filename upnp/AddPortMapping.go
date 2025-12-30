@@ -16,7 +16,12 @@ type AddPortMapping struct {
 
 func (this *AddPortMapping) Send(localPort, remotePort int, protocol string) bool {
 	request := this.buildRequest(localPort, remotePort, protocol)
-	response, _ := http.DefaultClient.Do(request)
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return false
+	}
+	defer response.Body.Close()
 	resultBody, _ := io.ReadAll(response.Body)
 	if response.StatusCode == 200 {
 		this.resolve(string(resultBody))

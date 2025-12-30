@@ -8,6 +8,7 @@ import (
 	"goodlink/utils"
 	"log"
 	"net"
+	"os"
 	"time"
 )
 
@@ -190,31 +191,32 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 	rand.Read(transactionID)
 	buf.Write(transactionID)
 
-	for {
-		for _, ip := range ips {
-			wan_ip, wan_port1, change_ip, change_port = getStunIpPort2(conn, ip.String()+":3478", &buf, magicCookie, transactionID)
-			if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 {
-				time.Sleep(1 * time.Second)
-				continue
-			}
+	for _, ip := range ips {
+		log.Printf("stun ip: %s", ip.String())
 
-			_, wan_port2, _, _ = getStunIpPort2(conn, ip.String()+":3479", &buf, magicCookie, transactionID)
-			if wan_port2 == 0 {
-				time.Sleep(1 * time.Second)
-				continue
-			}
-
-			_, wan_port3, _, _ = getStunIpPort2(conn, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
-			if wan_port3 == 0 {
-				time.Sleep(1 * time.Second)
-				continue
-			}
-
-			return
+		wan_ip, wan_port1, change_ip, change_port = getStunIpPort2(conn, ip.String()+":3478", &buf, magicCookie, transactionID)
+		if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 {
+			time.Sleep(1 * time.Second)
+			continue
 		}
 
-		time.Sleep(1 * time.Second)
+		_, wan_port2, _, _ = getStunIpPort2(conn, ip.String()+":3479", &buf, magicCookie, transactionID)
+		if wan_port2 == 0 {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		_, wan_port3, _, _ = getStunIpPort2(conn, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
+		if wan_port3 == 0 {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		return
 	}
+
+	os.Exit(1)
+	return
 }
 
 func TestStun() {
