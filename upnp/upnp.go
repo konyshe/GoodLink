@@ -193,3 +193,36 @@ func (this *Upnp) Reclaim() {
 func (this *Upnp) GetAllMapping() map[string][][]int {
 	return this.MappingPort.GetAllMapping()
 }
+
+// CleanupOldMappings 清理之前添加的端口映射
+// 通过枚举路由器上所有端口映射，筛选描述为 "goodlink" 的映射并删除
+func (this *Upnp) CleanupOldMappings() error {
+	// 确保已经初始化网关连接
+	if this.CtrlUrl == "" {
+		if err := this.deviceDesc(); err != nil {
+			return err
+		}
+	}
+
+	// 先收集所有需要删除的映射
+	toDelete := make([]PortMappingEntry, 0)
+	getter := GetPortMappingEntry{upnp: this}
+
+	for index := 0; ; index++ {
+		entry, ok := getter.Send(index)
+		if !ok {
+			// 没有更多映射了
+			break
+		}
+		if entry.Description == "goodlink" {
+			toDelete = append(toDelete, *entry)
+		}
+	}
+
+	// 删除所有 goodlink 的映射
+	for _, entry := range toDelete {
+		this.DelPortMapping(entry.ExternalPort, entry.Protocol)
+	}
+
+	return nil
+}
