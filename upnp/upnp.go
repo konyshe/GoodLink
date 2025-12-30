@@ -81,6 +81,7 @@ type Upnp struct {
 	Gateway            *Gateway          //网关信息
 	CtrlUrl            string            //控制请求url
 	MappingPort        MappingPortStruct //已经添加了的映射 {"TCP":[1990],"UDP":[1991]}
+	Lock               sync.Mutex
 }
 
 // 得到本地联网的ip地址
@@ -146,11 +147,14 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 			err = errTemp.(error)
 		}
 	}(err)
+	this.Lock.Lock()
 	if this.GatewayOutsideIP == "" {
 		if err := this.ExternalIPAddr(); err != nil {
+			this.Lock.Unlock()
 			return err
 		}
 	}
+	this.Lock.Unlock()
 	addPort := AddPortMapping{upnp: this}
 	if issuccess := addPort.Send(localPort, remotePort, protocol); issuccess {
 		this.MappingPort.addMapping(localPort, remotePort, protocol)
