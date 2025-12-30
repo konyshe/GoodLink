@@ -31,13 +31,6 @@ type Upnp struct {
 // 得到本地联网的ip地址
 // 得到局域网网关ip
 func (this *Upnp) SearchGateway() (err error) {
-	defer func(err error) {
-		if errTemp := recover(); errTemp != nil {
-			log.Println("upnp模块报错了", errTemp)
-			err = errTemp.(error)
-		}
-	}(err)
-
 	if this.LocalHost == "" {
 		this.MappingPort = MappingPortStruct{
 			lock: new(sync.Mutex),
@@ -58,16 +51,9 @@ func (this *Upnp) deviceStatus() {
 
 // 查看设备描述，得到控制请求url
 func (this *Upnp) deviceDesc() (err error) {
-	if this.GatewayInsideIP == "" {
-		if err := this.SearchGateway(); err != nil {
-			return err
-		}
-	}
 	device := DeviceDesc{upnp: this}
 	device.Send()
 	this.Active = true
-	log.Println("获得控制请求url:", this.CtrlUrl)
-
 	return
 }
 
@@ -76,10 +62,16 @@ func (this *Upnp) ExternalIPAddr() (err error) {
 	if this.GatewayOutsideIP != "" {
 		return nil
 	}
+	if this.GatewayInsideIP == "" {
+		if err := this.SearchGateway(); err != nil {
+			return err
+		}
+	}
 	if this.CtrlUrl == "" {
 		if err := this.deviceDesc(); err != nil {
 			return err
 		}
+		log.Println("获得控制请求url:", this.CtrlUrl)
 	}
 	eia := ExternalIPAddress{upnp: this}
 	eia.Send()
