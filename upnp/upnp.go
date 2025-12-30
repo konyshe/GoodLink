@@ -190,6 +190,27 @@ func (this *Upnp) Reclaim() {
 	}
 }
 
+// ReclaimExcept 回收除指定端口外的所有端口映射
+func (this *Upnp) ReclaimExcept(exceptPort int) {
+	mappings := this.MappingPort.GetAllMapping()
+	tcpMapping, ok := mappings["TCP"]
+	if ok {
+		for i := 0; i < len(tcpMapping[0]); i++ {
+			if tcpMapping[0][i] != exceptPort {
+				this.DelPortMapping(tcpMapping[1][i], "TCP")
+			}
+		}
+	}
+	udpMapping, ok := mappings["UDP"]
+	if ok {
+		for i := 0; i < len(udpMapping[0]); i++ {
+			if udpMapping[0][i] != exceptPort {
+				this.DelPortMapping(udpMapping[0][i], "UDP")
+			}
+		}
+	}
+}
+
 func (this *Upnp) GetAllMapping() map[string][][]int {
 	return this.MappingPort.GetAllMapping()
 }
