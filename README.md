@@ -38,7 +38,7 @@
 
 # 一定要看
 
-1. **建议直连光猫拨号，成功率最高。否则请关闭路由器防火墙，最好同时设置路由器DMZ为本机**
+1. **建议直连光猫拨号，成功率最高。否则请关闭路由器防火墙，开启UPNP，并建议设置路由器DMZ为本机**
 
 2. **如超过3分钟无法直连，找客服（电信10000,移动10086,联通10010）改NAT类型，优先NAT1>NAT2>NAT3**
 
@@ -81,7 +81,7 @@
 #### windows, 命令行
 
 ```
-.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+.\goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
 #### windows, UI
