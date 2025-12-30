@@ -120,9 +120,9 @@ func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
 	return issuccess
 }
 
-// CleanupOldMappings 清理之前添加的端口映射
+// CleanMappings 清理之前添加的端口映射
 // 通过枚举路由器上所有端口映射，筛选描述为 "goodlink" 的映射并删除
-func (this *Upnp) CleanupOldMappings(externalPort int) error {
+func (this *Upnp) CleanMappings(externalPort int) error {
 	// 确保已经初始化网关连接
 	if this.CtrlUrl == "" {
 		if err := this.deviceDesc(); err != nil {
