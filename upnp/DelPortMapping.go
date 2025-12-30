@@ -3,6 +3,7 @@ package upnp
 import (
 
 	// "log"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,15 +24,13 @@ func (this *DelPortMapping) Send(remotePort int, protocol string) bool {
 		return false
 	}
 	defer response.Body.Close()
-	/*
-		resultBody, _ := io.ReadAll(response.Body)
-		if response.StatusCode == 200 {
-			this.resolve(string(resultBody))
-			return true
-		}
-		return false
-	*/
-	return true
+
+	resultBody, _ := io.ReadAll(response.Body)
+	if response.StatusCode == 200 {
+		this.resolve(string(resultBody))
+		return true
+	}
+	return false
 }
 
 func (this *DelPortMapping) buildRequest(remotePort int, protocol string) *http.Request {
