@@ -47,12 +47,38 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		utils.Log().DebugF("发送Local端地址: %v", redisJson.LocalAddr)
 	}
 
-	RedisSet(15*time.Second, &redisJson)
+	// 阶段1: 将SessionID注册到Hash中，等待Remote端认领
+	if err := RedisSessionRegister(30*time.Second, &redisJson); err != nil {
+		log.Printf("注册会话失败: %v", err)
+		return tun_active, tun_passive, nil, nil, err
+	}
+	utils.Log().DebugF("已注册会话到队列，等待Remote端认领: %s", SessionID)
 
+	// 等待Remote端认领并写入独立的session key
+	sessionClaimed := false
+	for i := 0; i < 30 && m_local_state == 1; i++ {
+		time.Sleep(1 * time.Second)
+
+		// 尝试从独立的session key读取，如果能读到说明已被认领
+		if RedisSessionGet(SessionID, &redisJson) == nil {
+			sessionClaimed = true
+			utils.Log().DebugF("会话已被Remote端认领: %s", SessionID)
+			break
+		}
+	}
+
+	if !sessionClaimed {
+		// 超时未被认领，从Hash中移除注册
+		RedisSessionUnregister(SessionID)
+		log.Println("等待Remote端认领超时")
+		return tun_active, tun_passive, nil, nil, nil
+	}
+
+	// 阶段2: 使用独立的session key进行后续通信
 	for m_local_state == 1 {
 		time.Sleep(1 * time.Second)
 
-		if RedisGet(&redisJson) != nil {
+		if RedisSessionGet(SessionID, &redisJson) != nil {
 			log.Println("会话超时")
 			return tun_active, tun_passive, nil, nil, nil
 		}
@@ -70,7 +96,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case 1:
 			if redisJson.RemoteVersion != GetVersion() {
 				utils.Log().DebugF("两端版本不兼容: %v", redisJson)
-				RedisDel()
+				RedisSessionDel(SessionID)
 				return tun_active, tun_passive, nil, nil, errors.New("两端版本不兼容")
 			}
 
@@ -85,12 +111,12 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 				redisJson.LocalAddr = *addr
 
-				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond)
+				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
 				tun_passive.Start()
 
 				redisJson.State = 2
 				utils.Log().DebugF("发送Local端地址: %v", redisJson.LocalAddr)
-				RedisSet(redisJson.RedisTimeOut, &redisJson)
+				RedisSessionSet(SessionID, redisJson.RedisTimeOut, &redisJson)
 
 			default:
 				if tun_active != nil {
@@ -98,11 +124,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 				}
 				tun_passive = nil
 
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond)
+				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
 				tun_active.Start()
 
 				redisJson.State = 2
-				RedisSet(redisJson.RedisTimeOut, &redisJson)
+				RedisSessionSet(SessionID, redisJson.RedisTimeOut, &redisJson)
 			}
 
 		case 3:
