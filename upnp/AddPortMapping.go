@@ -4,31 +4,34 @@ import (
 	// "log"
 	// "fmt"
 
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
 type AddPortMapping struct {
-	upnp *Upnp
+	upnp        *Upnp
+	http_client http.Client
 }
 
 func (this *AddPortMapping) Send(localPort, remotePort int, protocol string) bool {
 	request := this.buildRequest(localPort, remotePort, protocol)
-	client := &http.Client{}
-	response, err := client.Do(request)
+	response, err := this.http_client.Do(request)
 	if err != nil {
 		return false
 	}
 	defer response.Body.Close()
-	resultBody, _ := io.ReadAll(response.Body)
-	if response.StatusCode == 200 {
-		this.resolve(string(resultBody))
-		return true
-	}
-	return false
+	/*
+		resultBody, _ := io.ReadAll(response.Body)
+		if response.StatusCode == 200 {
+			this.resolve(string(resultBody))
+			return true
+		}
+		return false
+	*/
+	return true
 }
+
 func (this *AddPortMapping) buildRequest(localPort, remotePort int, protocol string) *http.Request {
 	//请求头
 	header := http.Header{}

@@ -1,7 +1,7 @@
 package upnp
 
 import (
-	"io"
+
 	// "log"
 	"net/http"
 	"strconv"
@@ -9,25 +9,28 @@ import (
 )
 
 type DelPortMapping struct {
-	upnp *Upnp
+	upnp        *Upnp
+	http_client http.Client
 }
 
 func (this *DelPortMapping) Send(remotePort int, protocol string) bool {
 	request := this.buildRequest(remotePort, protocol)
-	client := &http.Client{}
-	response, err := client.Do(request)
+	response, err := this.http_client.Do(request)
 	if err != nil {
 		return false
 	}
 	defer response.Body.Close()
-	resultBody, _ := io.ReadAll(response.Body)
-	if response.StatusCode == 200 {
-		// log.Println(string(resultBody))
-		this.resolve(string(resultBody))
-		return true
-	}
-	return false
+	/*
+		resultBody, _ := io.ReadAll(response.Body)
+		if response.StatusCode == 200 {
+			this.resolve(string(resultBody))
+			return true
+		}
+		return false
+	*/
+	return true
 }
+
 func (this *DelPortMapping) buildRequest(remotePort int, protocol string) *http.Request {
 	//请求头
 	header := http.Header{}
