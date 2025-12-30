@@ -33,7 +33,7 @@ debug: create_nac windows-amd64-cmd rm_nac strip
 
 windows: create_nac $(NAC_PLATFORM_LIST) rm_nac strip
 
-linux: create_nac $(PLATFORM_LIST) rm_nac strip
+linux: $(PLATFORM_LIST) strip
 
 all: windows linux
 
