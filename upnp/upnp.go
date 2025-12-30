@@ -94,6 +94,8 @@ func (this *Upnp) Init() (err error) {
 		}
 	}(err)
 
+	log.Println("upnp模块初始化中")
+
 	if err := this.ExternalIPAddr(); err != nil {
 		return err
 	}
