@@ -28,16 +28,6 @@ type Upnp struct {
 	MappingPort        MappingPortStruct //已经添加了的映射 {"TCP":[1990],"UDP":[1991]}
 }
 
-// 得到本地联网的ip地址
-// 得到局域网网关ip
-func (this *Upnp) SearchGateway() (err error) {
-	searchGateway := SearchGateway{upnp: this}
-	if searchGateway.Send() {
-		return nil
-	}
-	return errors.New("未发现网关设备")
-}
-
 func (this *Upnp) deviceStatus() {
 
 }
@@ -68,12 +58,12 @@ func (this *Upnp) Init() (err error) {
 		log.Printf("LocalHost: %s", this.LocalHost)
 	}
 
-	if err := this.SearchGateway(); err != nil {
-		return err
-	}
-	log.Printf("Gateway.ServiceType: %s", this.Gateway.ServiceType)
-
 	if this.CtrlUrl == "" {
+		searchGateway := SearchGateway{upnp: this}
+		if searchGateway.Send() {
+			log.Printf("Gateway.ServiceType: %s", this.Gateway.ServiceType)
+		}
+
 		if err := this.deviceDesc(); err != nil {
 			return err
 		}
