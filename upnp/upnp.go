@@ -26,7 +26,6 @@ type Upnp struct {
 	Gateway            *Gateway          //网关信息
 	CtrlUrl            string            //控制请求url
 	MappingPort        MappingPortStruct //已经添加了的映射 {"TCP":[1990],"UDP":[1991]}
-	Lock               sync.Mutex
 }
 
 // 得到本地联网的ip地址
@@ -73,6 +72,9 @@ func (this *Upnp) deviceDesc() (err error) {
 
 // 查看公网ip地址
 func (this *Upnp) ExternalIPAddr() (err error) {
+	if this.GatewayOutsideIP != "" {
+		return nil
+	}
 	if this.CtrlUrl == "" {
 		if err := this.deviceDesc(); err != nil {
 			return err
@@ -84,22 +86,30 @@ func (this *Upnp) ExternalIPAddr() (err error) {
 	// log.Println("获得公网ip地址为：", this.GatewayOutsideIP)
 }
 
-// 添加一个端口映射
-func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (err error) {
+func (this *Upnp) Init() (err error) {
 	defer func(err error) {
 		if errTemp := recover(); errTemp != nil {
 			log.Println("upnp模块报错了", errTemp)
 			err = errTemp.(error)
 		}
 	}(err)
-	this.Lock.Lock()
-	if this.GatewayOutsideIP == "" {
-		if err := this.ExternalIPAddr(); err != nil {
-			this.Lock.Unlock()
-			return err
-		}
+
+	if err := this.ExternalIPAddr(); err != nil {
+		return err
 	}
-	this.Lock.Unlock()
+
+	if err := this.CleanMappings(0); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// 添加一个端口映射
+func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (err error) {
+	if this.GatewayOutsideIP == "" {
+		return errors.New("无Upnp设备")
+	}
 	addPort := AddPortMapping{upnp: this}
 	if issuccess := addPort.Send(localPort, remotePort, protocol); issuccess {
 		// log.Println("添加一个端口映射：protocol:", protocol, "local:", localPort, "remote:", remotePort)
@@ -112,6 +122,9 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 }
 
 func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
+	if this.GatewayOutsideIP == "" {
+		return false
+	}
 	delMapping := DelPortMapping{upnp: this}
 	issuccess := delMapping.Send(remotePort, protocol)
 	if issuccess {
@@ -123,11 +136,8 @@ func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
 // CleanMappings 清理之前添加的端口映射
 // 通过枚举路由器上所有端口映射，筛选描述为 "goodlink" 的映射并删除
 func (this *Upnp) CleanMappings(externalPort int) error {
-	// 确保已经初始化网关连接
-	if this.CtrlUrl == "" {
-		if err := this.deviceDesc(); err != nil {
-			return err
-		}
+	if this.GatewayOutsideIP == "" {
+		return errors.New("无Upnp设备")
 	}
 
 	// 先收集所有需要删除的映射
