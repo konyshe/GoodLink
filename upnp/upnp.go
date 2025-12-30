@@ -4,6 +4,7 @@ import (
 	// "fmt"
 	"errors"
 	"log"
+	"net/http"
 	"sync"
 )
 
@@ -17,15 +18,17 @@ type MappingPortStruct struct {
 }
 
 type Upnp struct {
-	Active             bool              //这个upnp协议是否可用
-	LocalHost          string            //本机ip地址
-	GatewayInsideIP    string            //局域网网关ip
-	GatewayOutsideIP   string            //网关公网ip
-	OutsideMappingPort map[string]int    //映射外部端口
-	InsideMappingPort  map[string]int    //映射本机端口
-	Gateway            *Gateway          //网关信息
-	CtrlUrl            string            //控制请求url
-	MappingPort        MappingPortStruct //已经添加了的映射 {"TCP":[1990],"UDP":[1991]}
+	Active               bool              //这个upnp协议是否可用
+	LocalHost            string            //本机ip地址
+	GatewayInsideIP      string            //局域网网关ip
+	GatewayOutsideIP     string            //网关公网ip
+	OutsideMappingPort   map[string]int    //映射外部端口
+	InsideMappingPort    map[string]int    //映射本机端口
+	Gateway              *Gateway          //网关信息
+	CtrlUrl              string            //控制请求url
+	MappingPort          MappingPortStruct //已经添加了的映射 {"TCP":[1990],"UDP":[1991]}
+	http_client_add_port http.Client
+	http_client_del_port http.Client
 }
 
 func (this *Upnp) deviceStatus() {
@@ -88,7 +91,7 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 	if this.GatewayOutsideIP == "" {
 		return errors.New("无Upnp设备")
 	}
-	addPort := AddPortMapping{upnp: this}
+	addPort := AddPortMapping{upnp: this, http_client: &this.http_client_add_port}
 	if issuccess := addPort.Send(localPort, remotePort, protocol); issuccess {
 		// log.Println("添加一个端口映射：protocol:", protocol, "local:", localPort, "remote:", remotePort)
 		return nil
@@ -103,7 +106,7 @@ func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
 	if this.GatewayOutsideIP == "" {
 		return false
 	}
-	delMapping := DelPortMapping{upnp: this}
+	delMapping := DelPortMapping{upnp: this, http_client: &this.http_client_del_port}
 	issuccess := delMapping.Send(remotePort, protocol)
 	if issuccess {
 		//log.Println("删除了一个端口映射： remote:", remotePort)
