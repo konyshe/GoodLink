@@ -65,13 +65,13 @@ func (this *Upnp) Init() (err error) {
 			lock: new(sync.Mutex),
 		}
 		this.LocalHost = GetLocalIntenetIp()
+		log.Printf("LocalHost: %s", this.LocalHost)
 	}
 
-	if this.GatewayInsideIP == "" {
-		if err := this.SearchGateway(); err != nil {
-			return err
-		}
+	if err := this.SearchGateway(); err != nil {
+		return err
 	}
+	log.Printf("Gateway.ServiceType: %s", this.Gateway.ServiceType)
 
 	if this.CtrlUrl == "" {
 		if err := this.deviceDesc(); err != nil {
@@ -79,9 +79,12 @@ func (this *Upnp) Init() (err error) {
 		}
 		log.Println("获得控制请求url:", this.CtrlUrl)
 	}
-	eia := ExternalIPAddress{upnp: this}
-	eia.Send()
-	log.Println("获得公网ip地址为：", this.GatewayOutsideIP)
+
+	if this.GatewayOutsideIP == "" {
+		eia := ExternalIPAddress{upnp: this}
+		eia.Send()
+		log.Printf("GatewayOutsideIP: %s", this.GatewayOutsideIP)
+	}
 
 	if err := this.CleanMappings(0); err != nil {
 		return err
