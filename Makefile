@@ -11,7 +11,7 @@ GOBUILD=GO111MODULE=on \
     	-X "go2.BuildTime=$(BuildTime)" \
 		-w -s -buildid='
 
-PLATFORM_LIST = \
+LINUX_PLATFORM_LIST = \
 	linux-386-cmd \
 	linux-amd64-cmd \
 	linux-arm-cmd \
@@ -23,17 +23,16 @@ PLATFORM_LIST = \
 	linux-mips64-cmd \
 	linux-riscv64-cmd \
 	linux-mips64le-cmd \
-	windows-arm64-cmd
 
-NAC_PLATFORM_LIST = \
+WINDOWS_PLATFORM_LIST = \
 	windows-amd64-ui \
 	windows-amd64-cmd \
 
 debug: create_nac windows-amd64-cmd rm_nac strip
 
-windows: create_nac $(NAC_PLATFORM_LIST) rm_nac strip
+windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac windows-arm64-cmd strip
 
-linux: $(PLATFORM_LIST) strip
+linux: $(LINUX_PLATFORM_LIST) strip
 
 all: windows linux
 
