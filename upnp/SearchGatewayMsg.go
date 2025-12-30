@@ -74,27 +74,27 @@ func (this *SearchGateway) send(remoteAddr, searchMessage string, c chan string)
 	}(conn)
 	remotAddr, err := net.ResolveUDPAddr("udp", remoteAddr)
 	if err != nil {
-		log.Println("组播地址格式不正确")
+		log.Fatal("组播地址格式不正确")
 	}
 	locaAddr, err := net.ResolveUDPAddr("udp", this.upnp.LocalHost+":")
 
 	if err != nil {
-		log.Println("本地ip地址格式不正确")
+		log.Fatal("本地ip地址格式不正确")
 	}
 	conn, err = net.ListenUDP("udp", locaAddr)
 	if conn == nil || err != nil {
-		log.Println("监听udp出错")
+		log.Fatal("监听udp出错")
 	}
 	defer conn.Close()
 
 	_, err = conn.WriteToUDP([]byte(searchMessage), remotAddr)
 	if err != nil {
-		log.Println("发送msg到组播地址出错")
+		log.Fatal("发送msg到组播地址出错")
 	}
 	buf := make([]byte, 1024)
 	n, _, err := conn.ReadFromUDP(buf)
 	if err != nil {
-		log.Println("从组播地址接搜消息出错")
+		log.Fatal("从组播地址接搜消息出错")
 	}
 
 	result := string(buf[:n])

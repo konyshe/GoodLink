@@ -3,7 +3,6 @@ package upnp
 import (
 	"encoding/xml"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -95,5 +94,5 @@ func (this *DeviceDesc) resolve(resultStr string) {
 		}
 	}
 	this.upnp.CtrlUrl = controlURL
-	log.Println("this.upnp.CtrlUrl:", this.upnp.CtrlUrl)
+	//log.Println("this.upnp.CtrlUrl:", this.upnp.CtrlUrl)
 }

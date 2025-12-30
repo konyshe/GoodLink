@@ -11,14 +11,14 @@ import (
  * 得到网关
  */
 
-//对所有的端口进行管理
+// 对所有的端口进行管理
 type MappingPortStruct struct {
 	lock         *sync.Mutex
 	mappingPorts map[string][][]int
 }
 
-//添加一个端口映射记录
-//只对映射进行管理
+// 添加一个端口映射记录
+// 只对映射进行管理
 func (this *MappingPortStruct) addMapping(localPort, remotePort int, protocol string) {
 
 	this.lock.Lock()
@@ -48,8 +48,8 @@ func (this *MappingPortStruct) addMapping(localPort, remotePort int, protocol st
 	this.mappingPorts[protocol] = [][]int{one, two}
 }
 
-//删除一个映射记录
-//只对映射进行管理
+// 删除一个映射记录
+// 只对映射进行管理
 func (this *MappingPortStruct) delMapping(remotePort int, protocol string) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
@@ -83,8 +83,8 @@ type Upnp struct {
 	MappingPort        MappingPortStruct //已经添加了的映射 {"TCP":[1990],"UDP":[1991]}
 }
 
-//得到本地联网的ip地址
-//得到局域网网关ip
+// 得到本地联网的ip地址
+// 得到局域网网关ip
 func (this *Upnp) SearchGateway() (err error) {
 	defer func(err error) {
 		if errTemp := recover(); errTemp != nil {
@@ -111,7 +111,7 @@ func (this *Upnp) deviceStatus() {
 
 }
 
-//查看设备描述，得到控制请求url
+// 查看设备描述，得到控制请求url
 func (this *Upnp) deviceDesc() (err error) {
 	if this.GatewayInsideIP == "" {
 		if err := this.SearchGateway(); err != nil {
@@ -125,7 +125,7 @@ func (this *Upnp) deviceDesc() (err error) {
 	return
 }
 
-//查看公网ip地址
+// 查看公网ip地址
 func (this *Upnp) ExternalIPAddr() (err error) {
 	if this.CtrlUrl == "" {
 		if err := this.deviceDesc(); err != nil {
@@ -138,7 +138,7 @@ func (this *Upnp) ExternalIPAddr() (err error) {
 	// log.Println("获得公网ip地址为：", this.GatewayOutsideIP)
 }
 
-//添加一个端口映射
+// 添加一个端口映射
 func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (err error) {
 	defer func(err error) {
 		if errTemp := recover(); errTemp != nil {
@@ -168,12 +168,12 @@ func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
 	issuccess := delMapping.Send(remotePort, protocol)
 	if issuccess {
 		this.MappingPort.delMapping(remotePort, protocol)
-		log.Println("删除了一个端口映射： remote:", remotePort)
+		//log.Println("删除了一个端口映射： remote:", remotePort)
 	}
 	return issuccess
 }
 
-//回收端口
+// 回收端口
 func (this *Upnp) Reclaim() {
 	mappings := this.MappingPort.GetAllMapping()
 	tcpMapping, ok := mappings["TCP"]

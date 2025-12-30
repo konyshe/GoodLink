@@ -3,7 +3,6 @@ package upnp
 import (
 	// "log"
 	"errors"
-	"log"
 	"net"
 	"strings"
 )
@@ -20,8 +19,8 @@ func GetLocalIntenetIp() string {
 		panic(errors.New("不能连接网络"))
 	}
 	defer conn.Close()
-	log.Println(conn.LocalAddr().String())
-	log.Println(strings.Split(conn.LocalAddr().String(), ":")[0])
+	//log.Println(conn.LocalAddr().String())
+	//log.Println(strings.Split(conn.LocalAddr().String(), ":")[0])
 	return strings.Split(conn.LocalAddr().String(), ":")[0]
 }
 
