@@ -77,7 +77,7 @@ func (this *Upnp) Init() (err error) {
 		if err := this.deviceDesc(); err != nil {
 			return err
 		}
-		log.Println("获得控制请求url:", this.CtrlUrl)
+		log.Println("CtrlUrl:", this.CtrlUrl)
 	}
 
 	if this.GatewayOutsideIP == "" {
