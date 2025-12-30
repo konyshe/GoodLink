@@ -13,62 +13,7 @@ import (
 
 // 对所有的端口进行管理
 type MappingPortStruct struct {
-	lock         *sync.Mutex
-	mappingPorts map[string][][]int
-}
-
-// 添加一个端口映射记录
-// 只对映射进行管理
-func (this *MappingPortStruct) addMapping(localPort, remotePort int, protocol string) {
-
-	this.lock.Lock()
-	defer this.lock.Unlock()
-	if this.mappingPorts == nil {
-		one := make([]int, 0)
-		one = append(one, localPort)
-		two := make([]int, 0)
-		two = append(two, remotePort)
-		portMapping := [][]int{one, two}
-		this.mappingPorts = map[string][][]int{protocol: portMapping}
-		return
-	}
-	portMapping := this.mappingPorts[protocol]
-	if portMapping == nil {
-		one := make([]int, 0)
-		one = append(one, localPort)
-		two := make([]int, 0)
-		two = append(two, remotePort)
-		this.mappingPorts[protocol] = [][]int{one, two}
-		return
-	}
-	one := portMapping[0]
-	two := portMapping[1]
-	one = append(one, localPort)
-	two = append(two, remotePort)
-	this.mappingPorts[protocol] = [][]int{one, two}
-}
-
-// 删除一个映射记录
-// 只对映射进行管理
-func (this *MappingPortStruct) delMapping(remotePort int, protocol string) {
-	this.lock.Lock()
-	defer this.lock.Unlock()
-	if this.mappingPorts == nil {
-		return
-	}
-	tmp := MappingPortStruct{lock: new(sync.Mutex)}
-	mappings := this.mappingPorts[protocol]
-	for i := 0; i < len(mappings[0]); i++ {
-		if mappings[1][i] == remotePort {
-			//要删除的映射
-			break
-		}
-		tmp.addMapping(mappings[0][i], mappings[1][i], protocol)
-	}
-	this.mappingPorts = tmp.mappingPorts
-}
-func (this *MappingPortStruct) GetAllMapping() map[string][][]int {
-	return this.mappingPorts
+	lock *sync.Mutex
 }
 
 type Upnp struct {
@@ -157,7 +102,6 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 	this.Lock.Unlock()
 	addPort := AddPortMapping{upnp: this}
 	if issuccess := addPort.Send(localPort, remotePort, protocol); issuccess {
-		this.MappingPort.addMapping(localPort, remotePort, protocol)
 		// log.Println("添加一个端口映射：protocol:", protocol, "local:", localPort, "remote:", remotePort)
 		return nil
 	} else {
@@ -171,57 +115,14 @@ func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
 	delMapping := DelPortMapping{upnp: this}
 	issuccess := delMapping.Send(remotePort, protocol)
 	if issuccess {
-		this.MappingPort.delMapping(remotePort, protocol)
 		//log.Println("删除了一个端口映射： remote:", remotePort)
 	}
 	return issuccess
 }
 
-// 回收端口
-func (this *Upnp) Reclaim() {
-	mappings := this.MappingPort.GetAllMapping()
-	tcpMapping, ok := mappings["TCP"]
-	if ok {
-		for i := 0; i < len(tcpMapping[0]); i++ {
-			this.DelPortMapping(tcpMapping[1][i], "TCP")
-		}
-	}
-	udpMapping, ok := mappings["UDP"]
-	if ok {
-		for i := 0; i < len(udpMapping[0]); i++ {
-			this.DelPortMapping(udpMapping[0][i], "UDP")
-		}
-	}
-}
-
-// ReclaimExcept 回收除指定端口外的所有端口映射
-func (this *Upnp) ReclaimExcept(exceptPort int) {
-	mappings := this.MappingPort.GetAllMapping()
-	tcpMapping, ok := mappings["TCP"]
-	if ok {
-		for i := 0; i < len(tcpMapping[0]); i++ {
-			if tcpMapping[0][i] != exceptPort {
-				this.DelPortMapping(tcpMapping[1][i], "TCP")
-			}
-		}
-	}
-	udpMapping, ok := mappings["UDP"]
-	if ok {
-		for i := 0; i < len(udpMapping[0]); i++ {
-			if udpMapping[0][i] != exceptPort {
-				this.DelPortMapping(udpMapping[0][i], "UDP")
-			}
-		}
-	}
-}
-
-func (this *Upnp) GetAllMapping() map[string][][]int {
-	return this.MappingPort.GetAllMapping()
-}
-
 // CleanupOldMappings 清理之前添加的端口映射
 // 通过枚举路由器上所有端口映射，筛选描述为 "goodlink" 的映射并删除
-func (this *Upnp) CleanupOldMappings() error {
+func (this *Upnp) CleanupOldMappings(externalPort int) error {
 	// 确保已经初始化网关连接
 	if this.CtrlUrl == "" {
 		if err := this.deviceDesc(); err != nil {
@@ -239,7 +140,7 @@ func (this *Upnp) CleanupOldMappings() error {
 			// 没有更多映射了
 			break
 		}
-		if entry.Description == "goodlink" {
+		if entry.Description == "goodlink" && entry.ExternalPort != externalPort {
 			toDelete = append(toDelete, *entry)
 		}
 	}

@@ -85,7 +85,7 @@ func Init() error {
 		return errors.New("Redis失败, 请重启程序")
 	}
 
-	if err := m_upnp_bind.CleanupOldMappings(); err != nil {
+	if err := m_upnp_bind.CleanupOldMappings(0); err != nil {
 		utils.Log().ErrorF("UPnP清理失败: %v", err)
 	}
 
