@@ -22,6 +22,8 @@ import (
 )
 
 func main2() {
+	log.Println("官方网址: https://gitee.com/konyshe/goodlink")
+
 	go func() {
 		if config.Arg_pprof_addr != "" { // 性能监测，开发使用选项
 			log.Println(http.ListenAndServe(config.Arg_pprof_addr, nil))
