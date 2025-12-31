@@ -45,6 +45,10 @@ func main() {
 
 	myWindow.SetContent(ui2.GetMainUI(&myWindow))
 
+	// 设置窗口初始大小：宽度等于高度（正方形窗口）
+	minSize := myWindow.Content().MinSize()
+	myWindow.Resize(fyne.NewSize(minSize.Width*2, minSize.Height))
+
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Hide()
 	})

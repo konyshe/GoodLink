@@ -87,15 +87,17 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	m_activity_start_button = widget.NewActivity()
 	m_button_start = widget.NewButton("点击启动", start_button_click)
 	m_button_start.Importance = widget.HighImportance
-	m_button_start.Resize(fyne.NewSize(100, 40))
+
+	// 初始化日志标签（用于兼容，但不再显示在UI中）
+	NewLogLabel("等待启动")
 
 	return container.New(layout.NewVBoxLayout(),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作端侧: "), m_radio_work_type),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), m_validated_key),
 		container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste),
 		//localUI_Container, remoteUI_Container,
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新状态: "), NewLogLabel("等待启动")),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新时间: "), &m_view_time),
+		//widget.NewLabel("日志显示:"),
+		NewLogList(),
 		container.NewStack(m_button_start, m_activity_start_button),
 		NewFooter())
 }
