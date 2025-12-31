@@ -9,9 +9,9 @@ import (
 	"goodlink/config"
 	"goodlink/stun2"
 	"goodlink/upnp"
-	"goodlink/utils"
 	"goodlink2/tun"
 	_ "goodlink2/tun"
+	"log"
 	"net"
 	"time"
 
@@ -35,16 +35,16 @@ func GetVersion() string {
 }
 
 func Init() error {
-	utils.Log().Debug("初始化配置中")
+	log.Println("初始化配置中")
 	for {
 		if err := config.Init(); err != nil {
-			utils.Log().Debug(err.Error())
+			log.Println(err.Error())
 			time.Sleep(3 * time.Second)
 			continue
 		}
 		break
 	}
-	utils.Log().Debug("初始化配置完成")
+	log.Println("初始化配置完成")
 
 	var redis_addr string
 	var redis_pass string
@@ -91,8 +91,6 @@ func Init() error {
 }
 
 func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
-	utils.Log().SetDebugSate(0)
-
 	if tun_active != nil {
 		tun_active.Release()
 	}
@@ -198,7 +196,7 @@ func RedisSessionScan() ([]RedisJsonType, error) {
 		var redisJson RedisJsonType
 		decryptedData := go2aes.Decrypt7([]byte(encryptedData), m_tun_key)
 		if err := json.Unmarshal(decryptedData, &redisJson); err != nil {
-			utils.Log().DebugF("解析会话数据失败: %v", err)
+			log.Printf("解析会话数据失败: %v", err)
 			continue
 		}
 
@@ -337,7 +335,7 @@ func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 	for {
 		conn, err = net.ListenUDP("udp4", nil) // 只监听IPv4
 		if err != nil {
-			utils.Log().Debug(err.Error())
+			log.Println(err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -348,7 +346,7 @@ func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 
 		conn, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
 		if err != nil {
-			utils.Log().Debug(err.Error())
+			log.Println(err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}

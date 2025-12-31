@@ -3,9 +3,7 @@
 package ui2
 
 import (
-	"errors"
 	"fmt"
-	"goodlink/utils"
 	"log"
 	"regexp"
 	"sync"
@@ -95,25 +93,10 @@ func UILogPrintF(a ...any) {
 	}
 }
 
-func UILogInit() {
-	utils.Log().RegistInfo(func(content string) {
-		UILogPrintF(content)
-	})
-	utils.Log().RegistDebug(func(content string) {
-		UILogPrintF(content)
-	})
-	utils.Log().RegistError(func(content string) {
-		UILogPrintF(content)
-		fyne.LogError("error: ", errors.New(content))
-	})
-}
-
 func NewLogLabel(content string) *LogLabel {
 	m_log_label = &LogLabel{}
 	m_log_label.ExtendBaseWidget(m_log_label)
 	m_log_label.SetText(content)
-
-	UILogInit()
 
 	return m_log_label
 }

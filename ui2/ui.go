@@ -81,8 +81,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	}
 	m_radio_work_type.SetSelected(configInfo.WorkType)
 
-	UILogInit()
-
 	m_stats_start_button = 0
 	m_activity_start_button = widget.NewActivity()
 	m_button_start = widget.NewButton("点击启动", start_button_click)

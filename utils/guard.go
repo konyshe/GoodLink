@@ -42,9 +42,9 @@ func GuardStart(proc_handler func(), time_out time.Duration, err_handle func(err
 			var err error
 
 			if err = cmd.Start(); err != nil {
-				log.Printf("   failed to run command: %v\n", err)
+				log.Printf("failed to run command: %v\n", err)
 			} else if err = cmd.Wait(); err != nil {
-				log.Printf("   failed to wait command: %v\n", err)
+				log.Printf("failed to wait command: %v\n", err)
 			}
 
 			err_handle(err)

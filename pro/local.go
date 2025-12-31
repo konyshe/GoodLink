@@ -5,7 +5,6 @@ import (
 	"go2"
 	"goodlink/config"
 	"goodlink/netstack"
-	"goodlink/utils"
 	"goodlink2/tun"
 	"log"
 	"net"
@@ -24,7 +23,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	var tun_passive *tun.TunPassive
 
 	SessionID := string(go2.RandomBytes(24))
-	utils.Log().DebugF("会话ID: %s", SessionID)
+	log.Printf("会话ID: %s", SessionID)
 
 	redisJson := RedisJsonType{
 		LocalVersion: GetVersion(),
@@ -40,11 +39,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 	switch conn_type {
 	case 0:
-		utils.Log().Debug("请求连接Remote端")
+		log.Println("请求连接Remote端")
 
 	default:
 		redisJson.LocalAddr = *addr
-		utils.Log().DebugF("发送Local端地址: %v", redisJson.LocalAddr)
+		log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
 	}
 
 	// 阶段1: 将SessionID注册到Hash中，等待Remote端认领
@@ -52,7 +51,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		log.Printf("注册会话失败: %v", err)
 		return tun_active, tun_passive, nil, nil, err
 	}
-	utils.Log().DebugF("已注册会话到队列，等待Remote端认领: %s", SessionID)
+	log.Printf("已注册会话到队列，等待Remote端认领: %s", SessionID)
 
 	// 等待Remote端认领并写入独立的session key
 	sessionClaimed := false
@@ -62,7 +61,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		// 尝试从独立的session key读取，如果能读到说明已被认领
 		if RedisSessionGet(SessionID, &redisJson) == nil {
 			sessionClaimed = true
-			utils.Log().DebugF("会话已被Remote端认领: %s", SessionID)
+			log.Printf("会话已被Remote端认领: %s", SessionID)
 			break
 		}
 	}
@@ -83,24 +82,20 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 			return tun_active, tun_passive, nil, nil, nil
 		}
 
-		//log.Printf("状态消息: %v", redisJson)
-
-		utils.Log().SetDebugSate(redisJson.State)
-
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
-			utils.Log().Debug("会话被重置")
+			log.Println("会话被重置")
 			return tun_active, tun_passive, nil, nil, nil
 		}
 
 		switch redisJson.State {
 		case 1:
 			if redisJson.RemoteVersion != GetVersion() {
-				utils.Log().DebugF("两端版本不兼容: %v", redisJson)
+				log.Printf("两端版本不兼容: %v", redisJson)
 				RedisSessionDel(SessionID)
 				return tun_active, tun_passive, nil, nil, errors.New("两端版本不兼容")
 			}
 
-			utils.Log().DebugF("收到Remote端地址: %v", redisJson.RemoteAddr)
+			log.Printf("收到Remote端地址: %v", redisJson.RemoteAddr)
 
 			switch conn_type {
 			case 0:
@@ -115,7 +110,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 				tun_passive.Start()
 
 				redisJson.State = 2
-				utils.Log().DebugF("发送Local端地址: %v", redisJson.LocalAddr)
+				log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
 				RedisSessionSet(SessionID, redisJson.RedisTimeOut, &redisJson)
 
 			default:
@@ -134,25 +129,25 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case 3:
 			if tun_passive != nil {
 				if tun_passive.TunQuicConn != nil {
-					utils.Log().DebugF("连接成功")
+					log.Printf("连接成功")
 					return tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream, nil
 				}
 			}
 			if tun_active != nil {
 				if tun_active.TunQuicConn != nil {
-					utils.Log().DebugF("连接成功")
+					log.Printf("连接成功")
 					return tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream, nil
 				}
 			}
-			utils.Log().Debug("连接失败")
+			log.Println("连接失败")
 			return tun_active, tun_passive, nil, nil, nil
 
 		case 4:
-			utils.Log().Debug("连接超时")
+			log.Println("连接超时")
 			return tun_active, tun_passive, nil, nil, nil
 
 		default:
-			utils.Log().DebugF("等待Remote端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
+			log.Printf("等待Remote端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
 
@@ -214,14 +209,14 @@ func RunLocal(tun_key string) error {
 		m_tun_passive = tun_passive
 
 		netstack.SetForWarder(quic_conn)
-		utils.Log().DebugF("Remote端IP: %s", netstack.GetRemoteIP())
+		log.Printf("Remote端IP: %s", netstack.GetRemoteIP())
 
 		m_local_state = 2
 		tun.ProcessHealth(health)
 		if m_local_state != 0 {
 			m_local_state = 1
 		}
-		utils.Log().DebugF("释放连接: %v", quic_conn.LocalAddr())
+		log.Printf("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive)
 
 		netstack.SetForWarder(nil)

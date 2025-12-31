@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"goodlink/utils"
 	"log"
 	"net"
 	"os"
@@ -173,7 +172,7 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 	var change_ip string
 	var change_port int
 
-	utils.Log().Debug("获取本端地址")
+	log.Println("获取本端地址")
 
 	ips, err := net.LookupIP("stun.easyvoip.com")
 	if err != nil {

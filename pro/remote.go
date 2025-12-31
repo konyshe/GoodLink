@@ -4,7 +4,6 @@ import (
 	"go2"
 	"goodlink/config"
 	"goodlink/proxy"
-	"goodlink/utils"
 	"goodlink2/tun"
 	"log"
 	"net"
@@ -52,14 +51,14 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 	redisJson.RemoteVersion = GetVersion()
 
 	// 阶段2: 处理会话状态为0，发送Remote端信息，并写入独立的session key
-	utils.Log().DebugF("会话 %s 收到Local端请求: %v", sessionID, redisJson)
+	log.Printf("会话 %s 收到Local端请求: %v", sessionID, redisJson)
 
 	redisJson.State = 1
 	redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
 	redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 
 	if redisJson.LocalVersion != GetVersion() {
-		utils.Log().DebugF("会话 %s 两端版本不兼容: Local: %v => Remote: %v", sessionID, redisJson.LocalVersion, GetVersion())
+		log.Printf("会话 %s 两端版本不兼容: Local: %v => Remote: %v", sessionID, redisJson.LocalVersion, GetVersion())
 		RedisSessionSet(sessionID, redisJson.SocketTimeOut*3, &redisJson)
 		return
 	}
@@ -69,7 +68,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 	switch redisJson.LocalAddr.WanPort1 {
 	case 0:
 		conn_type = 0
-		utils.Log().DebugF("会话 %s Local端未发来IP", sessionID)
+		log.Printf("会话 %s Local端未发来IP", sessionID)
 
 		tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
 		tun_active_chain = tun_active.GetChain()
@@ -77,7 +76,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 		redisJson.SendPortCount = 0x100
 
 	default:
-		utils.Log().DebugF("会话 %s Local端有发来IP: %v", sessionID, redisJson.LocalAddr)
+		log.Printf("会话 %s Local端有发来IP: %v", sessionID, redisJson.LocalAddr)
 		conn_type = 1
 
 		tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
@@ -86,7 +85,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 		tun_passive_chain = tun_passive.GetChain()
 	}
 
-	utils.Log().DebugF("会话 %s 发送Remote端地址: %v", sessionID, redisJson.RemoteAddr)
+	log.Printf("会话 %s 发送Remote端地址: %v", sessionID, redisJson.RemoteAddr)
 	// 写入独立的session key，通知Local端会话已被认领
 	RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
 
@@ -102,22 +101,20 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 		}
 		redisJson.RemoteVersion = GetVersion()
 
-		utils.Log().SetDebugSate(redisJson.State)
-
 		if !strings.EqualFold(redisJson.SessionID, sessionID) {
-			utils.Log().DebugF("会话 %s 被重置", sessionID)
+			log.Printf("会话 %s 被重置", sessionID)
 			return
 		}
 
 		if redisJson.State < last_state {
 			RedisSessionDel(sessionID)
-			utils.Log().DebugF("会话 %s 状态异常: %d -> %d", sessionID, last_state, redisJson.State)
+			log.Printf("会话 %s 状态异常: %d -> %d", sessionID, last_state, redisJson.State)
 			return
 		}
 
 		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
 			RedisSessionDel(sessionID)
-			utils.Log().DebugF("会话 %s 状态异常: %d -> %d", sessionID, last_state, redisJson.State)
+			log.Printf("会话 %s 状态异常: %d -> %d", sessionID, last_state, redisJson.State)
 			return
 		}
 
@@ -128,17 +125,17 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 		case 2:
 			switch conn_type {
 			case 0:
-				utils.Log().DebugF("会话 %s 收到Local端地址: %v", sessionID, redisJson.LocalAddr)
+				log.Printf("会话 %s 收到Local端地址: %v", sessionID, redisJson.LocalAddr)
 				tun_active.Start()
 
 			case 1:
-				utils.Log().DebugF("会话 %s 收到Local端地址, 等待连接: %v", sessionID, redisJson.LocalAddr)
+				log.Printf("会话 %s 收到Local端地址, 等待连接: %v", sessionID, redisJson.LocalAddr)
 			}
 
 			select {
 			case <-tun_active_chain:
 				redisJson.State = 3
-				utils.Log().DebugF("会话 %s Local端被动连接成功", sessionID)
+				log.Printf("会话 %s Local端被动连接成功", sessionID)
 				RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
 				if tun_active != nil && tun_active.TunQuicConn != nil {
 					// 连接成功，启动代理和健康检查
@@ -148,7 +145,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 
 			case <-tun_passive_chain:
 				redisJson.State = 3
-				utils.Log().DebugF("会话 %s Local端主动连接成功", sessionID)
+				log.Printf("会话 %s Local端主动连接成功", sessionID)
 				RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
 				if tun_passive != nil && tun_passive.TunQuicConn != nil {
 					// 连接成功，启动代理和健康检查
@@ -158,7 +155,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 
 			case <-time.After(time.Duration(config.Arg_p2p_timeout) * time.Second):
 				redisJson.State = 4
-				utils.Log().DebugF("会话 %s Local端连接超时", sessionID)
+				log.Printf("会话 %s Local端连接超时", sessionID)
 				RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
 				return
 			}
@@ -167,7 +164,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 			return
 
 		default:
-			utils.Log().DebugF("会话 %s 等待Local端状态: Local: %v => Remote: %v", sessionID, redisJson.LocalAddr, redisJson.RemoteAddr)
+			log.Printf("会话 %s 等待Local端状态: Local: %v => Remote: %v", sessionID, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 
 		last_state = redisJson.State
@@ -176,7 +173,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 
 // handleConnection 处理已建立的连接
 func handleConnection(sessionID string, quicConn quic.Connection, healthStream quic.Stream) {
-	utils.Log().DebugF("开始处理连接: %s", sessionID)
+	log.Printf("开始处理连接: %s", sessionID)
 
 	// 启动代理服务
 	go proxy.ProcessProxyServer(quicConn)
@@ -184,7 +181,7 @@ func handleConnection(sessionID string, quicConn quic.Connection, healthStream q
 	// 阻塞等待健康检查结束
 	tun.ProcessHealth(healthStream)
 
-	utils.Log().DebugF("释放连接: %v, SessionID: %s", quicConn.LocalAddr(), sessionID)
+	log.Printf("释放连接: %v, SessionID: %s", quicConn.LocalAddr(), sessionID)
 }
 
 func StopRemote() error {
@@ -211,7 +208,7 @@ func RunRemote(tun_key string) error {
 	for m_remote_stats == 1 {
 		pendingSessions, err := RedisSessionScan()
 		if err != nil {
-			utils.Log().DebugF("扫描会话失败: %v", err)
+			log.Printf("扫描会话失败: %v", err)
 			time.Sleep(3 * time.Second)
 			continue
 		}

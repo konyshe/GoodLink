@@ -111,7 +111,7 @@ func startTCPServer(s *stack.Stack) {
 			}
 		}
 
-		log.Printf("Accepted connection from %s:%d\n", addr.Addr, addr.Port)
+		log.Printf("Accepted %s:%d\n", addr.Addr, addr.Port)
 
 		// 获取新连接的端点
 		go handleConnection(newEP, waitq) // 传递正确的连接端点
