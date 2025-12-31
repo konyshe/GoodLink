@@ -106,5 +106,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		//localUI_Container, remoteUI_Container,
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新状态: "), NewLogLabel("等待启动")),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("更新时间: "), &m_view_time),
-		container.NewStack(m_button_start, m_activity_start_button))
+		container.NewStack(m_button_start, m_activity_start_button),
+		NewFooter())
 }
