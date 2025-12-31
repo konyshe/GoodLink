@@ -8,8 +8,6 @@ import (
 	"log"
 
 	"goodlink/config"
-	"goodlink/pro"
-	_ "goodlink/pro"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -90,14 +88,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	m_button_start = widget.NewButton("点击启动", start_button_click)
 	m_button_start.Importance = widget.HighImportance
 	m_button_start.Resize(fyne.NewSize(100, 40))
-	m_button_start.Disable()
-	go func() {
-		if err := pro.Init(); err != nil {
-			UILogPrintF(err.Error())
-			return
-		}
-		m_button_start.Enable()
-	}()
 
 	return container.New(layout.NewVBoxLayout(),
 		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作端侧: "), m_radio_work_type),

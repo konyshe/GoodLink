@@ -3,16 +3,19 @@
 package ui2
 
 import (
+	"bufio"
+	"context"
 	"encoding/json"
 	"go2"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"goodlink/config"
-	"goodlink/pro"
-	_ "goodlink/pro"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -26,6 +29,10 @@ var (
 	m_button_start          *widget.Button
 	m_activity_start_button *widget.Activity
 	m_stats_start_button    int
+
+	// 子进程管理
+	m_cmd_process *exec.Cmd
+	m_cmd_cancel  context.CancelFunc
 )
 
 func disable_other(content string) {
@@ -50,6 +57,16 @@ func enable_other() {
 	m_button_key_paste.Enable()
 	m_activity_start_button.Stop()
 	m_activity_start_button.Hide()
+}
+
+// 获取 cmd 版本可执行文件路径
+func getCmdExePath() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		return "goodlink-windows-amd64-cmd.exe"
+	}
+	dir := filepath.Dir(exePath)
+	return filepath.Join(dir, "goodlink-windows-amd64-cmd.exe")
 }
 
 func start_button_click() {
@@ -97,102 +114,131 @@ func start_button_click() {
 		m_button_start.Disable()
 		disable_other("正在启动...")
 
+		// 构建命令行参数
+		cmdPath := getCmdExePath()
+
+		// 检查 cmd 程序是否存在
+		if _, err := os.Stat(cmdPath); os.IsNotExist(err) {
+			UILogPrintF("未找到: %s", filepath.Base(cmdPath))
+			enable_other()
+			m_button_start.Enable()
+			m_stats_start_button = 0
+			return
+		}
+
+		var args []string
 		switch m_radio_work_type.Selected {
 		case "Local":
-			m_mg_start.Add(1)
-			go func() {
-				defer func() {
-					m_activity_start_button.Stop()
-					m_activity_start_button.Hide()
-					m_mg_start.Done()
-				}()
-
-				time.Sleep(time.Second * 1)
-				if m_stats_start_button != 1 {
-					return
-				}
-				m_button_start.Enable()
-				m_button_start.Importance = widget.WarningImportance
-				m_button_start.SetText("关闭连接")
-
-				for m_stats_start_button == 1 {
-					switch pro.GetLocalStats() {
-					case 1:
-						m_activity_start_button.Start()
-						m_activity_start_button.Show()
-						m_button_start.Importance = widget.WarningImportance
-						m_button_start.Refresh()
-					case 2:
-						m_activity_start_button.Stop()
-						m_activity_start_button.Hide()
-						m_button_start.Importance = widget.SuccessImportance
-						m_button_start.Refresh()
-					}
-					time.Sleep(time.Second * 1)
-				}
-			}()
-
-			m_mg_start.Add(1)
-			go func() {
-				defer m_mg_start.Done()
-				if err := pro.RunLocal(m_validated_key.Text); err != nil {
-					SetLogLabel(err.Error())
-				}
-				m_stats_start_button = 0
-				m_button_start.Importance = widget.HighImportance
-				m_button_start.SetText("点击启动")
-				m_button_start.Enable()
-				enable_other()
-			}()
-
+			args = []string{"-local", "-key=" + m_validated_key.Text}
 		case "Remote":
-			m_mg_start.Add(1)
-			go func() {
-				defer m_mg_start.Done()
-				time.Sleep(time.Second * 1)
-				m_log_label.SetText("启动成功")
-				m_button_start.Importance = widget.SuccessImportance
-				m_button_start.SetText("点击停止")
+			args = []string{"-remote", "-key=" + m_validated_key.Text}
+		}
+
+		// 创建带取消的 context
+		ctx, cancel := context.WithCancel(context.Background())
+		m_cmd_cancel = cancel
+		m_cmd_process = exec.CommandContext(ctx, cmdPath, args...)
+
+		// 隐藏子进程窗口
+		m_cmd_process.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow:    true,
+			CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+		}
+
+		// 获取输出管道
+		stdout, err := m_cmd_process.StdoutPipe()
+		if err != nil {
+			UILogPrintF("获取stdout失败: %v", err)
+			enable_other()
+			m_button_start.Enable()
+			m_stats_start_button = 0
+			return
+		}
+		stderr, err := m_cmd_process.StderrPipe()
+		if err != nil {
+			UILogPrintF("获取stderr失败: %v", err)
+			enable_other()
+			m_button_start.Enable()
+			m_stats_start_button = 0
+			return
+		}
+
+		// 启动子进程
+		if err := m_cmd_process.Start(); err != nil {
+			UILogPrintF("启动失败: %v", err)
+			enable_other()
+			m_button_start.Enable()
+			m_stats_start_button = 0
+			return
+		}
+
+		// 读取 stdout
+		m_mg_start.Add(1)
+		go func() {
+			defer m_mg_start.Done()
+			scanner := bufio.NewScanner(stdout)
+			for scanner.Scan() {
+				UILogPrintF(scanner.Text())
+			}
+		}()
+
+		// 读取 stderr
+		m_mg_start.Add(1)
+		go func() {
+			defer m_mg_start.Done()
+			scanner := bufio.NewScanner(stderr)
+			for scanner.Scan() {
+				UILogPrintF(scanner.Text())
+			}
+		}()
+
+		// 更新按钮状态
+		m_mg_start.Add(1)
+		go func() {
+			defer func() {
 				m_activity_start_button.Stop()
 				m_activity_start_button.Hide()
-				m_button_start.Enable()
+				m_mg_start.Done()
 			}()
 
-			m_mg_start.Add(1)
-			go func() {
-				defer m_mg_start.Done()
-				if err := pro.RunRemote(m_validated_key.Text); err != nil {
-					SetLogLabel(err.Error())
-				}
-				m_stats_start_button = 0
-				m_button_start.Importance = widget.HighImportance
-				m_button_start.SetText("点击启动")
-				enable_other()
-			}()
-		}
+			time.Sleep(time.Second * 1)
+			if m_stats_start_button != 1 {
+				return
+			}
+			m_button_start.Enable()
+			m_button_start.Importance = widget.WarningImportance
+			m_button_start.SetText("关闭连接")
+
+			// 等待子进程结束
+			m_cmd_process.Wait()
+
+			m_stats_start_button = 0
+			m_button_start.Importance = widget.HighImportance
+			m_button_start.SetText("点击启动")
+			m_button_start.Enable()
+			enable_other()
+		}()
 
 	case 1:
 		m_button_start.Disable()
 		UILogPrintF("正在停止...")
 		m_stats_start_button = 0
 
-		switch m_radio_work_type.Selected {
-		case "Local":
-			go func() {
-				pro.StopLocal()
-			}()
+		// 杀掉子进程（在 goroutine 中执行，避免阻塞 UI）
+		go func() {
+			if m_cmd_cancel != nil {
+				m_cmd_cancel()
+			}
+			if m_cmd_process != nil && m_cmd_process.Process != nil {
+				m_cmd_process.Process.Kill()
+			}
 
-		case "Remote":
-			go func() {
-				pro.StopRemote()
-			}()
-		}
-
-		m_mg_start.Wait()
-		enable_other()
-		UILogPrintF("等待启动")
-		m_button_start.Importance = widget.HighImportance
-		m_button_start.SetText("点击启动")
-		m_button_start.Enable()
+			m_mg_start.Wait()
+			enable_other()
+			UILogPrintF("等待启动")
+			m_button_start.Importance = widget.HighImportance
+			m_button_start.SetText("点击启动")
+			m_button_start.Enable()
+		}()
 	}
 }
