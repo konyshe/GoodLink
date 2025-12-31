@@ -35,7 +35,8 @@ var (
 )
 
 func disable_other(content string) {
-	m_radio_work_type.Disable()
+	m_btn_local.Disable()
+	m_btn_remote.Disable()
 	m_validated_key.Disable()
 	m_ui_local.Disable()
 	m_ui_remote.Disable()
@@ -47,7 +48,8 @@ func disable_other(content string) {
 }
 
 func enable_other() {
-	m_radio_work_type.Enable()
+	m_btn_local.Enable()
+	m_btn_remote.Enable()
 	m_validated_key.Enable()
 	m_ui_local.Enable()
 	m_ui_remote.Enable()
@@ -97,7 +99,7 @@ func start_button_click() {
 			SetLogLabel("请输入或点击生成连接密钥!")
 			return
 		}
-		switch m_radio_work_type.Selected {
+		switch GetWorkType() {
 		case "Local":
 			if m_ui_local.GetLocalPort() == "" {
 				//SetLogLabel("请填写访问端口号")
@@ -112,7 +114,7 @@ func start_button_click() {
 
 		// 保存配置文件, 下次启动加载
 		configByte, _ := json.Marshal(&config.ConfigInfo{
-			WorkType:   m_radio_work_type.Selected,
+			WorkType:   GetWorkType(),
 			TunKey:     m_validated_key.Text,
 			ConnType:   m_ui_local.GetConnType2(),
 			LocalIP:    m_ui_local.GetLocalIP(),
@@ -144,7 +146,7 @@ func start_button_click() {
 		}
 
 		var args []string
-		switch m_radio_work_type.Selected {
+		switch GetWorkType() {
 		case "Local":
 			args = []string{"--fork", "--local", "--key=" + m_validated_key.Text}
 		case "Remote":

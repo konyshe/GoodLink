@@ -9,7 +9,9 @@ import (
 	"sync"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -125,7 +127,10 @@ func NewLogList() fyne.CanvasObject {
 			m_log_mutex.RLock()
 			defer m_log_mutex.RUnlock()
 			if id < len(m_log_entries) {
-				obj.(*widget.Label).SetText(m_log_entries[id])
+				content := m_log_entries[id]
+				if label, ok := obj.(*widget.Label); ok {
+					label.SetText(content)
+				}
 			}
 		},
 	)
@@ -138,5 +143,22 @@ func NewLogList() fyne.CanvasObject {
 
 	m_log_scroll = logContainer
 
-	return logContainer
+	// 创建日志标题
+	logIcon := widget.NewIcon(theme.InfoIcon())
+	logTitle := widget.NewRichTextFromMarkdown("**运行日志**")
+	logTitleContainer := container.NewHBox(logIcon, logTitle)
+
+	// 创建背景
+	logBg := canvas.NewRectangle(bgColorCard)
+	logBg.CornerRadius = cornerRadius
+
+	// 组合标题和日志列表
+	logContent := container.NewVBox(
+		container.NewPadded(logTitleContainer),
+		container.NewPadded(logContainer),
+	)
+
+	logWithBg := container.NewStack(logBg, logContent)
+
+	return logWithBg
 }

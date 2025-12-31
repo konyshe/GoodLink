@@ -5,6 +5,7 @@ package ui2
 import (
 	"encoding/json"
 	"go2"
+	"image/color"
 	"log"
 
 	"goodlink/config"
@@ -13,14 +14,18 @@ import (
 	_ "net/http/pprof"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/atotto/clipboard"
 )
 
 var (
-	m_radio_work_type   *widget.RadioGroup
+	m_work_type         string
+	m_btn_local         *widget.Button
+	m_btn_remote        *widget.Button
 	m_validated_key     *widget.Entry
 	m_ui_local          *LocalUI
 	m_ui_remote         *RemoteUI
@@ -32,70 +37,167 @@ const (
 	M_APP_TITLE = "GoodLink"
 )
 
-func GetMainUI(myWindow *fyne.Window) *fyne.Container {
-	var configInfo config.ConfigInfo
-	json.Unmarshal(go2.FileReadAll("goodlink.json"), &configInfo)
-	log.Println(configInfo)
+// UI样式常量
+var (
+	// 统一的背景颜色
+	bgColorPrimary   = color.NRGBA{R: 45, G: 45, B: 55, A: 255}   // 主要背景
+	bgColorSecondary = color.NRGBA{R: 40, G: 40, B: 50, A: 255}   // 次要背景
+	bgColorCard      = color.NRGBA{R: 50, G: 50, B: 60, A: 255}   // 卡片背景
+	separatorColor   = color.NRGBA{R: 100, G: 100, B: 100, A: 80} // 分隔线颜色
+	// 统一的圆角半径
+	cornerRadius = float32(8)
+	// 统一的间距
+	paddingSize = float32(12)
+)
 
+// 更新工作模式按钮样式
+func updateWorkTypeButtons(selected string) {
+	m_work_type = selected
+	if selected == "Local" {
+		m_btn_local.Importance = widget.HighImportance
+		m_btn_remote.Importance = widget.MediumImportance
+	} else {
+		m_btn_local.Importance = widget.MediumImportance
+		m_btn_remote.Importance = widget.HighImportance
+	}
+	m_btn_local.Refresh()
+	m_btn_remote.Refresh()
+}
+
+// 获取当前工作类型
+func GetWorkType() string {
+	return m_work_type
+}
+
+// 创建工作模式选择器
+func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
+	// 创建本地端按钮
+	m_btn_local = widget.NewButtonWithIcon("  本地端  ", theme.ComputerIcon(), func() {
+		updateWorkTypeButtons("Local")
+	})
+
+	// 创建远程端按钮
+	m_btn_remote = widget.NewButtonWithIcon("  远程端  ", theme.StorageIcon(), func() {
+		updateWorkTypeButtons("Remote")
+	})
+
+	// 根据配置设置初始状态
+	if configInfo.WorkType == "" {
+		configInfo.WorkType = "Local"
+	}
+	updateWorkTypeButtons(configInfo.WorkType)
+
+	// 创建分隔线
+	separator := canvas.NewRectangle(separatorColor)
+	separator.SetMinSize(fyne.NewSize(2, 30))
+
+	// 创建标签
+	label := widget.NewRichTextFromMarkdown("**工作端侧**")
+
+	// 组合按钮和分隔线
+	buttonGroup := container.NewHBox(
+		m_btn_local,
+		separator,
+		m_btn_remote,
+	)
+
+	// 添加装饰性背景
+	bg := canvas.NewRectangle(bgColorCard)
+	bg.CornerRadius = cornerRadius
+
+	buttonWithBg := container.NewStack(bg, container.NewPadded(buttonGroup))
+
+	return container.NewBorder(nil, nil, label, nil, buttonWithBg)
+}
+
+// 创建连接密钥输入区域
+func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	m_validated_key = widget.NewEntry()
 	m_validated_key.SetPlaceHolder("自定义16-24字节长度")
 	if len(configInfo.TunKey) > 0 {
 		m_validated_key.SetText(configInfo.TunKey)
 	}
 
-	m_button_key_create = widget.NewButton("生成密钥", func() {
+	// 创建密钥标签
+	keyLabel := widget.NewRichTextFromMarkdown("**连接密钥**")
+
+	// 创建带图标的输入框容器
+	keyIcon := widget.NewIcon(theme.ConfirmIcon())
+
+	keyInputContainer := container.NewBorder(nil, nil, keyIcon, nil, m_validated_key)
+
+	// 创建背景
+	keyBg := canvas.NewRectangle(bgColorCard)
+	keyBg.CornerRadius = cornerRadius
+
+	keyInputWithBg := container.NewStack(keyBg, container.NewPadded(keyInputContainer))
+
+	return container.NewBorder(nil, nil, keyLabel, nil, keyInputWithBg)
+}
+
+// 创建密钥操作按钮组
+func createKeyButtons() fyne.CanvasObject {
+	m_button_key_create = widget.NewButtonWithIcon("生成密钥", theme.ContentAddIcon(), func() {
 		m_validated_key.SetText(string(go2.RandomBytes(24)))
 	})
-	key_copy_button := widget.NewButton("复制密钥", func() {
+
+	key_copy_button := widget.NewButtonWithIcon("复制密钥", theme.ContentCopyIcon(), func() {
 		clipboard.WriteAll(m_validated_key.Text)
 	})
-	m_button_key_paste = widget.NewButton("粘贴密钥", func() {
+
+	m_button_key_paste = widget.NewButtonWithIcon("粘贴密钥", theme.ContentPasteIcon(), func() {
 		if s, err := clipboard.ReadAll(); err == nil {
 			m_validated_key.SetText(s)
 		}
 	})
 
+	// 统一按钮样式
+	m_button_key_create.Importance = widget.MediumImportance
+	key_copy_button.Importance = widget.MediumImportance
+	m_button_key_paste.Importance = widget.MediumImportance
+
+	return container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste)
+}
+
+func GetMainUI(myWindow *fyne.Window) *fyne.Container {
+	var configInfo config.ConfigInfo
+	json.Unmarshal(go2.FileReadAll("goodlink.json"), &configInfo)
+	log.Println(configInfo)
+
 	m_ui_local = NewLocalUI(myWindow, &configInfo)
-	//localUI_Container := m_ui_local.GetContainer()
-
 	m_ui_remote = NewRemoteUI(myWindow, &configInfo)
-	//remoteUI_Container := m_ui_remote.GetContainer()
 
-	m_radio_work_type = widget.NewRadioGroup([]string{"Remote", "Local"}, nil)
-	m_radio_work_type.Horizontal = true
-	/*
-		m_radio_work_type.OnChanged = func(value string) {
-			switch value {
-			case "Remote":
-				localUI_Container.Hide()
-				remoteUI_Container.Show()
-			default:
-				remoteUI_Container.Hide()
-				localUI_Container.Show()
-			}
-			(*myWindow).Resize((*myWindow).Content().MinSize())
-		}
-	*/
-	if configInfo.WorkType == "" {
-		configInfo.WorkType = "Local"
-	}
-	m_radio_work_type.SetSelected(configInfo.WorkType)
+	// 创建各个UI组件
+	workTypeSelector := createWorkTypeSelector(&configInfo)
+	keyInputSection := createKeyInputSection(&configInfo)
+	keyButtons := createKeyButtons()
 
 	m_stats_start_button = 0
 	m_activity_start_button = widget.NewActivity()
-	m_button_start = widget.NewButton("点击启动", start_button_click)
+	m_button_start = widget.NewButtonWithIcon("点击启动", theme.MediaPlayIcon(), start_button_click)
 	m_button_start.Importance = widget.HighImportance
+
+	// 创建启动按钮容器（带背景）
+	startButtonBg := canvas.NewRectangle(bgColorCard)
+	startButtonBg.CornerRadius = cornerRadius
+	startButtonContainer := container.NewStack(
+		startButtonBg,
+		container.NewPadded(container.NewStack(m_button_start, m_activity_start_button)),
+	)
 
 	// 初始化日志标签（用于兼容，但不再显示在UI中）
 	NewLogLabel("等待启动")
 
-	return container.New(layout.NewVBoxLayout(),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作端侧: "), m_radio_work_type),
-		container.New(layout.NewFormLayout(), widget.NewRichTextWithText("连接密钥: "), m_validated_key),
-		container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste),
-		//localUI_Container, remoteUI_Container,
-		//widget.NewLabel("日志显示:"),
-		NewLogList(),
-		container.NewStack(m_button_start, m_activity_start_button),
-		NewFooter())
+	// 创建主容器，添加统一的间距和布局
+	mainContent := container.New(layout.NewVBoxLayout(),
+		container.NewPadded(workTypeSelector),
+		container.NewPadded(keyInputSection),
+		container.NewPadded(keyButtons),
+		container.NewPadded(NewLogList()),
+		container.NewPadded(startButtonContainer),
+		NewFooter(),
+	)
+
+	// 添加外层padding，确保整体有合适的边距
+	return container.NewPadded(mainContent)
 }
