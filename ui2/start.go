@@ -43,7 +43,6 @@ func disable_other(content string) {
 	m_button_key_paste.Disable()
 	m_activity_start_button.Start()
 	m_activity_start_button.Show()
-	UILogPrintF(content)
 	m_stats_start_button = 1
 }
 
@@ -147,9 +146,9 @@ func start_button_click() {
 		var args []string
 		switch m_radio_work_type.Selected {
 		case "Local":
-			args = []string{"-local", "-key=" + m_validated_key.Text}
+			args = []string{"--fork", "--local", "--key=" + m_validated_key.Text}
 		case "Remote":
-			args = []string{"-remote", "-key=" + m_validated_key.Text}
+			args = []string{"--fork", "--remote", "--key=" + m_validated_key.Text}
 		}
 
 		// 创建子进程
@@ -242,7 +241,6 @@ func start_button_click() {
 
 	case 1:
 		m_button_start.Disable()
-		UILogPrintF("正在停止...")
 
 		// 停止子进程（在 goroutine 中执行，避免阻塞 UI）
 		go func() {
@@ -250,7 +248,6 @@ func start_button_click() {
 
 			m_stats_start_button = 0
 			enable_other()
-			UILogPrintF("等待启动")
 			m_button_start.Importance = widget.HighImportance
 			m_button_start.SetText("点击启动")
 			m_button_start.Enable()

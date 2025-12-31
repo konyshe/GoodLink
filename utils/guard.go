@@ -31,7 +31,7 @@ func GuardStart(proc_handler func(), time_out time.Duration, err_handle func(err
 	time.Sleep(time_out)
 
 	if !fork {
-		log.Println("   父进程开始")
+		log.Println("父进程开始")
 		for {
 			cmd := exec.Command(os.Args[0], args...)
 			cmd.Env = os.Environ()
@@ -52,6 +52,6 @@ func GuardStart(proc_handler func(), time_out time.Duration, err_handle func(err
 		}
 	}
 
-	log.Println("   子进程开始")
+	log.Println("子进程开始")
 	proc_handler()
 }
