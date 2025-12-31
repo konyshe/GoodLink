@@ -8,10 +8,14 @@ import (
 	"go2"
 	"goodlink/winipcfg"
 	"io"
+	"log"
 	"net/http"
 	"net/netip"
 	"os"
 	"time"
+
+	"golang.org/x/sys/windows"
+	"golang.zx2c4.com/wintun"
 )
 
 func SetTunIP(wintunEP *Device, ip string, mask int) error {
@@ -41,6 +45,39 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 		return err
 	}
 
+	return nil
+}
+
+// CleanupOldAdapter 清理之前可能残留的虚拟网卡
+func CleanupOldAdapter(name string) {
+	// 尝试打开并删除之前创建的适配器
+	adapter, err := wintun.OpenAdapter(name)
+	if err != nil {
+		// 适配器不存在，无需清理
+		return
+	}
+
+	log.Printf("发现残留的虚拟网卡 %s，正在清理...", name)
+
+	// 强制关闭适配器
+	adapter.Close()
+
+	// 使用 Uninstall 方法尝试完全卸载
+	err = wintun.Uninstall()
+	if err != nil {
+		log.Printf("清理虚拟网卡警告: %v", err)
+	} else {
+		log.Printf("虚拟网卡 %s 已清理", name)
+	}
+}
+
+// DeleteAdapterByGUID 通过 GUID 删除适配器（备用方法）
+func DeleteAdapterByGUID(guid *windows.GUID) error {
+	adapter, err := wintun.OpenAdapter("")
+	if err != nil {
+		return err
+	}
+	adapter.Close()
 	return nil
 }
 

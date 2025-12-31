@@ -34,6 +34,11 @@ func main() {
 		m := fyne.NewMenu(M_APP_TITLE,
 			fyne.NewMenuItem("打开主程序", func() {
 				myWindow.Show()
+			}),
+			fyne.NewMenuItemSeparator(),
+			fyne.NewMenuItem("退出程序", func() {
+				ui2.StopCmdProcess()
+				myApp.Quit()
 			}))
 		desk.SetSystemTrayMenu(m)
 	}
@@ -42,6 +47,11 @@ func main() {
 
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Hide()
+	})
+
+	// 程序退出时停止子进程
+	myApp.Lifecycle().SetOnStopped(func() {
+		ui2.StopCmdProcess()
 	})
 
 	myWindow.ShowAndRun()

@@ -41,6 +41,9 @@ func Start() error {
 		return nil
 	}
 
+	// 先清理之前可能残留的虚拟网卡
+	CleanupOldAdapter(GetName())
+
 	netstack_stack = stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocolFactory{
 			ipv4.NewProtocol,

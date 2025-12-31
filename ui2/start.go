@@ -4,8 +4,8 @@ package ui2
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
+	"fmt"
 	"go2"
 	"log"
 	"os"
@@ -24,7 +24,6 @@ import (
 )
 
 var (
-	m_mg_start              sync.WaitGroup
 	m_lock_start            sync.Mutex
 	m_button_start          *widget.Button
 	m_activity_start_button *widget.Activity
@@ -32,7 +31,7 @@ var (
 
 	// 子进程管理
 	m_cmd_process *exec.Cmd
-	m_cmd_cancel  context.CancelFunc
+	m_cmd_mutex   sync.Mutex
 )
 
 func disable_other(content string) {
@@ -67,6 +66,25 @@ func getCmdExePath() string {
 	}
 	dir := filepath.Dir(exePath)
 	return filepath.Join(dir, "goodlink-windows-amd64-cmd.exe")
+}
+
+// killProcess 强制终止进程（使用 taskkill 确保终止）
+func killProcess(pid int) {
+	// 先尝试用 taskkill /F /T 强制终止进程树
+	cmd := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", pid))
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.Run()
+}
+
+// StopCmdProcess 停止子进程（供外部调用，如窗口关闭时）
+func StopCmdProcess() {
+	m_cmd_mutex.Lock()
+	defer m_cmd_mutex.Unlock()
+
+	if m_cmd_process != nil && m_cmd_process.Process != nil {
+		killProcess(m_cmd_process.Process.Pid)
+		m_cmd_process = nil
+	}
 }
 
 func start_button_click() {
@@ -134,10 +152,9 @@ func start_button_click() {
 			args = []string{"-remote", "-key=" + m_validated_key.Text}
 		}
 
-		// 创建带取消的 context
-		ctx, cancel := context.WithCancel(context.Background())
-		m_cmd_cancel = cancel
-		m_cmd_process = exec.CommandContext(ctx, cmdPath, args...)
+		// 创建子进程
+		m_cmd_mutex.Lock()
+		m_cmd_process = exec.Command(cmdPath, args...)
 
 		// 隐藏子进程窗口
 		m_cmd_process.SysProcAttr = &syscall.SysProcAttr{
@@ -148,6 +165,7 @@ func start_button_click() {
 		// 获取输出管道
 		stdout, err := m_cmd_process.StdoutPipe()
 		if err != nil {
+			m_cmd_mutex.Unlock()
 			UILogPrintF("获取stdout失败: %v", err)
 			enable_other()
 			m_button_start.Enable()
@@ -156,6 +174,7 @@ func start_button_click() {
 		}
 		stderr, err := m_cmd_process.StderrPipe()
 		if err != nil {
+			m_cmd_mutex.Unlock()
 			UILogPrintF("获取stderr失败: %v", err)
 			enable_other()
 			m_button_start.Enable()
@@ -165,17 +184,17 @@ func start_button_click() {
 
 		// 启动子进程
 		if err := m_cmd_process.Start(); err != nil {
+			m_cmd_mutex.Unlock()
 			UILogPrintF("启动失败: %v", err)
 			enable_other()
 			m_button_start.Enable()
 			m_stats_start_button = 0
 			return
 		}
+		m_cmd_mutex.Unlock()
 
 		// 读取 stdout
-		m_mg_start.Add(1)
 		go func() {
-			defer m_mg_start.Done()
 			scanner := bufio.NewScanner(stdout)
 			for scanner.Scan() {
 				UILogPrintF(scanner.Text())
@@ -183,35 +202,37 @@ func start_button_click() {
 		}()
 
 		// 读取 stderr
-		m_mg_start.Add(1)
 		go func() {
-			defer m_mg_start.Done()
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
 				UILogPrintF(scanner.Text())
 			}
 		}()
 
-		// 更新按钮状态
-		m_mg_start.Add(1)
+		// 更新按钮状态并等待进程结束
 		go func() {
-			defer func() {
-				m_activity_start_button.Stop()
-				m_activity_start_button.Hide()
-				m_mg_start.Done()
-			}()
-
 			time.Sleep(time.Second * 1)
 			if m_stats_start_button != 1 {
+				m_activity_start_button.Stop()
+				m_activity_start_button.Hide()
 				return
 			}
 			m_button_start.Enable()
 			m_button_start.Importance = widget.WarningImportance
 			m_button_start.SetText("关闭连接")
+			m_activity_start_button.Stop()
+			m_activity_start_button.Hide()
 
 			// 等待子进程结束
-			m_cmd_process.Wait()
+			m_cmd_mutex.Lock()
+			proc := m_cmd_process
+			m_cmd_mutex.Unlock()
 
+			if proc != nil {
+				proc.Wait()
+			}
+
+			// 进程结束后恢复 UI
 			m_stats_start_button = 0
 			m_button_start.Importance = widget.HighImportance
 			m_button_start.SetText("点击启动")
@@ -222,18 +243,12 @@ func start_button_click() {
 	case 1:
 		m_button_start.Disable()
 		UILogPrintF("正在停止...")
-		m_stats_start_button = 0
 
-		// 杀掉子进程（在 goroutine 中执行，避免阻塞 UI）
+		// 停止子进程（在 goroutine 中执行，避免阻塞 UI）
 		go func() {
-			if m_cmd_cancel != nil {
-				m_cmd_cancel()
-			}
-			if m_cmd_process != nil && m_cmd_process.Process != nil {
-				m_cmd_process.Process.Kill()
-			}
+			StopCmdProcess()
 
-			m_mg_start.Wait()
+			m_stats_start_button = 0
 			enable_other()
 			UILogPrintF("等待启动")
 			m_button_start.Importance = widget.HighImportance

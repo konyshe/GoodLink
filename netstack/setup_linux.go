@@ -73,6 +73,14 @@ func checkInterfaceExists(name string) error {
 	return nil
 }
 
+// CleanupOldAdapter 清理之前可能残留的虚拟网卡（Linux 平台暂不需要特殊处理）
+func CleanupOldAdapter(name string) {
+	// Linux 平台 TUN 设备在进程退出时会自动清理
+	// 这里可以尝试删除可能残留的设备
+	cmd := exec.Command("ip", "link", "delete", name)
+	_ = cmd.Run() // 忽略错误，设备可能不存在
+}
+
 // 修改调用端错误处理
 func SetTunIP(wintunEP *Device, ip string, mask int) error {
 	// ip addr add 192.17.0.1/32 dev GoodLink
