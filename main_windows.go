@@ -31,15 +31,20 @@ func main() {
 	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + GetVersion()) //myApp.Metadata().Version)
 
 	if desk, ok := myApp.(desktop.App); ok {
-		m := fyne.NewMenu(M_APP_TITLE,
-			fyne.NewMenuItem("打开主程序", func() {
-				myWindow.Show()
-			}),
+		// 创建菜单项
+		openItem := fyne.NewMenuItem("打开主程序", func() {
+			myWindow.Show()
+		})
+		quitItem := fyne.NewMenuItem("退出", func() {
+			ui2.StopCmdProcess()
+			myApp.Quit()
+		})
+		
+		// 创建菜单，确保只有一个退出选项
+		m := fyne.NewMenu("",
+			openItem,
 			fyne.NewMenuItemSeparator(),
-			fyne.NewMenuItem("退出程序", func() {
-				ui2.StopCmdProcess()
-				myApp.Quit()
-			}))
+			quitItem)
 		desk.SetSystemTrayMenu(m)
 	}
 
