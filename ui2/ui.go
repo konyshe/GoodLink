@@ -149,9 +149,9 @@ func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	keyLabel := widget.NewRichTextFromMarkdown("**连接密钥**")
 
 	// 创建带图标的输入框容器
-	keyIcon := widget.NewIcon(theme.ConfirmIcon())
+	// keyIcon := widget.NewIcon(theme.ConfirmIcon())
 
-	keyInputContainer := container.NewBorder(nil, nil, keyIcon, nil, m_validated_key)
+	keyInputContainer := container.NewBorder(nil, nil, nil, nil, m_validated_key)
 
 	// 创建背景
 	keyBg := canvas.NewRectangle(bgColorCard)

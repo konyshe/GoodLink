@@ -228,10 +228,6 @@ func start_button_click() {
 	//先对需要填写的数据进行校验
 	switch m_stats_start_button {
 	case 0:
-		if len(m_validated_key.Text) < 16 {
-			SetLogLabel("请输入或点击生成连接密钥!")
-			return
-		}
 		switch GetWorkType() {
 		case "Local":
 			if m_ui_local.GetLocalPort() == "" {
