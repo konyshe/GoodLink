@@ -83,14 +83,10 @@ func GetWorkType() string {
 // 创建工作模式选择器
 func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	// 创建本地端按钮
-	m_btn_local = widget.NewButtonWithIcon("  Local端  ", theme.ComputerIcon(), func() {
-		updateWorkTypeButtons("Local")
-	})
+	m_btn_local = widget.NewButtonWithIcon("  Local端  ", theme.ComputerIcon(), nil)
 
 	// 创建远程端按钮
-	m_btn_remote = widget.NewButtonWithIcon("  Remote端  ", theme.StorageIcon(), func() {
-		updateWorkTypeButtons("Remote")
-	})
+	m_btn_remote = widget.NewButtonWithIcon("  Remote端  ", theme.StorageIcon(), nil)
 
 	// 创建按钮高亮背景
 	m_btn_local_bg = canvas.NewRectangle(color.Transparent)
@@ -145,13 +141,16 @@ func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
 		m_validated_key.SetText(configInfo.TunKey)
 	}
 
-	// 创建密钥标签
+	// 创建密钥标签和图标
+	keyIcon := widget.NewIcon(theme.ConfirmIcon())
 	keyLabel := widget.NewRichTextFromMarkdown("**连接密钥**")
+	keyHeader := container.NewHBox(keyIcon, keyLabel)
 
-	// 创建带图标的输入框容器
-	// keyIcon := widget.NewIcon(theme.ConfirmIcon())
-
-	keyInputContainer := container.NewBorder(nil, nil, nil, nil, m_validated_key)
+	// 创建输入框容器
+	keyInputContainer := container.NewVBox(
+		container.NewPadded(keyHeader),
+		container.NewPadded(m_validated_key),
+	)
 
 	// 创建背景
 	keyBg := canvas.NewRectangle(bgColorCard)
@@ -159,7 +158,7 @@ func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
 
 	keyInputWithBg := container.NewStack(keyBg, container.NewPadded(keyInputContainer))
 
-	return container.NewBorder(nil, nil, keyLabel, nil, keyInputWithBg)
+	return keyInputWithBg
 }
 
 // 创建密钥操作按钮组
@@ -183,7 +182,14 @@ func createKeyButtons() fyne.CanvasObject {
 	key_copy_button.Importance = widget.MediumImportance
 	m_button_key_paste.Importance = widget.MediumImportance
 
-	return container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste)
+	// 创建按钮容器，使用网格布局
+	buttonGrid := container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste)
+	
+	// 添加卡片背景
+	buttonBg := canvas.NewRectangle(bgColorCard)
+	buttonBg.CornerRadius = cornerRadius
+	
+	return container.NewStack(buttonBg, container.NewPadded(buttonGrid))
 }
 
 func GetMainUI(myWindow *fyne.Window) *fyne.Container {
@@ -221,11 +227,39 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	// 初始化日志标签（用于兼容，但不再显示在UI中）
 	NewLogLabel("等待启动")
 
+	// 创建配置区域容器（根据工作模式动态显示）
+	configContainer := container.NewVBox()
+	
+	// 根据工作模式显示对应的配置
+	updateConfigDisplay := func() {
+		configContainer.RemoveAll()
+		if GetWorkType() == "Local" {
+			configContainer.Add(container.NewPadded(m_ui_local.GetContainer()))
+		} else {
+			configContainer.Add(container.NewPadded(m_ui_remote.GetContainer()))
+		}
+		configContainer.Refresh()
+	}
+	
+	// 设置按钮点击事件
+	m_btn_local.OnTapped = func() {
+		updateWorkTypeButtons("Local")
+		updateConfigDisplay()
+	}
+	m_btn_remote.OnTapped = func() {
+		updateWorkTypeButtons("Remote")
+		updateConfigDisplay()
+	}
+	
+	// 初始显示
+	updateConfigDisplay()
+
 	// 创建主容器，添加统一的间距和布局
 	mainContent := container.New(layout.NewVBoxLayout(),
 		container.NewPadded(workTypeSelector),
 		container.NewPadded(keyInputSection),
 		container.NewPadded(keyButtons),
+		configContainer,
 		container.NewPadded(NewLogList()),
 		container.NewPadded(startButtonContainer),
 		NewFooter(),
