@@ -83,12 +83,12 @@ func GetWorkType() string {
 // 创建工作模式选择器
 func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	// 创建本地端按钮
-	m_btn_local = widget.NewButtonWithIcon("  本地端  ", theme.ComputerIcon(), func() {
+	m_btn_local = widget.NewButtonWithIcon("  Local端  ", theme.ComputerIcon(), func() {
 		updateWorkTypeButtons("Local")
 	})
 
 	// 创建远程端按钮
-	m_btn_remote = widget.NewButtonWithIcon("  远程端  ", theme.StorageIcon(), func() {
+	m_btn_remote = widget.NewButtonWithIcon("  Remote端  ", theme.StorageIcon(), func() {
 		updateWorkTypeButtons("Remote")
 	})
 
