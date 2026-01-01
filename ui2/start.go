@@ -33,6 +33,9 @@ var (
 	// 子进程管理
 	m_cmd_process *exec.Cmd
 	m_cmd_mutex   sync.Mutex
+
+	// 自动重启控制
+	m_auto_restart_enabled bool
 )
 
 func disable_other(content string) {
@@ -136,6 +139,88 @@ func updateConnectionStatus(status string) {
 	}
 }
 
+// startCmdProcess 启动cmd进程（提取的公共逻辑，用于初始启动和自动重启）
+func startCmdProcess() error {
+	// 构建命令行参数
+	cmdPath := getCmdExePath()
+
+	// 检查 cmd 程序是否存在
+	if _, err := os.Stat(cmdPath); os.IsNotExist(err) {
+		UILogPrintF("未找到: %s", filepath.Base(cmdPath))
+		return fmt.Errorf("cmd程序不存在: %s", cmdPath)
+	}
+
+	var args []string
+	switch GetWorkType() {
+	case "Local":
+		args = []string{"--fork", "--local", "--key=" + m_validated_key.Text}
+	case "Remote":
+		args = []string{"--fork", "--remote", "--key=" + m_validated_key.Text}
+	}
+
+	// 创建子进程
+	m_cmd_mutex.Lock()
+	m_cmd_process = exec.Command(cmdPath, args...)
+
+	// 隐藏子进程窗口
+	m_cmd_process.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+	}
+
+	// 获取输出管道
+	stdout, err := m_cmd_process.StdoutPipe()
+	if err != nil {
+		m_cmd_mutex.Unlock()
+		UILogPrintF("获取stdout失败: %v", err)
+		return err
+	}
+	stderr, err := m_cmd_process.StderrPipe()
+	if err != nil {
+		m_cmd_mutex.Unlock()
+		UILogPrintF("获取stderr失败: %v", err)
+		return err
+	}
+
+	// 启动子进程
+	if err := m_cmd_process.Start(); err != nil {
+		m_cmd_mutex.Unlock()
+		UILogPrintF("启动失败: %v", err)
+		return err
+	}
+	m_cmd_mutex.Unlock()
+
+	// 读取 stdout
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			// 检查是否是状态消息
+			if status, ok := parseStatusMessage(line); ok {
+				updateConnectionStatus(status)
+			} else {
+				UILogPrintF(line)
+			}
+		}
+	}()
+
+	// 读取 stderr
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			// 检查是否是状态消息
+			if status, ok := parseStatusMessage(line); ok {
+				updateConnectionStatus(status)
+			} else {
+				UILogPrintF(line)
+			}
+		}
+	}()
+
+	return nil
+}
+
 func start_button_click() {
 	m_lock_start.Lock()
 	defer m_lock_start.Unlock()
@@ -181,94 +266,17 @@ func start_button_click() {
 		m_button_start.Disable()
 		disable_other("正在启动...")
 
-		// 构建命令行参数
-		cmdPath := getCmdExePath()
+		// 设置自动重启标志
+		m_auto_restart_enabled = true
 
-		// 检查 cmd 程序是否存在
-		if _, err := os.Stat(cmdPath); os.IsNotExist(err) {
-			UILogPrintF("未找到: %s", filepath.Base(cmdPath))
+		// 启动进程
+		if err := startCmdProcess(); err != nil {
 			enable_other()
 			m_button_start.Enable()
 			m_stats_start_button = 0
+			m_auto_restart_enabled = false
 			return
 		}
-
-		var args []string
-		switch GetWorkType() {
-		case "Local":
-			args = []string{"--fork", "--local", "--key=" + m_validated_key.Text}
-		case "Remote":
-			args = []string{"--fork", "--remote", "--key=" + m_validated_key.Text}
-		}
-
-		// 创建子进程
-		m_cmd_mutex.Lock()
-		m_cmd_process = exec.Command(cmdPath, args...)
-
-		// 隐藏子进程窗口
-		m_cmd_process.SysProcAttr = &syscall.SysProcAttr{
-			HideWindow:    true,
-			CreationFlags: 0x08000000, // CREATE_NO_WINDOW
-		}
-
-		// 获取输出管道
-		stdout, err := m_cmd_process.StdoutPipe()
-		if err != nil {
-			m_cmd_mutex.Unlock()
-			UILogPrintF("获取stdout失败: %v", err)
-			enable_other()
-			m_button_start.Enable()
-			m_stats_start_button = 0
-			return
-		}
-		stderr, err := m_cmd_process.StderrPipe()
-		if err != nil {
-			m_cmd_mutex.Unlock()
-			UILogPrintF("获取stderr失败: %v", err)
-			enable_other()
-			m_button_start.Enable()
-			m_stats_start_button = 0
-			return
-		}
-
-		// 启动子进程
-		if err := m_cmd_process.Start(); err != nil {
-			m_cmd_mutex.Unlock()
-			UILogPrintF("启动失败: %v", err)
-			enable_other()
-			m_button_start.Enable()
-			m_stats_start_button = 0
-			return
-		}
-		m_cmd_mutex.Unlock()
-
-		// 读取 stdout
-		go func() {
-			scanner := bufio.NewScanner(stdout)
-			for scanner.Scan() {
-				line := scanner.Text()
-				// 检查是否是状态消息
-				if status, ok := parseStatusMessage(line); ok {
-					updateConnectionStatus(status)
-				} else {
-					UILogPrintF(line)
-				}
-			}
-		}()
-
-		// 读取 stderr
-		go func() {
-			scanner := bufio.NewScanner(stderr)
-			for scanner.Scan() {
-				line := scanner.Text()
-				// 检查是否是状态消息
-				if status, ok := parseStatusMessage(line); ok {
-					updateConnectionStatus(status)
-				} else {
-					UILogPrintF(line)
-				}
-			}
-		}()
 
 		// 更新按钮状态并等待进程结束
 		go func() {
@@ -280,13 +288,13 @@ func start_button_click() {
 			}
 			m_button_start.Enable()
 			// Local模式：初始状态为"连接中"（黄色）
-			// Remote模式：显示"关闭连接"（黄色）
+			// Remote模式：显示"启动成功"（绿色）
 			if GetWorkType() == "Local" {
 				m_button_start.Importance = widget.WarningImportance
 				m_button_start.SetText("连接中")
 			} else {
-				m_button_start.Importance = widget.WarningImportance
-				m_button_start.SetText("关闭连接")
+				m_button_start.Importance = widget.SuccessImportance
+				m_button_start.SetText("启动成功")
 			}
 			m_activity_start_button.Stop()
 			m_activity_start_button.Hide()
@@ -300,12 +308,22 @@ func start_button_click() {
 				proc.Wait()
 			}
 
-			// 进程结束后恢复 UI
-			m_stats_start_button = 0
-			m_button_start.Importance = widget.HighImportance
-			m_button_start.SetText("点击启动")
-			m_button_start.Enable()
-			enable_other()
+			// 检查是否为异常退出（需要自动重启）
+			m_lock_start.Lock()
+			isAbnormalExit := m_stats_start_button == 1 && m_auto_restart_enabled
+			m_lock_start.Unlock()
+
+			if isAbnormalExit {
+				// 异常退出，自动重启
+				autoRestartProcess()
+			} else {
+				// 正常停止，恢复 UI
+				m_stats_start_button = 0
+				m_button_start.Importance = widget.HighImportance
+				m_button_start.SetText("点击启动")
+				m_button_start.Enable()
+				enable_other()
+			}
 		}()
 
 	case 1:
@@ -313,6 +331,8 @@ func start_button_click() {
 
 		// 停止子进程（在 goroutine 中执行，避免阻塞 UI）
 		go func() {
+			// 设置自动重启标志为false，防止误触发重启
+			m_auto_restart_enabled = false
 			StopCmdProcess()
 
 			m_stats_start_button = 0
@@ -322,4 +342,80 @@ func start_button_click() {
 			m_button_start.Enable()
 		}()
 	}
+}
+
+// autoRestartProcess 自动重启进程（当进程异常退出时调用）
+func autoRestartProcess() {
+	// 短暂延迟，避免频繁重启
+	time.Sleep(500 * time.Millisecond)
+
+	// 检查是否仍然需要重启（用户可能在此期间手动停止了）
+	m_lock_start.Lock()
+	if m_stats_start_button != 1 || !m_auto_restart_enabled {
+		m_lock_start.Unlock()
+		return
+	}
+	m_lock_start.Unlock()
+
+	UILogPrintF("检测到进程异常退出，正在自动重启...")
+
+	// 重启进程
+	if err := startCmdProcess(); err != nil {
+		UILogPrintF("自动重启失败: %v", err)
+		// 重启失败，恢复UI
+		m_stats_start_button = 0
+		m_button_start.Importance = widget.HighImportance
+		m_button_start.SetText("点击启动")
+		m_button_start.Enable()
+		enable_other()
+		return
+	}
+
+	// 根据模式设置按钮状态
+	if GetWorkType() == "Local" {
+		// Local模式：设置为"连接中"状态
+		m_button_start.Importance = widget.WarningImportance
+		m_button_start.SetText("连接中")
+		m_button_start.Refresh()
+	} else {
+		// Remote模式：设置为"启动成功"状态
+		m_button_start.Importance = widget.SuccessImportance
+		m_button_start.SetText("启动成功")
+		m_button_start.Refresh()
+	}
+
+	// 启动新的等待goroutine
+	go func() {
+		time.Sleep(time.Second * 1)
+		if m_stats_start_button != 1 {
+			return
+		}
+		m_button_start.Enable()
+
+		// 等待子进程结束
+		m_cmd_mutex.Lock()
+		proc := m_cmd_process
+		m_cmd_mutex.Unlock()
+
+		if proc != nil {
+			proc.Wait()
+		}
+
+		// 检查是否为异常退出（需要自动重启）
+		m_lock_start.Lock()
+		isAbnormalExit := m_stats_start_button == 1 && m_auto_restart_enabled
+		m_lock_start.Unlock()
+
+		if isAbnormalExit {
+			// 异常退出，继续自动重启
+			autoRestartProcess()
+		} else {
+			// 正常停止，恢复 UI
+			m_stats_start_button = 0
+			m_button_start.Importance = widget.HighImportance
+			m_button_start.SetText("点击启动")
+			m_button_start.Enable()
+			enable_other()
+		}
+	}()
 }
