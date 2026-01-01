@@ -8,6 +8,7 @@ import (
 	_ "goodlink/pro"
 	"goodlink/theme"
 	"goodlink/ui2"
+	"goodlink/utils"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -30,6 +31,14 @@ func main() {
 	myApp.Settings().SetTheme(&theme.MyTheme{})
 	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + GetVersion()) //myApp.Metadata().Version)
 
+	// 检查单实例，如果不是第一个实例则退出
+	if !utils.CheckSingleInstance(func() {
+		myWindow.Show()
+	}) {
+		// 已有实例运行，直接退出
+		return
+	}
+
 	if desk, ok := myApp.(desktop.App); ok {
 		// 创建菜单项
 		openItem := fyne.NewMenuItem("打开主程序", func() {
@@ -39,7 +48,7 @@ func main() {
 			ui2.StopCmdProcess()
 			myApp.Quit()
 		})
-		
+
 		// 创建菜单，确保只有一个退出选项
 		m := fyne.NewMenu("",
 			openItem,
