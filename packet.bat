@@ -1,4 +1,5 @@
 make clean
+rm -rf goodlink-windows-amd64
 make windows
 cd bin
 rm -rf goodlink.json
