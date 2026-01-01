@@ -191,6 +191,12 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	json.Unmarshal(go2.FileReadAll("goodlink.json"), &configInfo)
 	log.Println(configInfo)
 
+	// 如果密钥为空，自动生成密钥
+	if len(configInfo.TunKey) == 0 {
+		configInfo.TunKey = string(go2.RandomBytes(24))
+		log.Println("自动生成密钥:", configInfo.TunKey)
+	}
+
 	m_ui_local = NewLocalUI(myWindow, &configInfo)
 	m_ui_remote = NewRemoteUI(myWindow, &configInfo)
 
