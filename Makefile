@@ -32,9 +32,9 @@ WINDOWS_PLATFORM_LIST = \
 
 debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac
 
-windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac windows-arm64-cmd strip
+windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac strip
 
-linux: $(LINUX_PLATFORM_LIST) strip
+linux: $(LINUX_PLATFORM_LIST) windows-arm64-cmd strip
 
 linux-386-cmd:
 	GOARCH=386 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
