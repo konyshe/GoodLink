@@ -40,10 +40,12 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	switch conn_type {
 	case 0:
 		log.Println("请求连接Remote端")
+		log.Println("[GOODLINK_STATUS]connecting")
 
 	default:
 		redisJson.LocalAddr = *addr
 		log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
+		log.Println("[GOODLINK_STATUS]connecting")
 	}
 
 	// 阶段1: 将SessionID注册到Hash中，等待Remote端认领
@@ -130,12 +132,14 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 			if tun_passive != nil {
 				if tun_passive.TunQuicConn != nil {
 					log.Printf("连接成功")
+					log.Println("[GOODLINK_STATUS]connected")
 					return tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream, nil
 				}
 			}
 			if tun_active != nil {
 				if tun_active.TunQuicConn != nil {
 					log.Printf("连接成功")
+					log.Println("[GOODLINK_STATUS]connected")
 					return tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream, nil
 				}
 			}
@@ -192,6 +196,7 @@ func RunLocal(tun_key string) error {
 		udp_conn, addr = GetUDPAddr()
 
 		log.Printf("Local端地址: %v", addr)
+		log.Println("[GOODLINK_STATUS]connecting")
 
 		count++
 
@@ -215,6 +220,7 @@ func RunLocal(tun_key string) error {
 		tun.ProcessHealth(health)
 		if m_local_state != 0 {
 			m_local_state = 1
+			log.Println("[GOODLINK_STATUS]connecting")
 		}
 		log.Printf("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive)

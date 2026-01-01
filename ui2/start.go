@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -85,6 +86,53 @@ func StopCmdProcess() {
 	if m_cmd_process != nil && m_cmd_process.Process != nil {
 		killProcess(m_cmd_process.Process.Pid)
 		m_cmd_process = nil
+	}
+}
+
+// parseStatusMessage 解析状态消息，返回状态值（connecting/connected）和是否成功解析
+// 支持带时间戳前缀的日志格式，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]connected"
+func parseStatusMessage(line string) (string, bool) {
+	const prefix = "[GOODLINK_STATUS]"
+	// 查找前缀在行中的位置（可能不在行首，因为有时间戳）
+	idx := -1
+	for i := 0; i <= len(line)-len(prefix); i++ {
+		if line[i:i+len(prefix)] == prefix {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return "", false
+	}
+	// 提取状态值（去除前缀后的内容，可能包含空格）
+	status := line[idx+len(prefix):]
+	// 去除前后空格
+	status = strings.TrimSpace(status)
+	if status == "connecting" || status == "connected" {
+		return status, true
+	}
+	return "", false
+}
+
+// updateConnectionStatus 根据连接状态更新按钮（仅在Local模式下生效）
+func updateConnectionStatus(status string) {
+	if GetWorkType() != "Local" {
+		return
+	}
+	if m_button_start == nil {
+		return
+	}
+
+	switch status {
+	case "connecting":
+		m_button_start.Importance = widget.WarningImportance
+		m_button_start.SetText("连接中")
+		m_button_start.Refresh()
+	case "connected":
+		// Fyne没有SuccessImportance，使用HighImportance表示成功状态（主要颜色）
+		m_button_start.Importance = widget.SuccessImportance
+		m_button_start.SetText("连接成功")
+		m_button_start.Refresh()
 	}
 }
 
@@ -198,7 +246,13 @@ func start_button_click() {
 		go func() {
 			scanner := bufio.NewScanner(stdout)
 			for scanner.Scan() {
-				UILogPrintF(scanner.Text())
+				line := scanner.Text()
+				// 检查是否是状态消息
+				if status, ok := parseStatusMessage(line); ok {
+					updateConnectionStatus(status)
+				} else {
+					UILogPrintF(line)
+				}
 			}
 		}()
 
@@ -206,7 +260,13 @@ func start_button_click() {
 		go func() {
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
-				UILogPrintF(scanner.Text())
+				line := scanner.Text()
+				// 检查是否是状态消息
+				if status, ok := parseStatusMessage(line); ok {
+					updateConnectionStatus(status)
+				} else {
+					UILogPrintF(line)
+				}
 			}
 		}()
 
@@ -219,8 +279,15 @@ func start_button_click() {
 				return
 			}
 			m_button_start.Enable()
-			m_button_start.Importance = widget.WarningImportance
-			m_button_start.SetText("关闭连接")
+			// Local模式：初始状态为"连接中"（黄色）
+			// Remote模式：显示"关闭连接"（黄色）
+			if GetWorkType() == "Local" {
+				m_button_start.Importance = widget.WarningImportance
+				m_button_start.SetText("连接中")
+			} else {
+				m_button_start.Importance = widget.WarningImportance
+				m_button_start.SetText("关闭连接")
+			}
 			m_activity_start_button.Stop()
 			m_activity_start_button.Hide()
 
