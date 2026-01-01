@@ -31,6 +31,8 @@ var (
 	m_ui_remote         *RemoteUI
 	m_button_key_create *widget.Button
 	m_button_key_paste  *widget.Button
+	m_btn_local_bg      *canvas.Rectangle // 本地端按钮高亮背景
+	m_btn_remote_bg     *canvas.Rectangle // 远程端按钮高亮背景
 )
 
 const (
@@ -44,6 +46,7 @@ var (
 	bgColorSecondary = color.NRGBA{R: 40, G: 40, B: 50, A: 255}   // 次要背景
 	bgColorCard      = color.NRGBA{R: 50, G: 50, B: 60, A: 255}   // 卡片背景
 	separatorColor   = color.NRGBA{R: 100, G: 100, B: 100, A: 80} // 分隔线颜色
+	highlightColor   = color.NRGBA{R: 70, G: 130, B: 200, A: 255} // 选中按钮高亮颜色
 	// 统一的圆角半径
 	cornerRadius = float32(8)
 	// 统一的间距
@@ -56,12 +59,20 @@ func updateWorkTypeButtons(selected string) {
 	if selected == "Local" {
 		m_btn_local.Importance = widget.HighImportance
 		m_btn_remote.Importance = widget.MediumImportance
+		// 高亮本地端按钮背景
+		m_btn_local_bg.FillColor = highlightColor
+		m_btn_remote_bg.FillColor = color.Transparent
 	} else {
 		m_btn_local.Importance = widget.MediumImportance
 		m_btn_remote.Importance = widget.HighImportance
+		// 高亮远程端按钮背景
+		m_btn_local_bg.FillColor = color.Transparent
+		m_btn_remote_bg.FillColor = highlightColor
 	}
 	m_btn_local.Refresh()
 	m_btn_remote.Refresh()
+	m_btn_local_bg.Refresh()
+	m_btn_remote_bg.Refresh()
 }
 
 // 获取当前工作类型
@@ -81,6 +92,22 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 		updateWorkTypeButtons("Remote")
 	})
 
+	// 创建按钮高亮背景
+	m_btn_local_bg = canvas.NewRectangle(color.Transparent)
+	m_btn_local_bg.CornerRadius = cornerRadius
+	m_btn_remote_bg = canvas.NewRectangle(color.Transparent)
+	m_btn_remote_bg.CornerRadius = cornerRadius
+
+	// 将按钮包装在高亮背景容器中
+	localButtonContainer := container.NewStack(
+		m_btn_local_bg,
+		container.NewPadded(m_btn_local),
+	)
+	remoteButtonContainer := container.NewStack(
+		m_btn_remote_bg,
+		container.NewPadded(m_btn_remote),
+	)
+
 	// 根据配置设置初始状态
 	if configInfo.WorkType == "" {
 		configInfo.WorkType = "Local"
@@ -96,9 +123,9 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 
 	// 组合按钮和分隔线
 	buttonGroup := container.NewHBox(
-		m_btn_local,
+		localButtonContainer,
 		separator,
-		m_btn_remote,
+		remoteButtonContainer,
 	)
 
 	// 添加装饰性背景
