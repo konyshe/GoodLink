@@ -23,17 +23,23 @@ func NewFooter() fyne.CanvasObject {
 	versionLabel := widget.NewRichTextFromMarkdown("**@2026 GoodLink**")
 
 	// 超链接
-	giteeURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/releases")
-	link := widget.NewHyperlink("关注最新版本", giteeURL)
-
+	updateURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/releases")
+	updateLink := widget.NewHyperlink("升级版本", updateURL)
 	// 添加图标
-	linkIcon := widget.NewIcon(theme.DownloadIcon())
+	updateIcon := widget.NewIcon(theme.DownloadIcon())
+
+	// 反馈问题链接
+	feedbackURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/issues")
+	feedbackLink := widget.NewHyperlink("反馈问题", feedbackURL)
+	// 添加图标
+	feedbackIcon := widget.NewIcon(theme.InfoIcon())
 
 	// 组合为卡片样式
 	footerContent := container.NewHBox(
 		layout.NewSpacer(),
 		versionLabel,
-		container.NewHBox(linkIcon, link),
+		container.NewHBox(updateIcon, updateLink),
+		container.NewHBox(feedbackIcon, feedbackLink),
 		layout.NewSpacer(),
 	)
 
