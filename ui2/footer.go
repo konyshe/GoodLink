@@ -36,11 +36,10 @@ func NewFooter() fyne.CanvasObject {
 
 	// 组合内容
 	footerContent := container.NewHBox(
-		layout.NewSpacer(),
 		versionLabel,
+		layout.NewSpacer(),
 		container.NewHBox(updateIcon, updateLink),
 		container.NewHBox(feedbackIcon, feedbackLink),
-		layout.NewSpacer(),
 	)
 
 	// 最终布局：分隔线 + 内容
