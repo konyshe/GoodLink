@@ -34,7 +34,7 @@ func NewFooter() fyne.CanvasObject {
 	// 添加图标
 	feedbackIcon := widget.NewIcon(theme.InfoIcon())
 
-	// 组合为卡片样式
+	// 组合内容
 	footerContent := container.NewHBox(
 		layout.NewSpacer(),
 		versionLabel,
@@ -43,19 +43,9 @@ func NewFooter() fyne.CanvasObject {
 		layout.NewSpacer(),
 	)
 
-	// 创建背景
-	footerBg := canvas.NewRectangle(bgColorSecondary)
-	footerBg.CornerRadius = cornerRadius
-
-	// 使用带背景的容器
-	footerCard := container.NewStack(
-		footerBg,
-		container.NewPadded(footerContent),
-	)
-
-	// 最终布局：分隔线 + 卡片
+	// 最终布局：分隔线 + 内容
 	return container.NewVBox(
-		container.NewPadded(separator),
-		footerCard,
+		separator,
+		footerContent,
 	)
 }

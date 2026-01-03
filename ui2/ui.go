@@ -97,11 +97,11 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	// 将按钮包装在高亮背景容器中
 	localButtonContainer := container.NewStack(
 		m_btn_local_bg,
-		container.NewPadded(m_btn_local),
+		m_btn_local,
 	)
 	remoteButtonContainer := container.NewStack(
 		m_btn_remote_bg,
-		container.NewPadded(m_btn_remote),
+		m_btn_remote,
 	)
 
 	// 根据配置设置初始状态
@@ -124,13 +124,7 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 		remoteButtonContainer,
 	)
 
-	// 添加装饰性背景
-	bg := canvas.NewRectangle(bgColorCard)
-	bg.CornerRadius = cornerRadius
-
-	buttonWithBg := container.NewStack(bg, container.NewPadded(buttonGroup))
-
-	return container.NewBorder(nil, nil, label, nil, buttonWithBg)
+	return container.NewBorder(nil, nil, label, nil, buttonGroup)
 }
 
 // 创建连接密钥输入区域
@@ -142,23 +136,13 @@ func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	}
 
 	// 创建密钥标签和图标
-	keyIcon := widget.NewIcon(theme.ConfirmIcon())
 	keyLabel := widget.NewRichTextFromMarkdown("**连接密钥**")
-	keyHeader := container.NewHBox(keyIcon, keyLabel)
+	keyHeader := container.NewHBox(keyLabel)
 
-	// 创建输入框容器
-	keyInputContainer := container.NewVBox(
-		container.NewPadded(keyHeader),
-		container.NewPadded(m_validated_key),
-	)
+	// 创建输入框容器，将标签和输入框放在同一行
+	keyInputContainer := container.NewBorder(nil, nil, keyHeader, nil, m_validated_key)
 
-	// 创建背景
-	keyBg := canvas.NewRectangle(bgColorCard)
-	keyBg.CornerRadius = cornerRadius
-
-	keyInputWithBg := container.NewStack(keyBg, container.NewPadded(keyInputContainer))
-
-	return keyInputWithBg
+	return keyInputContainer
 }
 
 // 创建密钥操作按钮组
@@ -184,12 +168,8 @@ func createKeyButtons() fyne.CanvasObject {
 
 	// 创建按钮容器，使用网格布局
 	buttonGrid := container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste)
-	
-	// 添加卡片背景
-	buttonBg := canvas.NewRectangle(bgColorCard)
-	buttonBg.CornerRadius = cornerRadius
-	
-	return container.NewStack(buttonBg, container.NewPadded(buttonGrid))
+
+	return buttonGrid
 }
 
 func GetMainUI(myWindow *fyne.Window) *fyne.Container {
@@ -216,31 +196,26 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	m_button_start = widget.NewButtonWithIcon("点击启动", theme.MediaPlayIcon(), start_button_click)
 	m_button_start.Importance = widget.HighImportance
 
-	// 创建启动按钮容器（带背景）
-	startButtonBg := canvas.NewRectangle(bgColorCard)
-	startButtonBg.CornerRadius = cornerRadius
-	startButtonContainer := container.NewStack(
-		startButtonBg,
-		container.NewPadded(container.NewStack(m_button_start, m_activity_start_button)),
-	)
+	// 创建启动按钮容器
+	startButtonContainer := container.NewStack(m_button_start, m_activity_start_button)
 
 	// 初始化日志标签（用于兼容，但不再显示在UI中）
 	NewLogLabel("等待启动")
 
 	// 创建配置区域容器（根据工作模式动态显示）
 	configContainer := container.NewVBox()
-	
+
 	// 根据工作模式显示对应的配置
 	updateConfigDisplay := func() {
 		configContainer.RemoveAll()
 		if GetWorkType() == "Local" {
-			configContainer.Add(container.NewPadded(m_ui_local.GetContainer()))
+			configContainer.Add(m_ui_local.GetContainer())
 		} else {
-			configContainer.Add(container.NewPadded(m_ui_remote.GetContainer()))
+			configContainer.Add(m_ui_remote.GetContainer())
 		}
 		configContainer.Refresh()
 	}
-	
+
 	// 设置按钮点击事件
 	m_btn_local.OnTapped = func() {
 		updateWorkTypeButtons("Local")
@@ -250,21 +225,21 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		updateWorkTypeButtons("Remote")
 		updateConfigDisplay()
 	}
-	
+
 	// 初始显示
 	updateConfigDisplay()
 
-	// 创建主容器，添加统一的间距和布局
+	// 创建主容器，紧凑布局
 	mainContent := container.New(layout.NewVBoxLayout(),
-		container.NewPadded(workTypeSelector),
-		container.NewPadded(keyInputSection),
-		container.NewPadded(keyButtons),
+		workTypeSelector,
+		keyInputSection,
+		keyButtons,
 		configContainer,
-		container.NewPadded(NewLogList()),
-		container.NewPadded(startButtonContainer),
+		NewLogList(),
+		startButtonContainer,
 		NewFooter(),
 	)
 
-	// 添加外层padding，确保整体有合适的边距
+	// 添加最小外层padding，确保整体有合适的边距
 	return container.NewPadded(mainContent)
 }

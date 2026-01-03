@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -22,9 +21,9 @@ const (
 	// 日志最大条目数，避免内存占用过大
 	maxLogEntries = 500
 	// 日志显示行高度
-	logRowHeight = 20
+	logRowHeight = 15
 	// 日志显示行数
-	logVisibleRows = 20
+	logVisibleRows = 15
 )
 
 var (
@@ -148,17 +147,11 @@ func NewLogList() fyne.CanvasObject {
 	logTitle := widget.NewRichTextFromMarkdown("**运行日志**")
 	logTitleContainer := container.NewHBox(logIcon, logTitle)
 
-	// 创建背景
-	logBg := canvas.NewRectangle(bgColorCard)
-	logBg.CornerRadius = cornerRadius
-
 	// 组合标题和日志列表
 	logContent := container.NewVBox(
-		container.NewPadded(logTitleContainer),
-		container.NewPadded(logContainer),
+		logTitleContainer,
+		logContainer,
 	)
 
-	logWithBg := container.NewStack(logBg, logContent)
-
-	return logWithBg
+	return logContent
 }
