@@ -16,7 +16,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/atotto/clipboard"
@@ -266,15 +265,27 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	// 初始显示
 	updateConfigDisplay()
 
-	// 创建主容器，紧凑布局
-	mainContent := container.New(layout.NewVBoxLayout(),
+	// 创建顶部内容（工作模式选择器、密钥输入、配置区域）
+	topContent := container.NewVBox(
 		workTypeSelector,
 		keyInputSection,
 		keyButtons,
 		configContainer,
-		NewLogList(),
+	)
+
+	// 创建底部内容（启动按钮和页脚）
+	bottomContent := container.NewVBox(
 		startButtonContainer,
 		NewFooter(),
+	)
+
+	// 使用 Border 布局，让日志区域自适应占用剩余空间
+	mainContent := container.NewBorder(
+		topContent,    // 顶部
+		bottomContent, // 底部
+		nil,           // 左侧
+		nil,           // 右侧
+		NewLogList(),  // 中心（自适应区域）
 	)
 
 	// 添加最小外层padding，确保整体有合适的边距

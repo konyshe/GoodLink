@@ -134,11 +134,11 @@ func NewLogList() fyne.CanvasObject {
 		},
 	)
 
-	// 创建一个固定高度的容器包装 List
-	// 20行 * 每行高度
-	listHeight := float32(logVisibleRows * logRowHeight)
+	// 创建可滚动的容器包装 List，自适应高度
 	logContainer := container.NewVScroll(m_log_list)
-	logContainer.SetMinSize(fyne.NewSize(0, listHeight))
+	// 设置最小高度，但允许根据窗口大小自动扩展
+	minListHeight := float32(logVisibleRows * logRowHeight)
+	logContainer.SetMinSize(fyne.NewSize(0, minListHeight))
 
 	m_log_scroll = logContainer
 
@@ -147,10 +147,13 @@ func NewLogList() fyne.CanvasObject {
 	logTitle := widget.NewRichTextFromMarkdown("**运行日志**")
 	logTitleContainer := container.NewHBox(logIcon, logTitle)
 
-	// 组合标题和日志列表
-	logContent := container.NewVBox(
-		logTitleContainer,
-		logContainer,
+	// 组合标题和日志列表，使用 Border 布局让日志列表自适应
+	logContent := container.NewBorder(
+		logTitleContainer, // 顶部标题
+		nil,               // 底部
+		nil,               // 左侧
+		nil,               // 右侧
+		logContainer,      // 中心（自适应区域）
 	)
 
 	return logContent
