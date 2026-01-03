@@ -131,8 +131,6 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | `--key` | 连接密钥（必须） | `--key=AIabJpEIYHMDIA6NBgOBboYJ` |
 | `--remote` | 运行为Remote端（必须） | `--remote` |
 | `--local` | 运行为Local端（必须） | `--local` |
-| `--fork` | 单进程运行（命令行版本） | `--fork` |
-| `--log-level` | 日志级别（命令行版本） | `--log-level=debug` |
 | `-v` | 查看版本信息（命令行版本） | `-v` |
 
 # 工作模式
