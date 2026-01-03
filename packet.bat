@@ -17,7 +17,6 @@ zip goodlink-linux-arm64-cmd.zip goodlink-linux-arm64-cmd
 zip goodlink-linux-386-cmd.zip goodlink-linux-386-cmd
 zip goodlink-linux-arm-cmd.zip goodlink-linux-arm-cmd
 zip goodlink-linux-armv6l-cmd.zip goodlink-linux-armv6l-cmd
-zip goodlink-windows-arm64-cmd.zip goodlink-windows-arm64-cmd.exe
 zip goodlink-linux-loong64-cmd.zip goodlink-linux-loong64-cmd
 zip goodlink-linux-mips-cmd.zip goodlink-linux-mips-cmd
 zip goodlink-linux-mipsle-cmd.zip goodlink-linux-mipsle-cmd
