@@ -260,6 +260,8 @@ func start_button_click() {
 	switch m_stats_start_button {
 	case 0:
 		m_button_start.Disable()
+		// 强制刷新工作端侧按钮高亮，确保选中项明显显示
+		updateWorkTypeButtons(GetWorkType())
 		disable_other("正在启动...")
 
 		// 设置自动重启标志

@@ -33,6 +33,8 @@ var (
 	m_button_key_paste  *widget.Button
 	m_btn_local_bg      *canvas.Rectangle // 本地端按钮高亮背景
 	m_btn_remote_bg     *canvas.Rectangle // 远程端按钮高亮背景
+	m_btn_local_border  *canvas.Rectangle // 本地端按钮边框容器
+	m_btn_remote_border *canvas.Rectangle // 远程端按钮边框容器
 )
 
 const (
@@ -42,11 +44,12 @@ const (
 // UI样式常量
 var (
 	// 统一的背景颜色
-	bgColorPrimary   = color.NRGBA{R: 45, G: 45, B: 55, A: 255}   // 主要背景
-	bgColorSecondary = color.NRGBA{R: 40, G: 40, B: 50, A: 255}   // 次要背景
-	bgColorCard      = color.NRGBA{R: 50, G: 50, B: 60, A: 255}   // 卡片背景
-	separatorColor   = color.NRGBA{R: 100, G: 100, B: 100, A: 80} // 分隔线颜色
-	highlightColor   = color.NRGBA{R: 70, G: 130, B: 200, A: 255} // 选中按钮高亮颜色
+	bgColorPrimary       = color.NRGBA{R: 45, G: 45, B: 55, A: 255}   // 主要背景
+	bgColorSecondary     = color.NRGBA{R: 40, G: 40, B: 50, A: 255}   // 次要背景
+	bgColorCard          = color.NRGBA{R: 50, G: 50, B: 60, A: 255}   // 卡片背景
+	separatorColor       = color.NRGBA{R: 100, G: 100, B: 100, A: 80} // 分隔线颜色
+	highlightColor       = color.NRGBA{R: 0, G: 120, B: 255, A: 255}  // 选中按钮高亮颜色（完全不透明，更亮）
+	highlightBorderColor = color.NRGBA{R: 0, G: 180, B: 255, A: 255}  // 高亮边框颜色
 	// 统一的圆角半径
 	cornerRadius = float32(8)
 	// 统一的间距
@@ -59,20 +62,36 @@ func updateWorkTypeButtons(selected string) {
 	if selected == "Local" {
 		m_btn_local.Importance = widget.HighImportance
 		m_btn_remote.Importance = widget.MediumImportance
-		// 高亮本地端按钮背景
+		// 高亮本地端按钮背景（完全不透明，更明显）
 		m_btn_local_bg.FillColor = highlightColor
 		m_btn_remote_bg.FillColor = color.Transparent
+		// 添加外层边框使高亮更明显
+		m_btn_local_border.StrokeColor = highlightBorderColor
+		m_btn_local_border.StrokeWidth = 3
+		m_btn_local_border.FillColor = color.Transparent
+		m_btn_remote_border.StrokeColor = color.Transparent
+		m_btn_remote_border.StrokeWidth = 0
+		m_btn_remote_border.FillColor = color.Transparent
 	} else {
 		m_btn_local.Importance = widget.MediumImportance
 		m_btn_remote.Importance = widget.HighImportance
-		// 高亮远程端按钮背景
+		// 高亮远程端按钮背景（完全不透明，更明显）
 		m_btn_local_bg.FillColor = color.Transparent
 		m_btn_remote_bg.FillColor = highlightColor
+		// 添加外层边框使高亮更明显
+		m_btn_local_border.StrokeColor = color.Transparent
+		m_btn_local_border.StrokeWidth = 0
+		m_btn_local_border.FillColor = color.Transparent
+		m_btn_remote_border.StrokeColor = highlightBorderColor
+		m_btn_remote_border.StrokeWidth = 3
+		m_btn_remote_border.FillColor = color.Transparent
 	}
 	m_btn_local.Refresh()
 	m_btn_remote.Refresh()
 	m_btn_local_bg.Refresh()
 	m_btn_remote_bg.Refresh()
+	m_btn_local_border.Refresh()
+	m_btn_remote_border.Refresh()
 }
 
 // 获取当前工作类型
@@ -94,14 +113,32 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	m_btn_remote_bg = canvas.NewRectangle(color.Transparent)
 	m_btn_remote_bg.CornerRadius = cornerRadius
 
+	// 创建外层边框容器（用于更明显的高亮显示）
+	m_btn_local_border = canvas.NewRectangle(color.Transparent)
+	m_btn_local_border.CornerRadius = cornerRadius
+	m_btn_remote_border = canvas.NewRectangle(color.Transparent)
+	m_btn_remote_border.CornerRadius = cornerRadius
+
 	// 将按钮包装在高亮背景容器中
-	localButtonContainer := container.NewStack(
+	localButtonInner := container.NewStack(
 		m_btn_local_bg,
 		m_btn_local,
 	)
-	remoteButtonContainer := container.NewStack(
+	// 使用带padding的容器，让边框显示在padding区域（边框在底层，按钮在上层，边框通过padding显示）
+	localButtonWithPadding := container.NewPadded(localButtonInner)
+	localButtonContainer := container.NewStack(
+		m_btn_local_border,
+		localButtonWithPadding,
+	)
+
+	remoteButtonInner := container.NewStack(
 		m_btn_remote_bg,
 		m_btn_remote,
+	)
+	remoteButtonWithPadding := container.NewPadded(remoteButtonInner)
+	remoteButtonContainer := container.NewStack(
+		m_btn_remote_border,
+		remoteButtonWithPadding,
 	)
 
 	// 根据配置设置初始状态
