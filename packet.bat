@@ -1,16 +1,14 @@
 make clean
-rm -rf goodlink-windows-amd64
 make windows
 cd bin
 rm -rf goodlink.json
 wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
 cd ..
-mv bin goodlink-windows-amd64
-zip goodlink-windows-amd64.zip goodlink-windows-amd64
 rm -rf goodlink-windows-amd64
+cp -r bin goodlink-windows-amd64
 
+make clean
 make linux
-mv goodlink-windows-amd64.zip bin/
 cd bin
 zip goodlink-linux-amd64-cmd.zip goodlink-linux-amd64-cmd
 zip goodlink-linux-arm64-cmd.zip goodlink-linux-arm64-cmd
