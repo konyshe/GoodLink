@@ -32,17 +32,27 @@ func main() {
 	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + GetVersion()) //myApp.Metadata().Version)
 
 	// 检查单实例，如果不是第一个实例则退出
-	if !utils.CheckSingleInstance(func() {
-		myWindow.Show()
-	}) {
+	if !utils.CheckSingleInstance() {
 		// 已有实例运行，直接退出
 		return
 	}
 
+	// 监听显示窗口请求
+	// Fyne的Show()方法会自动处理线程安全，可以直接在goroutine中调用
+	go func() {
+		for range utils.GetShowWindowChan() {
+			// Fyne会自动处理线程安全，直接调用Show()
+			myWindow.Show()
+			myWindow.RequestFocus()
+		}
+	}()
+
 	if desk, ok := myApp.(desktop.App); ok {
 		// 创建菜单项
 		openItem := fyne.NewMenuItem("打开主程序", func() {
+			// 系统托盘菜单回调已经在主线程中执行，可以直接调用Show()
 			myWindow.Show()
+			myWindow.RequestFocus()
 		})
 		quitItem := fyne.NewMenuItem("退出", func() {
 			ui2.StopCmdProcess()
