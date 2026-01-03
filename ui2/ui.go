@@ -151,7 +151,7 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	separator.SetMinSize(fyne.NewSize(2, 30))
 
 	// 创建标签
-	label := widget.NewRichTextFromMarkdown("**工作端侧**")
+	label := widget.NewRichTextFromMarkdown("**工作端侧**: ")
 
 	// 组合按钮和分隔线
 	buttonGroup := container.NewHBox(
@@ -172,11 +172,10 @@ func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	}
 
 	// 创建密钥标签和图标
-	keyLabel := widget.NewRichTextFromMarkdown("**连接密钥**")
-	keyHeader := container.NewHBox(keyLabel)
+	keyLabel := widget.NewRichTextFromMarkdown("**连接密钥**: ")
 
 	// 创建输入框容器，将标签和输入框放在同一行
-	keyInputContainer := container.NewBorder(nil, nil, keyHeader, nil, m_validated_key)
+	keyInputContainer := container.NewBorder(nil, nil, keyLabel, nil, m_validated_key)
 
 	return keyInputContainer
 }

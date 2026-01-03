@@ -10,7 +10,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -143,17 +142,15 @@ func NewLogList() fyne.CanvasObject {
 	m_log_scroll = logContainer
 
 	// 创建日志标题
-	logIcon := widget.NewIcon(theme.InfoIcon())
-	logTitle := widget.NewRichTextFromMarkdown("**运行日志**")
-	logTitleContainer := container.NewHBox(logIcon, logTitle)
+	logTitle := widget.NewRichTextFromMarkdown("**运行日志**: ")
 
 	// 组合标题和日志列表，使用 Border 布局让日志列表自适应
 	logContent := container.NewBorder(
-		logTitleContainer, // 顶部标题
-		nil,               // 底部
-		nil,               // 左侧
-		nil,               // 右侧
-		logContainer,      // 中心（自适应区域）
+		logTitle,     // 顶部标题
+		nil,          // 底部
+		nil,          // 左侧
+		nil,          // 右侧
+		logContainer, // 中心（自适应区域）
 	)
 
 	return logContent
