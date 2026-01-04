@@ -15,7 +15,10 @@ import (
 )
 
 var (
-	m_local_state = 0 //0: 停止, 1: 启动, 2: 连接成功
+	m_local_state      = 0 //0: 停止, 1: 启动, 2: 连接成功
+	m_tun_active       *tun.TunActive
+	m_tun_passive      *tun.TunPassive
+	g_netstack_started = false
 )
 
 func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
@@ -34,7 +37,10 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 	conn_type := 0 // 被动连接
 	if addr.WanPort1 == addr.WanPort2 {
+		log.Printf("WanPort %d:%d, 主动连接", addr.WanPort1, addr.WanPort2)
 		conn_type = 1 // 主动连接
+	} else {
+		log.Printf("WanPort %d:%d, 被动连接", addr.WanPort1, addr.WanPort2)
 	}
 
 	switch conn_type {
@@ -162,11 +168,6 @@ func GetLocalStats() int {
 	return m_local_state
 }
 
-var (
-	m_tun_active  *tun.TunActive
-	m_tun_passive *tun.TunPassive
-)
-
 func StopLocal() error {
 	m_local_state = 0
 	Release(m_tun_active, m_tun_passive)
@@ -184,10 +185,6 @@ func RunLocal(tun_key string) error {
 	var udp_conn *net.UDPConn
 	var addr tun.AddrType
 
-	if err := netstack.Start(); err != nil {
-		return err
-	}
-
 	for m_local_state == 1 {
 
 		if udp_conn != nil {
@@ -197,6 +194,13 @@ func RunLocal(tun_key string) error {
 
 		log.Printf("Local端地址: %v", addr)
 		log.Println("[GOODLINK_STATUS]connecting")
+
+		if !g_netstack_started {
+			if err := netstack.Start(); err != nil {
+				return err
+			}
+			g_netstack_started = true
+		}
 
 		count++
 
