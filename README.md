@@ -76,17 +76,17 @@
 
 # 快速使用
 
-###  **启动 remote端**
+###  **启动 remote端(以下方式任选)**
+
+#### windows, UI
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
 
 #### windows, 命令行
 
 ```
 .\goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
-
-#### windows, UI
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
 
 #### linux, Docker
 
@@ -100,17 +100,17 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
-###  **启动 local端**
+###  **启动 local端(以下方式任选)**
+
+#### windows, UI
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
 
 #### windows, 命令行
 
 ```
 .\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
-
-#### windows, UI
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
 
 #### linux, Docker
 
