@@ -51,11 +51,8 @@ func (c *RemoteUI) GetRemoteAddr() (string, error) {
 }
 
 func (c *RemoteUI) GetContainer() *fyne.Container {
-	return container.NewVBox(
-	//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("工作模式: "), c.radio),
-	//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标地址: "), c.box_remote_ip),
-	//container.New(layout.NewFormLayout(), widget.NewRichTextWithText("转发目标端口: "), c.box_remote_port),
-	)
+	// 当前返回空容器，保留接口以便未来扩展
+	return container.NewVBox()
 }
 
 func NewRemoteUI(myWindow *fyne.Window, configInfo *config.ConfigInfo) *RemoteUI {

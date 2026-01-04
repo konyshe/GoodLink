@@ -21,6 +21,8 @@ import (
 	_ "embed"
 	_ "net/http/pprof"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -38,27 +40,37 @@ var (
 	m_auto_restart_enabled bool
 )
 
+// UI组件接口，用于统一管理启用/禁用
+type uiComponent interface {
+	Enable()
+	Disable()
+}
+
+// 所有需要控制的UI组件列表
+var uiComponents = []uiComponent{}
+
+func init() {
+	// 延迟初始化，在 GetMainUI 中设置
+}
+
+// setUIComponents 设置需要控制的UI组件列表
+func setUIComponents(components []uiComponent) {
+	uiComponents = components
+}
+
 func disable_other(content string) {
-	m_btn_local.Disable()
-	m_btn_remote.Disable()
-	m_validated_key.Disable()
-	m_ui_local.Disable()
-	m_ui_remote.Disable()
-	m_button_key_create.Disable()
-	m_button_key_paste.Disable()
+	for _, comp := range uiComponents {
+		comp.Disable()
+	}
 	m_activity_start_button.Start()
 	m_activity_start_button.Show()
 	m_stats_start_button = 1
 }
 
 func enable_other() {
-	m_btn_local.Enable()
-	m_btn_remote.Enable()
-	m_validated_key.Enable()
-	m_ui_local.Enable()
-	m_ui_remote.Enable()
-	m_button_key_create.Enable()
-	m_button_key_paste.Enable()
+	for _, comp := range uiComponents {
+		comp.Enable()
+	}
 	m_activity_start_button.Stop()
 	m_activity_start_button.Hide()
 }
@@ -92,50 +104,80 @@ func StopCmdProcess() {
 	}
 }
 
+const (
+	statusPrefix     = "[GOODLINK_STATUS]"
+	statusConnecting = "connecting"
+	statusConnected  = "connected"
+)
+
 // parseStatusMessage 解析状态消息，返回状态值（connecting/connected）和是否成功解析
 // 支持带时间戳前缀的日志格式，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]connected"
 func parseStatusMessage(line string) (string, bool) {
-	const prefix = "[GOODLINK_STATUS]"
 	// 查找前缀在行中的位置（可能不在行首，因为有时间戳）
-	idx := -1
-	for i := 0; i <= len(line)-len(prefix); i++ {
-		if line[i:i+len(prefix)] == prefix {
-			idx = i
-			break
-		}
-	}
+	idx := strings.Index(line, statusPrefix)
 	if idx == -1 {
 		return "", false
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
-	status := line[idx+len(prefix):]
-	// 去除前后空格
-	status = strings.TrimSpace(status)
-	if status == "connecting" || status == "connected" {
+	status := strings.TrimSpace(line[idx+len(statusPrefix):])
+	if status == statusConnecting || status == statusConnected {
 		return status, true
 	}
 	return "", false
 }
 
-// updateConnectionStatus 根据连接状态更新按钮（仅在Local模式下生效）
-func updateConnectionStatus(status string) {
-	if GetWorkType() != "Local" {
-		return
+// 按钮状态类型
+type buttonState struct {
+	text       string
+	importance widget.Importance
+	icon       fyne.Resource
+}
+
+// 预定义的按钮状态
+var (
+	buttonStateIdle = buttonState{
+		text:       "点击启动",
+		importance: widget.HighImportance,
+		icon:       theme.MediaPlayIcon(),
 	}
+	buttonStateConnecting = buttonState{
+		text:       "连接中",
+		importance: widget.WarningImportance,
+		icon:       theme.MediaStopIcon(),
+	}
+	buttonStateConnected = buttonState{
+		text:       "连接成功, 点击停止",
+		importance: widget.SuccessImportance,
+		icon:       theme.MediaStopIcon(),
+	}
+	buttonStateRunning = buttonState{
+		text:       "启动成功, 点击停止",
+		importance: widget.SuccessImportance,
+		icon:       theme.MediaStopIcon(),
+	}
+)
+
+// updateButtonState 更新启动按钮的状态
+func updateButtonState(state buttonState) {
 	if m_button_start == nil {
 		return
 	}
+	m_button_start.SetText(state.text)
+	m_button_start.Importance = state.importance
+	m_button_start.SetIcon(state.icon)
+	m_button_start.Refresh()
+}
 
+// updateConnectionStatus 根据连接状态更新按钮（仅在Local模式下生效）
+func updateConnectionStatus(status string) {
+	if GetWorkType() != workTypeLocal {
+		return
+	}
 	switch status {
-	case "connecting":
-		m_button_start.Importance = widget.WarningImportance
-		m_button_start.SetText("连接中")
-		m_button_start.Refresh()
-	case "connected":
-		// Fyne没有SuccessImportance，使用HighImportance表示成功状态（主要颜色）
-		m_button_start.Importance = widget.SuccessImportance
-		m_button_start.SetText("连接成功")
-		m_button_start.Refresh()
+	case statusConnecting:
+		updateButtonState(buttonStateConnecting)
+	case statusConnected:
+		updateButtonState(buttonStateConnected)
 	}
 }
 
@@ -150,13 +192,9 @@ func startCmdProcess() error {
 		return fmt.Errorf("cmd程序不存在: %s", cmdPath)
 	}
 
-	var args []string
-	switch GetWorkType() {
-	case "Local":
-		args = []string{"--fork", "--local", "--key=" + m_validated_key.Text}
-	case "Remote":
-		args = []string{"--fork", "--remote", "--key=" + m_validated_key.Text}
-	}
+	// 构建命令行参数
+	workType := GetWorkType()
+	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + m_validated_key.Text}
 
 	// 创建子进程
 	m_cmd_mutex.Lock()
@@ -190,9 +228,8 @@ func startCmdProcess() error {
 	}
 	m_cmd_mutex.Unlock()
 
-	// 读取 stdout
-	go func() {
-		scanner := bufio.NewScanner(stdout)
+	// 处理进程输出的通用函数
+	handleProcessOutput := func(scanner *bufio.Scanner) {
 		for scanner.Scan() {
 			line := scanner.Text()
 			// 检查是否是状态消息
@@ -202,21 +239,11 @@ func startCmdProcess() error {
 				UILogPrintF(line)
 			}
 		}
-	}()
+	}
 
-	// 读取 stderr
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			line := scanner.Text()
-			// 检查是否是状态消息
-			if status, ok := parseStatusMessage(line); ok {
-				updateConnectionStatus(status)
-			} else {
-				UILogPrintF(line)
-			}
-		}
-	}()
+	// 读取 stdout 和 stderr
+	go handleProcessOutput(bufio.NewScanner(stdout))
+	go handleProcessOutput(bufio.NewScanner(stderr))
 
 	return nil
 }
@@ -229,12 +256,12 @@ func start_button_click() {
 	switch m_stats_start_button {
 	case 0:
 		switch GetWorkType() {
-		case "Local":
+		case workTypeLocal:
 			if m_ui_local.GetLocalPort() == "" {
 				//SetLogLabel("请填写访问端口号")
 				//return
 			}
-		case "Remote":
+		case workTypeRemote:
 			switch m_ui_remote.GetRemoteType() {
 			case "代理模式":
 			case "转发模式":
@@ -277,52 +304,7 @@ func start_button_click() {
 		}
 
 		// 更新按钮状态并等待进程结束
-		go func() {
-			time.Sleep(time.Second * 1)
-			if m_stats_start_button != 1 {
-				m_activity_start_button.Stop()
-				m_activity_start_button.Hide()
-				return
-			}
-			m_button_start.Enable()
-			// Local模式：初始状态为"连接中"（黄色）
-			// Remote模式：显示"启动成功"（绿色）
-			if GetWorkType() == "Local" {
-				m_button_start.Importance = widget.WarningImportance
-				m_button_start.SetText("连接中")
-			} else {
-				m_button_start.Importance = widget.SuccessImportance
-				m_button_start.SetText("启动成功")
-			}
-			m_activity_start_button.Stop()
-			m_activity_start_button.Hide()
-
-			// 等待子进程结束
-			m_cmd_mutex.Lock()
-			proc := m_cmd_process
-			m_cmd_mutex.Unlock()
-
-			if proc != nil {
-				proc.Wait()
-			}
-
-			// 检查是否为异常退出（需要自动重启）
-			m_lock_start.Lock()
-			isAbnormalExit := m_stats_start_button == 1 && m_auto_restart_enabled
-			m_lock_start.Unlock()
-
-			if isAbnormalExit {
-				// 异常退出，自动重启
-				autoRestartProcess()
-			} else {
-				// 正常停止，恢复 UI
-				m_stats_start_button = 0
-				m_button_start.Importance = widget.HighImportance
-				m_button_start.SetText("点击启动")
-				m_button_start.Enable()
-				enable_other()
-			}
-		}()
+		go waitForProcessAndHandleExit(false)
 
 	case 1:
 		m_button_start.Disable()
@@ -335,10 +317,59 @@ func start_button_click() {
 
 			m_stats_start_button = 0
 			enable_other()
-			m_button_start.Importance = widget.HighImportance
-			m_button_start.SetText("点击启动")
+			updateButtonState(buttonStateIdle)
 			m_button_start.Enable()
 		}()
+	}
+}
+
+// waitForProcessAndHandleExit 等待进程结束并处理退出逻辑
+func waitForProcessAndHandleExit(isRestart bool) {
+	time.Sleep(time.Second * 1)
+	if m_stats_start_button != 1 {
+		if !isRestart {
+			m_activity_start_button.Stop()
+			m_activity_start_button.Hide()
+		}
+		return
+	}
+	m_button_start.Enable()
+
+	// 根据模式设置初始按钮状态
+	if GetWorkType() == workTypeLocal {
+		updateButtonState(buttonStateConnecting)
+	} else {
+		updateButtonState(buttonStateRunning)
+	}
+
+	if !isRestart {
+		m_activity_start_button.Stop()
+		m_activity_start_button.Hide()
+	}
+
+	// 等待子进程结束
+	m_cmd_mutex.Lock()
+	proc := m_cmd_process
+	m_cmd_mutex.Unlock()
+
+	if proc != nil {
+		proc.Wait()
+	}
+
+	// 检查是否为异常退出（需要自动重启）
+	m_lock_start.Lock()
+	isAbnormalExit := m_stats_start_button == 1 && m_auto_restart_enabled
+	m_lock_start.Unlock()
+
+	if isAbnormalExit {
+		// 异常退出，自动重启
+		autoRestartProcess()
+	} else {
+		// 正常停止，恢复 UI
+		m_stats_start_button = 0
+		updateButtonState(buttonStateIdle)
+		m_button_start.Enable()
+		enable_other()
 	}
 }
 
@@ -362,58 +393,19 @@ func autoRestartProcess() {
 		UILogPrintF("自动重启失败: %v", err)
 		// 重启失败，恢复UI
 		m_stats_start_button = 0
-		m_button_start.Importance = widget.HighImportance
-		m_button_start.SetText("点击启动")
+		updateButtonState(buttonStateIdle)
 		m_button_start.Enable()
 		enable_other()
 		return
 	}
 
 	// 根据模式设置按钮状态
-	if GetWorkType() == "Local" {
-		// Local模式：设置为"连接中"状态
-		m_button_start.Importance = widget.WarningImportance
-		m_button_start.SetText("连接中")
-		m_button_start.Refresh()
+	if GetWorkType() == workTypeLocal {
+		updateButtonState(buttonStateConnecting)
 	} else {
-		// Remote模式：设置为"启动成功"状态
-		m_button_start.Importance = widget.SuccessImportance
-		m_button_start.SetText("启动成功")
-		m_button_start.Refresh()
+		updateButtonState(buttonStateRunning)
 	}
 
 	// 启动新的等待goroutine
-	go func() {
-		time.Sleep(time.Second * 1)
-		if m_stats_start_button != 1 {
-			return
-		}
-		m_button_start.Enable()
-
-		// 等待子进程结束
-		m_cmd_mutex.Lock()
-		proc := m_cmd_process
-		m_cmd_mutex.Unlock()
-
-		if proc != nil {
-			proc.Wait()
-		}
-
-		// 检查是否为异常退出（需要自动重启）
-		m_lock_start.Lock()
-		isAbnormalExit := m_stats_start_button == 1 && m_auto_restart_enabled
-		m_lock_start.Unlock()
-
-		if isAbnormalExit {
-			// 异常退出，继续自动重启
-			autoRestartProcess()
-		} else {
-			// 正常停止，恢复 UI
-			m_stats_start_button = 0
-			m_button_start.Importance = widget.HighImportance
-			m_button_start.SetText("点击启动")
-			m_button_start.Enable()
-			enable_other()
-		}
-	}()
+	go waitForProcessAndHandleExit(true)
 }

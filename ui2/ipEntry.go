@@ -10,6 +10,11 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+var (
+	// IPv4 验证正则表达式（编译一次，重复使用）
+	ipv4Regex = regexp.MustCompile(`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$`)
+)
+
 type ipEntry struct {
 	widget.Entry
 }
@@ -26,7 +31,6 @@ func NewIpEntry(ip string) *ipEntry {
 	e := &ipEntry{}
 	e.ExtendBaseWidget(e)
 	e.Validator = func(ip string) error {
-		ipv4Regex := regexp.MustCompile(`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$`)
 		if ipv4Regex.MatchString(ip) {
 			return nil
 		}

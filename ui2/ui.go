@@ -21,6 +21,22 @@ import (
 	"github.com/atotto/clipboard"
 )
 
+// entryWrapper 包装 Entry 以实现 uiComponent 接口
+type entryWrapper struct {
+	entry *widget.Entry
+}
+
+func (e *entryWrapper) Enable()  { e.entry.Enable() }
+func (e *entryWrapper) Disable() { e.entry.Disable() }
+
+// buttonWrapper 包装 Button 以实现 uiComponent 接口
+type buttonWrapper struct {
+	btn *widget.Button
+}
+
+func (b *buttonWrapper) Enable()  { b.btn.Enable() }
+func (b *buttonWrapper) Disable() { b.btn.Disable() }
+
 var (
 	m_work_type         string
 	m_btn_local         *widget.Button
@@ -37,7 +53,9 @@ var (
 )
 
 const (
-	M_APP_TITLE = "GoodLink"
+	M_APP_TITLE    = "GoodLink"
+	workTypeLocal  = "Local"
+	workTypeRemote = "Remote"
 )
 
 // UI样式常量
@@ -55,47 +73,48 @@ var (
 	paddingSize = float32(12)
 )
 
+// updateButtonHighlight 更新单个按钮的高亮状态
+func updateButtonHighlight(btn *widget.Button, bg *canvas.Rectangle, border *canvas.Rectangle, isHighlighted bool) {
+	if isHighlighted {
+		btn.Importance = widget.HighImportance
+		bg.FillColor = highlightColor
+		border.StrokeColor = highlightBorderColor
+		border.StrokeWidth = 3
+		border.FillColor = color.Transparent
+	} else {
+		btn.Importance = widget.MediumImportance
+		bg.FillColor = color.Transparent
+		border.StrokeColor = color.Transparent
+		border.StrokeWidth = 0
+		border.FillColor = color.Transparent
+	}
+	btn.Refresh()
+	bg.Refresh()
+	border.Refresh()
+}
+
 // 更新工作模式按钮样式
 func updateWorkTypeButtons(selected string) {
 	m_work_type = selected
-	if selected == "Local" {
-		m_btn_local.Importance = widget.HighImportance
-		m_btn_remote.Importance = widget.MediumImportance
-		// 高亮本地端按钮背景（完全不透明，更明显）
-		m_btn_local_bg.FillColor = highlightColor
-		m_btn_remote_bg.FillColor = color.Transparent
-		// 添加外层边框使高亮更明显
-		m_btn_local_border.StrokeColor = highlightBorderColor
-		m_btn_local_border.StrokeWidth = 3
-		m_btn_local_border.FillColor = color.Transparent
-		m_btn_remote_border.StrokeColor = color.Transparent
-		m_btn_remote_border.StrokeWidth = 0
-		m_btn_remote_border.FillColor = color.Transparent
-	} else {
-		m_btn_local.Importance = widget.MediumImportance
-		m_btn_remote.Importance = widget.HighImportance
-		// 高亮远程端按钮背景（完全不透明，更明显）
-		m_btn_local_bg.FillColor = color.Transparent
-		m_btn_remote_bg.FillColor = highlightColor
-		// 添加外层边框使高亮更明显
-		m_btn_local_border.StrokeColor = color.Transparent
-		m_btn_local_border.StrokeWidth = 0
-		m_btn_local_border.FillColor = color.Transparent
-		m_btn_remote_border.StrokeColor = highlightBorderColor
-		m_btn_remote_border.StrokeWidth = 3
-		m_btn_remote_border.FillColor = color.Transparent
-	}
-	m_btn_local.Refresh()
-	m_btn_remote.Refresh()
-	m_btn_local_bg.Refresh()
-	m_btn_remote_bg.Refresh()
-	m_btn_local_border.Refresh()
-	m_btn_remote_border.Refresh()
+	isLocal := selected == workTypeLocal
+
+	updateButtonHighlight(m_btn_local, m_btn_local_bg, m_btn_local_border, isLocal)
+	updateButtonHighlight(m_btn_remote, m_btn_remote_bg, m_btn_remote_border, !isLocal)
 }
 
 // 获取当前工作类型
 func GetWorkType() string {
 	return m_work_type
+}
+
+// createButtonWithHighlight 创建带高亮效果的按钮容器
+func createButtonWithHighlight(btn *widget.Button, bg *canvas.Rectangle, border *canvas.Rectangle) *fyne.Container {
+	bg.CornerRadius = cornerRadius
+	border.CornerRadius = cornerRadius
+
+	buttonInner := container.NewStack(bg, btn)
+	buttonWithPadding := container.NewPadded(buttonInner)
+	return container.NewStack(border, buttonWithPadding)
 }
 
 // 创建工作模式选择器
@@ -108,41 +127,19 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 
 	// 创建按钮高亮背景
 	m_btn_local_bg = canvas.NewRectangle(color.Transparent)
-	m_btn_local_bg.CornerRadius = cornerRadius
 	m_btn_remote_bg = canvas.NewRectangle(color.Transparent)
-	m_btn_remote_bg.CornerRadius = cornerRadius
 
 	// 创建外层边框容器（用于更明显的高亮显示）
 	m_btn_local_border = canvas.NewRectangle(color.Transparent)
-	m_btn_local_border.CornerRadius = cornerRadius
 	m_btn_remote_border = canvas.NewRectangle(color.Transparent)
-	m_btn_remote_border.CornerRadius = cornerRadius
 
-	// 将按钮包装在高亮背景容器中
-	localButtonInner := container.NewStack(
-		m_btn_local_bg,
-		m_btn_local,
-	)
-	// 使用带padding的容器，让边框显示在padding区域（边框在底层，按钮在上层，边框通过padding显示）
-	localButtonWithPadding := container.NewPadded(localButtonInner)
-	localButtonContainer := container.NewStack(
-		m_btn_local_border,
-		localButtonWithPadding,
-	)
-
-	remoteButtonInner := container.NewStack(
-		m_btn_remote_bg,
-		m_btn_remote,
-	)
-	remoteButtonWithPadding := container.NewPadded(remoteButtonInner)
-	remoteButtonContainer := container.NewStack(
-		m_btn_remote_border,
-		remoteButtonWithPadding,
-	)
+	// 创建带高亮的按钮容器
+	localButtonContainer := createButtonWithHighlight(m_btn_local, m_btn_local_bg, m_btn_local_border)
+	remoteButtonContainer := createButtonWithHighlight(m_btn_remote, m_btn_remote_bg, m_btn_remote_border)
 
 	// 根据配置设置初始状态
 	if configInfo.WorkType == "" {
-		configInfo.WorkType = "Local"
+		configInfo.WorkType = workTypeLocal
 	}
 	updateWorkTypeButtons(configInfo.WorkType)
 
@@ -226,6 +223,17 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	keyInputSection := createKeyInputSection(&configInfo)
 	keyButtons := createKeyButtons()
 
+	// 设置需要控制的UI组件列表（必须在所有组件创建后设置）
+	setUIComponents([]uiComponent{
+		m_ui_local,
+		m_ui_remote,
+		&entryWrapper{entry: m_validated_key},
+		&buttonWrapper{btn: m_button_key_create},
+		&buttonWrapper{btn: m_button_key_paste},
+		&buttonWrapper{btn: m_btn_local},
+		&buttonWrapper{btn: m_btn_remote},
+	})
+
 	m_stats_start_button = 0
 	m_activity_start_button = widget.NewActivity()
 	m_button_start = widget.NewButtonWithIcon("点击启动", theme.MediaPlayIcon(), start_button_click)
@@ -243,7 +251,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	// 根据工作模式显示对应的配置
 	updateConfigDisplay := func() {
 		configContainer.RemoveAll()
-		if GetWorkType() == "Local" {
+		if GetWorkType() == workTypeLocal {
 			configContainer.Add(m_ui_local.GetContainer())
 		} else {
 			configContainer.Add(m_ui_remote.GetContainer())
@@ -253,11 +261,11 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 
 	// 设置按钮点击事件
 	m_btn_local.OnTapped = func() {
-		updateWorkTypeButtons("Local")
+		updateWorkTypeButtons(workTypeLocal)
 		updateConfigDisplay()
 	}
 	m_btn_remote.OnTapped = func() {
-		updateWorkTypeButtons("Remote")
+		updateWorkTypeButtons(workTypeRemote)
 		updateConfigDisplay()
 	}
 
