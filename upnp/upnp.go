@@ -43,12 +43,12 @@ func (this *Upnp) deviceDesc() (err error) {
 func (this *Upnp) Init() (err error) {
 	defer func(err error) {
 		if errTemp := recover(); errTemp != nil {
-			log.Println("upnp模块报错了", errTemp)
+			log.Printf("upnp: %v", errTemp)
 			err = errTemp.(error)
 		}
 	}(err)
 
-	log.Println("upnp模块初始化中")
+	log.Println("upnp: 初始化中...")
 
 	if this.LocalHost == "" {
 		this.MappingPort = MappingPortStruct{
@@ -61,19 +61,19 @@ func (this *Upnp) Init() (err error) {
 	if this.CtrlUrl == "" {
 		searchGateway := SearchGateway{upnp: this}
 		if searchGateway.Send() {
-			log.Printf("Gateway.ServiceType: %s", this.Gateway.ServiceType)
+			log.Printf("upnp: Gateway.ServiceType: %s", this.Gateway.ServiceType)
 		}
 
 		if err := this.deviceDesc(); err != nil {
 			return err
 		}
-		log.Println("CtrlUrl:", this.CtrlUrl)
+		log.Printf("upnp: CtrlUrl: %s", this.CtrlUrl)
 	}
 
 	if this.GatewayOutsideIP == "" {
 		eia := ExternalIPAddress{upnp: this}
 		eia.Send()
-		log.Printf("GatewayOutsideIP: %s", this.GatewayOutsideIP)
+		log.Printf("upnp: GatewayOutsideIP: %s", this.GatewayOutsideIP)
 	}
 
 	if err := this.CleanMappings(0); err != nil {
