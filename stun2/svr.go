@@ -147,7 +147,7 @@ func normalize(address string) string {
 func svr(address string) {
 
 	normalized := normalize(address)
-	fmt.Println("goodlink/stund listening on", normalized, "via", "udp4")
+	log.Println("goodlink/stund listening on", normalized, "via", "udp4")
 	log.Fatal(ListenUDPAndServe("udp4", normalized))
 }
 

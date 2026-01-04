@@ -59,6 +59,11 @@ func main2() {
 }
 
 func main() {
+	// 初始化日志文件输出
+	if err := utils.InitLogFile(); err != nil {
+		log.Printf("初始化日志文件失败: %v", err)
+	}
+
 	// 新增系统级调优
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	debug.SetGCPercent(10) // 降低GC频率
