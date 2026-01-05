@@ -85,7 +85,7 @@
 #### windows, 命令行
 
 ```
-.\goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+.\goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
 #### linux, Docker
@@ -97,7 +97,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 #### linux, 命令行
 
 ```
-./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
 ###  **启动 local端(以下方式任选)**
@@ -109,7 +109,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 #### windows, 命令行
 
 ```
-.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+.\goodlink-windows-amd64-cmd.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
 #### linux, Docker
@@ -121,7 +121,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 #### linux, 命令行
 
 ```
-./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
 ### 🛠️ 常用参数说明
