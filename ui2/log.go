@@ -4,7 +4,6 @@ package ui2
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"sync"
 
@@ -26,23 +25,11 @@ const (
 )
 
 var (
-	m_log_label   *LogLabel
 	m_log_list    *widget.List
 	m_log_entries []string
 	m_log_mutex   sync.RWMutex
 	m_log_scroll  *container.Scroll
 )
-
-type LogLabel struct {
-	widget.Label
-}
-
-func SetLogLabel(content string) {
-	if m_log_label != nil {
-		m_log_label.SetText(content)
-		m_log_label.TextStyle = fyne.TextStyle{Bold: true}
-	}
-}
 
 // appendLogEntry 追加日志条目到列表
 func appendLogEntry(content string) {
@@ -64,11 +51,6 @@ func appendLogEntry(content string) {
 	}
 }
 
-// stripLogDateTime 去除日志内容前面的日期时间前缀
-func stripLogDateTime(content string) string {
-	return logDateTimeRegex.ReplaceAllString(content, "")
-}
-
 func UILogPrintF(a ...any) {
 	var content string
 
@@ -79,26 +61,7 @@ func UILogPrintF(a ...any) {
 		content = fmt.Sprintf(a[0].(string), a[1:]...)
 	}
 
-	log.Println(content)
-
-	// 去除日期时间前缀后追加到日志列表
-	displayContent := stripLogDateTime(content)
-	appendLogEntry(displayContent)
-
-	// 保留原有的 LogLabel 更新（截断显示），也使用去除日期后的内容
-	if len(displayContent) > 32 {
-		SetLogLabel(displayContent[:32])
-	} else {
-		SetLogLabel(displayContent)
-	}
-}
-
-func NewLogLabel(content string) *LogLabel {
-	m_log_label = &LogLabel{}
-	m_log_label.ExtendBaseWidget(m_log_label)
-	m_log_label.SetText(content)
-
-	return m_log_label
+	appendLogEntry(content)
 }
 
 // NewLogList 创建日志显示列表组件，带滚动条，20行高度

@@ -123,6 +123,8 @@ func InitLogFile() error {
 	// 设置日志同时输出到文件和控制台
 	multiWriter := io.MultiWriter(os.Stdout, writer)
 	log.SetOutput(multiWriter)
+	// 添加时间前缀
+	log.SetFlags(log.Ltime)
 
 	return nil
 }

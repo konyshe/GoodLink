@@ -242,9 +242,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	// 创建启动按钮容器
 	startButtonContainer := container.NewStack(m_button_start, m_activity_start_button)
 
-	// 初始化日志标签（用于兼容，但不再显示在UI中）
-	NewLogLabel("等待启动")
-
 	// 创建配置区域容器（根据工作模式动态显示）
 	configContainer := container.NewVBox()
 
