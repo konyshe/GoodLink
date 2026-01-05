@@ -176,7 +176,7 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 
 	ips, err := net.LookupIP("stun.easyvoip.com")
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Printf("lookup stun ip error: %v", err)
 		return
 	}
 

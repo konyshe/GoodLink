@@ -58,7 +58,7 @@ func basicProcess(addr net.Addr, b []byte, req, res *stun.Message) error {
 		ip = a.IP
 		port = a.Port
 	default:
-		panic(fmt.Sprintf("unknown addr: %v", addr))
+		log.Panicf("unknown addr: %v", addr)
 	}
 
 	return res.Build(req,
