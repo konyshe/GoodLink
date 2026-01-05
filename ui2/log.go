@@ -28,7 +28,6 @@ var (
 	m_log_list    *widget.List
 	m_log_entries []string
 	m_log_mutex   sync.RWMutex
-	m_log_scroll  *container.Scroll
 )
 
 // appendLogEntry 追加日志条目到列表
@@ -101,8 +100,6 @@ func NewLogList() fyne.CanvasObject {
 	// 设置最小高度，但允许根据窗口大小自动扩展
 	minListHeight := float32(logVisibleRows * logRowHeight)
 	logContainer.SetMinSize(fyne.NewSize(0, minListHeight))
-
-	m_log_scroll = logContainer
 
 	// 创建日志标题
 	logTitle := widget.NewRichTextFromMarkdown("**运行日志**: ")
