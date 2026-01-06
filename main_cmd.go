@@ -30,6 +30,23 @@ func main2() {
 		}
 	}()
 
+	// 初始化日志文件输出
+	if err := utils.InitLogFile(); err != nil {
+		log.Printf("初始化日志文件失败: %v", err)
+	}
+
+	// 新增系统级调优
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	debug.SetGCPercent(10) // 降低GC频率
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
+			log.Println(string(debug.Stack()))
+		}
+	}()
+
+	pro.SetVersion(GetVersion())
+
 	// 第三方集成, 关注以下代码即可
 	go func() {
 		if err := pro.Init(); err != nil {
@@ -59,23 +76,6 @@ func main2() {
 }
 
 func main() {
-	// 初始化日志文件输出
-	if err := utils.InitLogFile(); err != nil {
-		log.Printf("初始化日志文件失败: %v", err)
-	}
-
-	// 新增系统级调优
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	debug.SetGCPercent(10) // 降低GC频率
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("Recovered from panic:", r)
-			log.Println(string(debug.Stack()))
-		}
-	}()
-
-	pro.SetVersion(GetVersion())
-
 	config.Help(GetVersion())
 
 	if *config.Arg_stun_test { // 测试stun节点，开发使用选项

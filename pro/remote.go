@@ -290,8 +290,6 @@ func RunRemote(tun_key string) error {
 
 	// 主循环扫描待处理的会话
 	for m_remote_stats == 1 {
-		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
-
 		// 每次只认领一个待处理的会话
 		redisJson, err := RedisSessionClaim()
 		if err != nil {
