@@ -38,6 +38,11 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 
 	// 获取 UDP 地址
 	*udp_conn, redisJson.RemoteAddr = GetUDPAddr()
+	if redisJson.RemoteAddr.WanPort1 == redisJson.RemoteAddr.WanPort2 {
+		log.Printf("WanPort %d:%d, 当前是NAT1-NAT3", redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2)
+	} else {
+		log.Printf("WanPort %d:%d, 当前是NAT4", redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2)
+	}
 
 	// 根据 Local 端是否发送地址决定连接类型
 	switch redisJson.LocalAddr.WanPort1 {

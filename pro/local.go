@@ -151,10 +151,10 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 	conn_type := 0 // 被动连接
 	if addr.WanPort1 == addr.WanPort2 {
-		log.Printf("WanPort %d:%d, 主动连接", addr.WanPort1, addr.WanPort2)
+		log.Printf("WanPort %d:%d, 当前是NAT1-NAT3, 主动连接", addr.WanPort1, addr.WanPort2)
 		conn_type = 1 // 主动连接
 	} else {
-		log.Printf("WanPort %d:%d, 被动连接", addr.WanPort1, addr.WanPort2)
+		log.Printf("WanPort %d:%d, 当前是NAT4, 被动连接", addr.WanPort1, addr.WanPort2)
 	}
 
 	// 阶段1: 处理 State 0 - 注册会话并等待认领
