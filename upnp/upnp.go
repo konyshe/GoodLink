@@ -1,35 +1,22 @@
 package upnp
 
 import (
-	// "fmt"
 	"errors"
 	"log"
 	"sync"
 )
 
-/*
- * 得到网关
- */
-
-// 对所有的端口进行管理
-type MappingPortStruct struct {
-	lock *sync.Mutex
-}
-
 type Upnp struct {
-	Active             bool              //这个upnp协议是否可用
-	LocalHost          string            //本机ip地址
-	GatewayInsideIP    string            //局域网网关ip
-	GatewayOutsideIP   string            //网关公网ip
-	OutsideMappingPort map[string]int    //映射外部端口
-	InsideMappingPort  map[string]int    //映射本机端口
-	Gateway            *Gateway          //网关信息
-	CtrlUrl            string            //控制请求url
-	MappingPort        MappingPortStruct //已经添加了的映射 {"TCP":[1990],"UDP":[1991]}
-}
-
-func (this *Upnp) deviceStatus() {
-
+	Active             bool           //这个upnp协议是否可用
+	LocalHost          string         //本机ip地址
+	GatewayInsideIP    string         //局域网网关ip
+	GatewayOutsideIP   string         //网关公网ip
+	OutsideMappingPort map[string]int //映射外部端口
+	InsideMappingPort  map[string]int //映射本机端口
+	Gateway            *Gateway       //网关信息
+	CtrlUrl            string         //控制请求url
+	KeepPorts          map[int]bool   //需要保留映射的端口号
+	lock               sync.Mutex
 }
 
 // 查看设备描述，得到控制请求url
@@ -41,6 +28,11 @@ func (this *Upnp) deviceDesc() (err error) {
 }
 
 func (this *Upnp) Init() (err error) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
+	this.KeepPorts = make(map[int]bool)
+
 	defer func(err error) {
 		if errTemp := recover(); errTemp != nil {
 			log.Printf("upnp: %v", errTemp)
@@ -51,11 +43,8 @@ func (this *Upnp) Init() (err error) {
 	log.Println("upnp: 初始化中...")
 
 	if this.LocalHost == "" {
-		this.MappingPort = MappingPortStruct{
-			lock: new(sync.Mutex),
-		}
 		this.LocalHost = GetLocalIntenetIp()
-		log.Printf("LocalHost: %s", this.LocalHost)
+		log.Printf("upnp: LocalHost: %s", this.LocalHost)
 	}
 
 	if this.CtrlUrl == "" {
@@ -76,17 +65,16 @@ func (this *Upnp) Init() (err error) {
 		log.Printf("upnp: GatewayOutsideIP: %s", this.GatewayOutsideIP)
 	}
 
-	if err := this.CleanMappings(0); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // 添加一个端口映射
 func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (err error) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
 	if this.GatewayOutsideIP == "" {
-		return errors.New("无Upnp设备")
+		return errors.New("upnp: 无Upnp设备")
 	}
 	addPort := AddPortMapping{upnp: this, http_client: nil}
 	if issuccess := addPort.Send(localPort, remotePort, protocol); issuccess {
@@ -95,11 +83,14 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 	} else {
 		this.Active = false
 		// log.Println("添加一个端口映射失败")
-		return errors.New("添加一个端口映射失败")
+		return errors.New("upnp: 添加一个端口映射失败")
 	}
 }
 
 func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
 	if this.GatewayOutsideIP == "" {
 		return false
 	}
@@ -111,11 +102,29 @@ func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
 	return issuccess
 }
 
+func (this *Upnp) AddKeepPort(port int) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
+	this.KeepPorts[port] = true
+}
+
+func (this *Upnp) RemoveKeepPort(port int) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
+	delete(this.KeepPorts, port)
+}
+
 // CleanMappings 清理之前添加的端口映射
-// 通过枚举路由器上所有端口映射，筛选描述为 "goodlink" 的映射并删除
-func (this *Upnp) CleanMappings(externalPort int) error {
+// 通过枚举路由器上所有端口映射，筛选描述为 "goodlink" 的映射
+// keepPorts 为需要保留的端口号 map，不在该 map 中的端口映射将被删除
+func (this *Upnp) CleanMappings() error {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
 	if this.GatewayOutsideIP == "" {
-		return errors.New("无Upnp设备")
+		return errors.New("upnp: 无Upnp设备")
 	}
 
 	// 先收集所有需要删除的映射
@@ -128,12 +137,13 @@ func (this *Upnp) CleanMappings(externalPort int) error {
 			// 没有更多映射了
 			break
 		}
-		if entry.Description == "goodlink" && entry.ExternalPort != externalPort {
+		// 如果是 goodlink 的映射，且端口号不在保留列表中，则标记为删除
+		if entry.Description == "goodlink" && !this.KeepPorts[entry.ExternalPort] {
 			toDelete = append(toDelete, *entry)
 		}
 	}
 
-	// 删除所有 goodlink 的映射
+	// 删除所有标记为删除的映射
 	for _, entry := range toDelete {
 		this.DelPortMapping(entry.ExternalPort, entry.Protocol)
 	}
