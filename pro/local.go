@@ -21,6 +21,120 @@ var (
 	g_netstack_started = false
 )
 
+// handleState0_RegisterSession 处理 State 0: 注册会话并等待 Remote 端认领
+func handleState0_RegisterSession(sessionID string, redisJson *RedisJsonType, conn_type int, addr *tun.AddrType) (bool, error) {
+	log.Printf("[状态转换] State 0: 注册会话 %s", sessionID)
+
+	// 根据连接类型设置初始信息
+	switch conn_type {
+	case 0:
+		log.Println("请求连接Remote端")
+		log.Println("[GOODLINK_STATUS]connecting")
+	default:
+		redisJson.LocalAddr = *addr
+		log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
+		log.Println("[GOODLINK_STATUS]connecting")
+	}
+
+	// 将SessionID注册到Hash中，等待Remote端认领
+	if err := RedisSessionRegister(30*time.Second, redisJson); err != nil {
+		log.Printf("注册会话失败: %v", err)
+		return false, err
+	}
+	log.Printf("已注册会话到队列，等待Remote端认领: %s", sessionID)
+
+	// 等待Remote端认领并写入独立的session key
+	sessionClaimed := false
+	for i := 0; i < 30 && m_local_state == 1; i++ {
+		time.Sleep(1 * time.Second)
+
+		// 尝试从独立的session key读取，如果能读到说明已被认领
+		if RedisSessionGet(sessionID, redisJson) == nil {
+			sessionClaimed = true
+			log.Printf("[状态转换] State 0 -> State 1: 会话已被Remote端认领: %s", sessionID)
+			break
+		}
+	}
+
+	if !sessionClaimed {
+		// 超时未被认领，从Hash中移除注册
+		RedisSessionUnregister(sessionID)
+		log.Println("等待Remote端认领超时")
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// handleState1_ProcessRemoteAddr 处理 State 1: 处理 Remote 端地址，创建 TUN 连接
+func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, conn *net.UDPConn, addr *tun.AddrType, conn_type int, tun_active **tun.TunActive, tun_passive **tun.TunPassive) error {
+	log.Printf("[状态转换] State 1: 收到Remote端地址: %v", redisJson.RemoteAddr)
+
+	// 版本兼容性检查
+	if redisJson.RemoteVersion != GetVersion() {
+		log.Printf("两端版本不兼容: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
+		RedisSessionDel(sessionID)
+		return errors.New("两端版本不兼容")
+	}
+
+	// 根据连接类型创建 TUN 连接
+	switch conn_type {
+	case 0:
+		// 被动连接：Local 端等待 Remote 端连接
+		if *tun_passive != nil {
+			(*tun_passive).Release()
+		}
+		*tun_active = nil
+
+		redisJson.LocalAddr = *addr
+
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
+		(*tun_passive).Start()
+
+		redisJson.State = 2
+		log.Printf("[状态转换] State 1 -> State 2: 发送Local端地址: %v", redisJson.LocalAddr)
+		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
+
+	default:
+		// 主动连接：Local 端主动连接 Remote 端
+		if *tun_active != nil {
+			(*tun_active).Release()
+		}
+		*tun_passive = nil
+
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
+		(*tun_active).Start()
+
+		redisJson.State = 2
+		log.Printf("[状态转换] State 1 -> State 2: 发送Local端地址: %v", redisJson.LocalAddr)
+		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
+	}
+
+	return nil
+}
+
+// handleLocalState3_ConnectionSuccess 处理 Local 端 State 3: 连接成功
+func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive *tun.TunPassive) (quic.Connection, quic.Stream, bool) {
+	log.Printf("[状态转换] State 3: 连接成功")
+
+	if tun_passive != nil && tun_passive.TunQuicConn != nil {
+		log.Println("[GOODLINK_STATUS]connected")
+		return tun_passive.TunQuicConn, tun_passive.TunHealthStream, true
+	}
+	if tun_active != nil && tun_active.TunQuicConn != nil {
+		log.Println("[GOODLINK_STATUS]connected")
+		return tun_active.TunQuicConn, tun_active.TunHealthStream, true
+	}
+
+	log.Println("连接失败: TUN连接已建立但QUIC连接为空")
+	return nil, nil, false
+}
+
+// handleLocalState4_ConnectionTimeout 处理 Local 端 State 4: 连接超时
+func handleLocalState4_ConnectionTimeout() {
+	log.Printf("[状态转换] State 4: 连接超时")
+}
+
 func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
@@ -43,121 +157,86 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		log.Printf("WanPort %d:%d, 被动连接", addr.WanPort1, addr.WanPort2)
 	}
 
-	switch conn_type {
-	case 0:
-		log.Println("请求连接Remote端")
-		log.Println("[GOODLINK_STATUS]connecting")
-
-	default:
-		redisJson.LocalAddr = *addr
-		log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
-		log.Println("[GOODLINK_STATUS]connecting")
-	}
-
-	// 阶段1: 将SessionID注册到Hash中，等待Remote端认领
-	if err := RedisSessionRegister(30*time.Second, &redisJson); err != nil {
-		log.Printf("注册会话失败: %v", err)
+	// 阶段1: 处理 State 0 - 注册会话并等待认领
+	sessionClaimed, err := handleState0_RegisterSession(SessionID, &redisJson, conn_type, addr)
+	if err != nil {
 		return tun_active, tun_passive, nil, nil, err
 	}
-	log.Printf("已注册会话到队列，等待Remote端认领: %s", SessionID)
-
-	// 等待Remote端认领并写入独立的session key
-	sessionClaimed := false
-	for i := 0; i < 30 && m_local_state == 1; i++ {
-		time.Sleep(1 * time.Second)
-
-		// 尝试从独立的session key读取，如果能读到说明已被认领
-		if RedisSessionGet(SessionID, &redisJson) == nil {
-			sessionClaimed = true
-			log.Printf("会话已被Remote端认领: %s", SessionID)
-			break
-		}
-	}
-
 	if !sessionClaimed {
-		// 超时未被认领，从Hash中移除注册
-		RedisSessionUnregister(SessionID)
-		log.Println("等待Remote端认领超时")
 		return tun_active, tun_passive, nil, nil, nil
 	}
 
 	// 阶段2: 使用独立的session key进行后续通信
+	lastState := 0
 	for m_local_state == 1 {
 		time.Sleep(1 * time.Second)
 
+		// 读取会话状态
 		if RedisSessionGet(SessionID, &redisJson) != nil {
 			log.Println("会话超时")
 			return tun_active, tun_passive, nil, nil, nil
 		}
 
+		// 验证会话ID
 		if !strings.EqualFold(redisJson.SessionID, SessionID) {
 			log.Println("会话被重置")
 			return tun_active, tun_passive, nil, nil, nil
 		}
 
+		// 状态转换验证
+		if redisJson.State < lastState {
+			log.Printf("[状态验证] 状态异常回退: %d -> %d", lastState, redisJson.State)
+			return tun_active, tun_passive, nil, nil, nil
+		}
+
+		// 检查状态跳跃（除了允许的最终状态）
+		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-lastState > 1 {
+			log.Printf("[状态验证] 状态异常跳跃: %d -> %d", lastState, redisJson.State)
+			return tun_active, tun_passive, nil, nil, nil
+		}
+
+		// 根据状态进行处理
 		switch redisJson.State {
 		case 1:
-			if redisJson.RemoteVersion != GetVersion() {
-				log.Printf("两端版本不兼容: %v", redisJson)
-				RedisSessionDel(SessionID)
-				return tun_active, tun_passive, nil, nil, errors.New("两端版本不兼容")
+			if lastState != 0 && lastState != 1 {
+				log.Printf("[状态验证] 状态转换异常: 期望从 State 0 或 State 1，当前 lastState: %d", lastState)
+				continue
 			}
-
-			log.Printf("收到Remote端地址: %v", redisJson.RemoteAddr)
-
-			switch conn_type {
-			case 0:
-				if tun_passive != nil {
-					tun_passive.Release()
-				}
-				tun_active = nil
-
-				redisJson.LocalAddr = *addr
-
-				tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
-				tun_passive.Start()
-
-				redisJson.State = 2
-				log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
-				RedisSessionSet(SessionID, redisJson.RedisTimeOut, &redisJson)
-
-			default:
-				if tun_active != nil {
-					tun_active.Release()
-				}
-				tun_passive = nil
-
-				tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
-				tun_active.Start()
-
-				redisJson.State = 2
-				RedisSessionSet(SessionID, redisJson.RedisTimeOut, &redisJson)
+			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {
+				return tun_active, tun_passive, nil, nil, err
 			}
+			lastState = redisJson.State
+
+		case 2:
+			// State 2: 等待连接建立，继续循环等待 State 3 或 State 4
+			if lastState != 1 && lastState != 2 {
+				log.Printf("[状态验证] 状态转换异常: 期望从 State 1 或 State 2，当前 lastState: %d", lastState)
+				continue
+			}
+			log.Printf("[状态转换] State 2: 等待连接建立, Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
+			lastState = redisJson.State
 
 		case 3:
-			if tun_passive != nil {
-				if tun_passive.TunQuicConn != nil {
-					log.Printf("连接成功")
-					log.Println("[GOODLINK_STATUS]connected")
-					return tun_active, tun_passive, tun_passive.TunQuicConn, tun_passive.TunHealthStream, nil
-				}
+			if lastState != 2 {
+				log.Printf("[状态验证] 状态转换异常: 期望从 State 2，当前 lastState: %d", lastState)
+				continue
 			}
-			if tun_active != nil {
-				if tun_active.TunQuicConn != nil {
-					log.Printf("连接成功")
-					log.Println("[GOODLINK_STATUS]connected")
-					return tun_active, tun_passive, tun_active.TunQuicConn, tun_active.TunHealthStream, nil
-				}
+			quicConn, healthStream, success := handleLocalState3_ConnectionSuccess(tun_active, tun_passive)
+			if success {
+				return tun_active, tun_passive, quicConn, healthStream, nil
 			}
-			log.Println("连接失败")
 			return tun_active, tun_passive, nil, nil, nil
 
 		case 4:
-			log.Println("连接超时")
+			if lastState != 2 {
+				log.Printf("[状态验证] 状态转换异常: 期望从 State 2，当前 lastState: %d", lastState)
+				continue
+			}
+			handleLocalState4_ConnectionTimeout()
 			return tun_active, tun_passive, nil, nil, nil
 
 		default:
-			log.Printf("等待Remote端状态: Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
+			log.Printf("[状态转换] 等待Remote端状态: State %d, Local: %v => Remote: %v", redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
 

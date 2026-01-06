@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"errors"
 	"go2"
 	"goodlink/config"
 	"goodlink/proxy"
@@ -9,6 +10,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -16,21 +18,151 @@ import (
 
 var (
 	m_remote_stats        int
-	m_processing_sessions sync.Map // 记录正在处理的 SessionID，避免同一进程内重复处理
+	m_processing_sessions sync.Map       // 记录正在处理的 SessionID，避免同一进程内重复处理
+	m_max_concurrent_conn int      = 100 // 最大并发连接数限制，0 表示无限制
+	m_active_conn_count   int32    = 0   // 当前活跃连接数（原子操作）
 )
+
+// handleState1_SendRemoteAddr 处理 State 1: 发送 Remote 端地址，创建 TUN 连接
+func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun_active **tun.TunActive, tun_passive **tun.TunPassive, udp_conn **net.UDPConn, conn_type *int, tun_active_chain *chan quic.Connection, tun_passive_chain *chan quic.Connection) error {
+	log.Printf("[状态转换] 会话 %s State 1: 发送Remote端地址", sessionID)
+
+	redisJson.RemoteVersion = GetVersion()
+	redisJson.State = 1
+	redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
+	redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
+
+	// 版本兼容性检查
+	if redisJson.LocalVersion != GetVersion() {
+		log.Printf("会话 %s 两端版本不兼容: Local: %s => Remote: %s", sessionID, redisJson.LocalVersion, GetVersion())
+		RedisSessionSet(sessionID, redisJson.SocketTimeOut*3, redisJson)
+		return errors.New("两端版本不兼容")
+	}
+
+	// 获取 UDP 地址
+	*udp_conn, redisJson.RemoteAddr = GetUDPAddr()
+
+	// 根据 Local 端是否发送地址决定连接类型
+	switch redisJson.LocalAddr.WanPort1 {
+	case 0:
+		*conn_type = 0
+		log.Printf("会话 %s Local端未发来IP，使用主动连接", sessionID)
+
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_active_chain = (*tun_active).GetChain()
+
+		redisJson.SendPortCount = 0x100
+
+	default:
+		log.Printf("会话 %s Local端有发来IP: %v，使用被动连接", sessionID, redisJson.LocalAddr)
+		*conn_type = 1
+
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
+		(*tun_passive).Start()
+
+		*tun_passive_chain = (*tun_passive).GetChain()
+	}
+
+	log.Printf("会话 %s 发送Remote端地址: %v", sessionID, redisJson.RemoteAddr)
+	// 写入独立的session key，通知Local端会话已被认领
+	RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
+
+	return nil
+}
+
+// handleState2_WaitConnection 处理 State 2: 等待连接建立
+func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, conn_type int, tun_active *tun.TunActive, tun_passive *tun.TunPassive, tun_active_chain chan quic.Connection, tun_passive_chain chan quic.Connection) (bool, error) {
+	log.Printf("[状态转换] 会话 %s State 2: 等待连接建立", sessionID)
+
+	switch conn_type {
+	case 0:
+		log.Printf("会话 %s 收到Local端地址: %v，启动主动连接", sessionID, redisJson.LocalAddr)
+		if tun_active != nil {
+			tun_active.Start()
+		}
+
+	case 1:
+		log.Printf("会话 %s 收到Local端地址, 等待被动连接: %v", sessionID, redisJson.LocalAddr)
+	}
+
+	// 等待连接建立或超时
+	select {
+	case <-tun_active_chain:
+		redisJson.State = 3
+		log.Printf("[状态转换] 会话 %s State 2 -> State 3: Local端被动连接成功", sessionID)
+		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
+		if tun_active != nil && tun_active.TunQuicConn != nil {
+			return true, nil
+		}
+		return false, nil
+
+	case <-tun_passive_chain:
+		redisJson.State = 3
+		log.Printf("[状态转换] 会话 %s State 2 -> State 3: Local端主动连接成功", sessionID)
+		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
+		if tun_passive != nil && tun_passive.TunQuicConn != nil {
+			return true, nil
+		}
+		return false, nil
+
+	case <-time.After(time.Duration(config.Arg_p2p_timeout) * time.Second):
+		redisJson.State = 4
+		log.Printf("[状态转换] 会话 %s State 2 -> State 4: Local端连接超时", sessionID)
+		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
+		return false, nil
+	}
+}
+
+// handleRemoteState3_ConnectionSuccess 处理 Remote 端 State 3: 连接成功
+func handleRemoteState3_ConnectionSuccess(sessionID string, tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
+	log.Printf("[状态转换] 会话 %s State 3: 连接成功，当前活跃连接数: %d", sessionID, getActiveConnCount())
+
+	if tun_active != nil && tun_active.TunQuicConn != nil {
+		// 连接成功，启动代理和健康检查
+		handleConnection(sessionID, tun_active.TunQuicConn, tun_active.TunHealthStream)
+	} else if tun_passive != nil && tun_passive.TunQuicConn != nil {
+		// 连接成功，启动代理和健康检查
+		handleConnection(sessionID, tun_passive.TunQuicConn, tun_passive.TunHealthStream)
+	}
+}
+
+// handleRemoteState4_ConnectionTimeout 处理 Remote 端 State 4: 连接超时
+func handleRemoteState4_ConnectionTimeout(sessionID string) {
+	log.Printf("[状态转换] 会话 %s State 4: 连接超时", sessionID)
+}
+
+// getActiveConnCount 获取当前活跃连接数
+func getActiveConnCount() int {
+	return int(atomic.LoadInt32(&m_active_conn_count))
+}
+
+// incrementActiveConnCount 增加活跃连接数
+func incrementActiveConnCount() {
+	atomic.AddInt32(&m_active_conn_count, 1)
+}
+
+// decrementActiveConnCount 减少活跃连接数
+func decrementActiveConnCount() {
+	atomic.AddInt32(&m_active_conn_count, -1)
+}
 
 // processSession 处理单个会话的完整生命周期
 // 由主循环认领会话后启动，接收已认领的 SessionID 和 redisJson
 func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer m_processing_sessions.Delete(sessionID) // 处理完成后从本地 map 移除
+	defer decrementActiveConnCount()              // 减少活跃连接数
+
+	// 增加活跃连接数
+	incrementActiveConnCount()
+	log.Printf("[连接统计] 会话 %s 开始处理，当前活跃连接数: %d", sessionID, getActiveConnCount())
 
 	// 独立的资源，每个会话完全隔离
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 	var udp_conn *net.UDPConn
 
-	conn_type := 0 //主动连接
+	conn_type := 0 // 主动连接
 
 	var tun_active_chain chan quic.Connection
 	var tun_passive_chain chan quic.Connection
@@ -48,123 +180,99 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 		}
 	}()
 
-	redisJson.RemoteVersion = GetVersion()
-
-	// 阶段2: 处理会话状态为0，发送Remote端信息，并写入独立的session key
 	log.Printf("会话 %s 收到Local端请求: %v", sessionID, redisJson)
 
-	redisJson.State = 1
-	redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
-	redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
-
-	if redisJson.LocalVersion != GetVersion() {
-		log.Printf("会话 %s 两端版本不兼容: Local: %v => Remote: %v", sessionID, redisJson.LocalVersion, GetVersion())
-		RedisSessionSet(sessionID, redisJson.SocketTimeOut*3, &redisJson)
+	// 阶段1: 处理 State 0 -> State 1 - 认领会话并发送 Remote 端地址
+	if err := handleState1_SendRemoteAddr(sessionID, &redisJson, &tun_active, &tun_passive, &udp_conn, &conn_type, &tun_active_chain, &tun_passive_chain); err != nil {
+		log.Printf("会话 %s 处理 State 1 失败: %v", sessionID, err)
 		return
 	}
 
-	udp_conn, redisJson.RemoteAddr = GetUDPAddr()
-
-	switch redisJson.LocalAddr.WanPort1 {
-	case 0:
-		conn_type = 0
-		log.Printf("会话 %s Local端未发来IP", sessionID)
-
-		tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
-		tun_active_chain = tun_active.GetChain()
-
-		redisJson.SendPortCount = 0x100
-
-	default:
-		log.Printf("会话 %s Local端有发来IP: %v", sessionID, redisJson.LocalAddr)
-		conn_type = 1
-
-		tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
-		tun_passive.Start()
-
-		tun_passive_chain = tun_passive.GetChain()
-	}
-
-	log.Printf("会话 %s 发送Remote端地址: %v", sessionID, redisJson.RemoteAddr)
-	// 写入独立的session key，通知Local端会话已被认领
-	RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
-
 	last_state := redisJson.State
 
-	// 阶段3: 使用独立的session key进行后续通信
+	// 阶段2: 使用独立的session key进行后续通信
 	for m_remote_stats == 1 {
 		time.Sleep(1 * time.Second)
 
+		// 读取会话状态
 		if RedisSessionGet(sessionID, &redisJson) != nil {
 			log.Printf("会话 %s 超时", sessionID)
 			return
 		}
 		redisJson.RemoteVersion = GetVersion()
 
+		// 验证会话ID
 		if !strings.EqualFold(redisJson.SessionID, sessionID) {
 			log.Printf("会话 %s 被重置", sessionID)
 			return
 		}
 
+		// 状态转换验证
 		if redisJson.State < last_state {
 			RedisSessionDel(sessionID)
-			log.Printf("会话 %s 状态异常: %d -> %d", sessionID, last_state, redisJson.State)
+			log.Printf("[状态验证] 会话 %s 状态异常回退: %d -> %d", sessionID, last_state, redisJson.State)
 			return
 		}
 
 		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
 			RedisSessionDel(sessionID)
-			log.Printf("会话 %s 状态异常: %d -> %d", sessionID, last_state, redisJson.State)
+			log.Printf("[状态验证] 会话 %s 状态异常跳跃: %d -> %d", sessionID, last_state, redisJson.State)
 			return
 		}
 
 		redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
 		redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 
+		// 根据状态进行处理
 		switch redisJson.State {
+		case 1:
+			// State 1 已在开始时处理，这里不应该再次进入
+			if last_state != 0 && last_state != 1 {
+				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 0 或 State 1，当前 lastState: %d", sessionID, last_state)
+				continue
+			}
+			log.Printf("[状态转换] 会话 %s State 1: 等待Local端状态, Local: %v => Remote: %v", sessionID, redisJson.LocalAddr, redisJson.RemoteAddr)
+			last_state = redisJson.State
+
 		case 2:
-			switch conn_type {
-			case 0:
-				log.Printf("会话 %s 收到Local端地址: %v", sessionID, redisJson.LocalAddr)
-				tun_active.Start()
-
-			case 1:
-				log.Printf("会话 %s 收到Local端地址, 等待连接: %v", sessionID, redisJson.LocalAddr)
+			if last_state != 1 && last_state != 2 {
+				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 1 或 State 2，当前 lastState: %d", sessionID, last_state)
+				continue
 			}
-
-			select {
-			case <-tun_active_chain:
-				redisJson.State = 3
-				log.Printf("会话 %s Local端被动连接成功", sessionID)
-				RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
-				if tun_active != nil && tun_active.TunQuicConn != nil {
-					// 连接成功，启动代理和健康检查
-					handleConnection(sessionID, tun_active.TunQuicConn, tun_active.TunHealthStream)
-				}
-				return
-
-			case <-tun_passive_chain:
-				redisJson.State = 3
-				log.Printf("会话 %s Local端主动连接成功", sessionID)
-				RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
-				if tun_passive != nil && tun_passive.TunQuicConn != nil {
-					// 连接成功，启动代理和健康检查
-					handleConnection(sessionID, tun_passive.TunQuicConn, tun_passive.TunHealthStream)
-				}
-				return
-
-			case <-time.After(time.Duration(config.Arg_p2p_timeout) * time.Second):
-				redisJson.State = 4
-				log.Printf("会话 %s Local端连接超时", sessionID)
-				RedisSessionSet(sessionID, redisJson.RedisTimeOut, &redisJson)
+			success, err := handleState2_WaitConnection(sessionID, &redisJson, conn_type, tun_active, tun_passive, tun_active_chain, tun_passive_chain)
+			if err != nil {
+				log.Printf("会话 %s 处理 State 2 失败: %v", sessionID, err)
 				return
 			}
+			if success {
+				// 连接成功，进入 State 3
+				handleRemoteState3_ConnectionSuccess(sessionID, tun_active, tun_passive)
+				return
+			} else if redisJson.State == 4 {
+				// 连接超时，进入 State 4
+				handleRemoteState4_ConnectionTimeout(sessionID)
+				return
+			}
+			last_state = redisJson.State
 
-		case 3, 4:
+		case 3:
+			if last_state != 2 {
+				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 2，当前 lastState: %d", sessionID, last_state)
+				continue
+			}
+			handleRemoteState3_ConnectionSuccess(sessionID, tun_active, tun_passive)
+			return
+
+		case 4:
+			if last_state != 2 {
+				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 2，当前 lastState: %d", sessionID, last_state)
+				continue
+			}
+			handleRemoteState4_ConnectionTimeout(sessionID)
 			return
 
 		default:
-			log.Printf("会话 %s 等待Local端状态: Local: %v => Remote: %v", sessionID, redisJson.LocalAddr, redisJson.RemoteAddr)
+			log.Printf("[状态转换] 会话 %s 等待Local端状态: State %d, Local: %v => Remote: %v", sessionID, redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 
 		last_state = redisJson.State
@@ -173,7 +281,7 @@ func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGrou
 
 // handleConnection 处理已建立的连接
 func handleConnection(sessionID string, quicConn quic.Connection, healthStream quic.Stream) {
-	log.Printf("开始处理连接: %s", sessionID)
+	log.Printf("[连接处理] 开始处理连接: %s，当前活跃连接数: %d", sessionID, getActiveConnCount())
 
 	// 启动代理服务
 	go proxy.ProcessProxyServer(quicConn)
@@ -181,7 +289,28 @@ func handleConnection(sessionID string, quicConn quic.Connection, healthStream q
 	// 阻塞等待健康检查结束
 	tun.ProcessHealth(healthStream)
 
-	log.Printf("释放连接: %v, SessionID: %s", quicConn.LocalAddr(), sessionID)
+	log.Printf("[连接处理] 释放连接: %v, SessionID: %s，当前活跃连接数: %d", quicConn.LocalAddr(), sessionID, getActiveConnCount()-1)
+}
+
+// SetMaxConcurrentConn 设置最大并发连接数，0 表示无限制
+func SetMaxConcurrentConn(maxConn int) {
+	m_max_concurrent_conn = maxConn
+	log.Printf("[连接配置] 设置最大并发连接数: %d", maxConn)
+}
+
+// GetMaxConcurrentConn 获取最大并发连接数
+func GetMaxConcurrentConn() int {
+	return m_max_concurrent_conn
+}
+
+// GetRemoteStats 获取 Remote 端统计信息
+func GetRemoteStats() (activeConn int, processingCount int) {
+	activeConn = getActiveConnCount()
+	m_processing_sessions.Range(func(key, value any) bool {
+		processingCount++
+		return true
+	})
+	return activeConn, processingCount
 }
 
 func StopRemote() error {
@@ -191,6 +320,9 @@ func StopRemote() error {
 		m_processing_sessions.Delete(key)
 		return true
 	})
+	// 重置活跃连接数
+	atomic.StoreInt32(&m_active_conn_count, 0)
+	log.Println("[连接统计] Remote端已停止，所有连接已清理")
 	return nil
 }
 
@@ -202,7 +334,7 @@ func RunRemote(tun_key string) error {
 	m_tun_key = tun_key
 	m_md5_tun_key = go2.Md5Encode(tun_key)
 
-	log.Println("Remote端启动，等待Local端连接...")
+	log.Printf("Remote端启动，等待Local端连接... (最大并发连接数: %d)", m_max_concurrent_conn)
 
 	// 主循环扫描待处理的会话
 	for m_remote_stats == 1 {
@@ -214,9 +346,14 @@ func RunRemote(tun_key string) error {
 		}
 
 		if len(pendingSessions) == 0 {
+			// 没有待处理会话时，减少扫描频率
 			time.Sleep(3 * time.Second)
 			continue
 		}
+
+		// 有待处理会话时，减少扫描间隔以提高响应速度
+		// 但避免过于频繁的扫描
+		time.Sleep(500 * time.Millisecond)
 
 		// 尝试认领待处理的会话
 		for _, session := range pendingSessions {
@@ -225,18 +362,38 @@ func RunRemote(tun_key string) error {
 				continue
 			}
 
+			// 检查并发连接数限制
+			currentConnCount := getActiveConnCount()
+			if m_max_concurrent_conn > 0 && currentConnCount >= m_max_concurrent_conn {
+				log.Printf("[连接限制] 达到最大并发连接数限制 (%d)，跳过会话 %s，当前活跃连接数: %d", m_max_concurrent_conn, session.SessionID, currentConnCount)
+				// 可以选择拒绝或等待，这里选择跳过，等待下次扫描
+				continue
+			}
+
 			redisJson := RedisJsonType{}
 			if err := RedisSessionClaim(session.SessionID, &redisJson, 30*time.Second); err != nil {
 				// 可能被其他节点认领了，继续尝试下一个
+				log.Printf("[会话认领] 会话 %s 认领失败: %v", session.SessionID, err)
 				continue
 			}
 
 			// 标记为正在处理
 			m_processing_sessions.Store(session.SessionID, true)
 
-			log.Printf("认领会话: %s", session.SessionID)
+			log.Printf("[会话认领] 认领会话: %s，当前活跃连接数: %d/%d", session.SessionID, currentConnCount+1, m_max_concurrent_conn)
 			wg.Add(1)
 			go processSession(session.SessionID, redisJson, &wg)
+		}
+
+		// 定期输出连接统计信息
+		if len(pendingSessions) > 0 {
+			activeCount := getActiveConnCount()
+			processingCount := 0
+			m_processing_sessions.Range(func(key, value any) bool {
+				processingCount++
+				return true
+			})
+			log.Printf("[连接统计] 待处理会话: %d, 正在处理: %d, 活跃连接: %d/%d", len(pendingSessions), processingCount, activeCount, m_max_concurrent_conn)
 		}
 	}
 
