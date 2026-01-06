@@ -54,7 +54,7 @@
 
 8. 以下举例中的密钥(--key), 请不要使用, 否则会连上别人的 remote 端, 或者被别人的 local 端连上。自己随机 24 字符长度的密钥
 
-9. 如有安全疑问，请看: [使用GoodLink 是否足够安全？](https://gitee.com/konyshe/goodlink/issues/IBFKC2)
+9. 如有安全疑问，请看: [使用GoodLink 是否足够安全？](https://gitee.com/konyshe/goodlink/wikis/GoodLink%E6%98%AF%E5%90%A6%E8%B6%B3%E5%A4%9F%E5%AE%89%E5%85%A8)
 
 10. 连接remote端的windows远程桌面，可在ip后面加上 :13389，尝试连接。3389端口貌似有特殊路由处理，和GoodLink创建的虚拟网卡冲突
 
