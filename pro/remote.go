@@ -220,7 +220,8 @@ func processSession(redisJson *RedisJsonType) {
 			}
 			if success {
 				// 连接成功，进入 State 3
-				handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
+				log.Println("2 handleRemoteState3_ConnectionSuccess")
+				go handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
 				return
 			} else if redisJson.State == 4 {
 				// 连接超时，进入 State 4
@@ -234,6 +235,7 @@ func processSession(redisJson *RedisJsonType) {
 				log.Printf("会话 %s 状态转换异常: 期望从 State 2，当前 lastState: %d", redisJson.SessionID, last_state)
 				continue
 			}
+			log.Println("3 handleRemoteState3_ConnectionSuccess")
 			go handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
 			return
 
@@ -288,6 +290,8 @@ func RunRemote(tun_key string) error {
 
 	// 主循环扫描待处理的会话
 	for m_remote_stats == 1 {
+		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
+
 		// 每次只认领一个待处理的会话
 		redisJson, err := RedisSessionClaim()
 		if err != nil {
