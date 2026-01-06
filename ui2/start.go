@@ -108,9 +108,10 @@ const (
 	statusPrefix     = "[GOODLINK_STATUS]"
 	statusConnecting = "connecting"
 	statusConnected  = "connected"
+	statusWaiting    = "waiting"
 )
 
-// parseStatusMessage 解析状态消息，返回状态值（connecting/connected）和是否成功解析
+// parseStatusMessage 解析状态消息，返回状态值（connecting/connected/waiting）和是否成功解析
 // 支持带时间戳前缀的日志格式，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]connected"
 func parseStatusMessage(line string) (string, bool) {
 	// 查找前缀在行中的位置（可能不在行首，因为有时间戳）
@@ -120,7 +121,7 @@ func parseStatusMessage(line string) (string, bool) {
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
 	status := strings.TrimSpace(line[idx+len(statusPrefix):])
-	if status == statusConnecting || status == statusConnected {
+	if status == statusConnecting || status == statusConnected || status == statusWaiting {
 		return status, true
 	}
 	return "", false
@@ -148,6 +149,11 @@ var (
 	buttonStateConnected = buttonState{
 		text:       "连接成功, 点击停止",
 		importance: widget.SuccessImportance,
+		icon:       theme.MediaStopIcon(),
+	}
+	buttonStateWaiting = buttonState{
+		text:       "当前有其他local端请求连接, 等待中",
+		importance: widget.MediumImportance,
 		icon:       theme.MediaStopIcon(),
 	}
 	buttonStateRunning = buttonState{
@@ -178,6 +184,8 @@ func updateConnectionStatus(status string) {
 		updateButtonState(buttonStateConnecting)
 	case statusConnected:
 		updateButtonState(buttonStateConnected)
+	case statusWaiting:
+		updateButtonState(buttonStateWaiting)
 	}
 }
 

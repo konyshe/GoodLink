@@ -334,10 +334,24 @@ func RunRemote(tun_key string) error {
 	m_tun_key = tun_key
 	m_md5_tun_key = go2.Md5Encode(tun_key)
 
-	log.Printf("Remote端启动，等待Local端连接... (最大并发连接数: %d)", m_max_concurrent_conn)
+	log.Printf("Remote端启动，等待Local端连接...")
 
 	// 主循环扫描待处理的会话
 	for m_remote_stats == 1 {
+		// 检查是否有正在处理的会话
+		hasProcessingSession := false
+		m_processing_sessions.Range(func(key, value any) bool {
+			hasProcessingSession = true
+			return false // 只检查第一个，发现有任何正在处理的会话就返回
+		})
+
+		if hasProcessingSession {
+			// 有正在处理的会话，等待当前会话完成
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// 没有正在处理的会话，尝试认领新会话
 		pendingSessions, err := RedisSessionScan()
 		if err != nil {
 			log.Printf("扫描会话失败: %v", err)
@@ -355,7 +369,7 @@ func RunRemote(tun_key string) error {
 		// 但避免过于频繁的扫描
 		time.Sleep(500 * time.Millisecond)
 
-		// 尝试认领待处理的会话
+		// 串行认领：只认领第一个待处理的会话
 		for _, session := range pendingSessions {
 			// 检查本地是否已在处理
 			if _, exists := m_processing_sessions.Load(session.SessionID); exists {
@@ -383,6 +397,9 @@ func RunRemote(tun_key string) error {
 			log.Printf("[会话认领] 认领会话: %s，当前活跃连接数: %d/%d", session.SessionID, currentConnCount+1, m_max_concurrent_conn)
 			wg.Add(1)
 			go processSession(session.SessionID, redisJson, &wg)
+
+			// 只认领第一个会话，然后等待处理完成
+			break
 		}
 
 		// 定期输出连接统计信息
