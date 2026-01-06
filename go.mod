@@ -8,17 +8,15 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/imroc/req/v3 v3.56.0
 	github.com/pion/stun/v2 v2.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/quic-go/quic-go v0.58.0
 	github.com/sirupsen/logrus v1.9.3
 	go2 v0.0.0
 	golang.org/x/sys v0.39.0
+	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb
-	goodlink2 v0.0.0
-	goroutine-pool v0.0.0
-	gvisor.dev/gvisor v0.0.0-20251229180343-3ad5b57e0557
+	gvisor.dev/gvisor v0.0.0-20260106035720-534579b743fb
 	proxy v0.0.0
 )
 
@@ -40,16 +38,17 @@ require (
 	github.com/go-text/typesetting v0.3.2 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
+	github.com/google/pprof v0.0.0-20260106004452-d7df1bf2cac7 // indirect
 	github.com/hack-pad/go-indexeddb v0.3.2 // indirect
 	github.com/hack-pad/safejs v0.1.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/imroc/req/v3 v3.57.0 // indirect
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
-	github.com/nicksnyder/go-i18n/v2 v2.6.0 // indirect
+	github.com/nicksnyder/go-i18n/v2 v2.6.1 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/onsi/ginkgo/v2 v2.27.3 // indirect
 	github.com/pion/dtls/v2 v2.2.12 // indirect
@@ -64,7 +63,7 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
-	github.com/yuin/goldmark v1.7.13 // indirect
+	github.com/yuin/goldmark v1.7.16 // indirect
 	go.mongodb.org/mongo-driver v1.17.6 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
@@ -77,13 +76,11 @@ require (
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
-	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	goroutine-pool v0.0.0 // indirect
 )
 
 replace go2 => ../go2
-
-replace goodlink2 => ../goodlink2
 
 replace proxy => ../proxy
 

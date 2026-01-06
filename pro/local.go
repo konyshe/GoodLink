@@ -5,7 +5,7 @@ import (
 	"go2"
 	"goodlink/config"
 	"goodlink/netstack"
-	"goodlink2/tun"
+	"goodlink/tun"
 	"log"
 	"net"
 	"strings"
