@@ -30,6 +30,7 @@ const (
 	TagStatusPrefix     = "[GOODLINK_STATUS]"
 	TagStatusConnecting = "connecting"
 	TagStatusConnected  = "connected"
+	TagStatusRunning    = "running"
 )
 
 func SetVersion(v string) {

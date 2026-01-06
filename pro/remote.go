@@ -247,6 +247,7 @@ func RunRemote(tun_key string) error {
 	m_md5_tun_key = go2.Md5Encode(tun_key)
 
 	log.Printf("Remote端启动，等待Local端连接...")
+	log.Printf("%s%s", TagStatusPrefix, TagStatusRunning)
 
 	// 主循环扫描待处理的会话
 	for m_remote_stats == 1 {

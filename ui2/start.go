@@ -115,7 +115,7 @@ func parseStatusMessage(line string) (string, bool) {
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
 	status := strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):])
-	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected {
+	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning {
 		return status, true
 	}
 	return "", false
@@ -135,8 +135,13 @@ var (
 		importance: widget.HighImportance,
 		icon:       theme.MediaPlayIcon(),
 	}
+	buttonStateStarting = buttonState{
+		text:       "启动中...",
+		importance: widget.WarningImportance,
+		icon:       theme.MediaStopIcon(),
+	}
 	buttonStateConnecting = buttonState{
-		text:       "连接中",
+		text:       "连接中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
 	}
@@ -163,16 +168,21 @@ func updateButtonState(state buttonState) {
 	m_button_start.Refresh()
 }
 
-// updateConnectionStatus 根据连接状态更新按钮（仅在Local模式下生效）
+// updateConnectionStatus 根据连接状态更新按钮（Local端直接映射，Remote端在连接成功后才切换为运行状态）
 func updateConnectionStatus(status string) {
-	if GetWorkType() != workTypeLocal {
-		return
-	}
-	switch status {
-	case pro.TagStatusConnecting:
-		updateButtonState(buttonStateConnecting)
-	case pro.TagStatusConnected:
-		updateButtonState(buttonStateConnected)
+	switch GetWorkType() {
+	case workTypeLocal:
+		switch status {
+		case pro.TagStatusConnecting:
+			updateButtonState(buttonStateConnecting)
+		case pro.TagStatusConnected:
+			updateButtonState(buttonStateConnected)
+		}
+	case workTypeRemote:
+		switch status {
+		case pro.TagStatusRunning:
+			updateButtonState(buttonStateRunning)
+		}
 	}
 }
 
@@ -334,9 +344,8 @@ func waitForProcessAndHandleExit(isRestart bool) {
 	if GetWorkType() == workTypeLocal {
 		updateButtonState(buttonStateConnecting)
 	} else {
-		updateButtonState(buttonStateRunning)
+		updateButtonState(buttonStateStarting)
 	}
-
 	if !isRestart {
 		m_activity_start_button.Stop()
 		m_activity_start_button.Hide()
@@ -398,7 +407,7 @@ func autoRestartProcess() {
 	if GetWorkType() == workTypeLocal {
 		updateButtonState(buttonStateConnecting)
 	} else {
-		updateButtonState(buttonStateRunning)
+		updateButtonState(buttonStateStarting)
 	}
 
 	// 启动新的等待goroutine
