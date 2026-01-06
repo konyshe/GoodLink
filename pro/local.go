@@ -77,6 +77,10 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 		return errors.New("两端版本不兼容")
 	}
 
+	if (addr.WanPort1 != addr.WanPort2) && (redisJson.RemoteAddr.WanPort1 != redisJson.RemoteAddr.WanPort2) {
+		log.Printf("*** local端和remote端都是NAT4 ***")
+	}
+
 	// 根据连接类型创建 TUN 连接
 	switch conn_type {
 	case 0:
