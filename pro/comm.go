@@ -139,13 +139,9 @@ func RedisGet(redisJson *RedisJsonType) error {
 	return nil
 }
 
-func RedisDel() {
-	m_redis_db.Del(m_md5_tun_key)
-}
-
 // 获取会话注册表的 Redis key
 func getSessionsKey() string {
-	return m_md5_tun_key + ":sessions"
+	return m_md5_tun_key
 }
 
 // 获取单个会话的 Redis key
@@ -241,6 +237,9 @@ func RedisSessionClaim(sessionID string, redisJson *RedisJsonType, timeout time.
 		return errors.New("会话不存在或已被其他Worker认领")
 	}
 
+	// 认领后立刻删除注册信息，防止重复认领
+	m_redis_db.Del(getSessionsKey())
+
 	encryptedData, ok := result.(string)
 	if !ok {
 		return errors.New("会话数据格式错误")
@@ -260,6 +259,7 @@ func RedisSessionClaim(sessionID string, redisJson *RedisJsonType, timeout time.
 }
 
 // RedisSessionSet 基于SessionID的会话数据写入
+// 使用SessionID作为密钥加密，Remote端认领后使用此函数
 func RedisSessionSet(sessionID string, timeout time.Duration, redisJson *RedisJsonType) error {
 	if m_redis_db == nil {
 		return errors.New("Redis未初始化")
@@ -270,7 +270,8 @@ func RedisSessionSet(sessionID string, timeout time.Duration, redisJson *RedisJs
 		return fmt.Errorf("序列化会话数据失败: %v", err)
 	}
 
-	encryptedData := go2aes.Encrypt7(jsonByte, m_tun_key)
+	// 使用SessionID作为密钥加密（Remote端认领后，后续交互都使用SessionID作为密钥）
+	encryptedData := go2aes.Encrypt7(jsonByte, sessionID)
 	sessionKey := getSessionKey(sessionID)
 
 	if err := m_redis_db.Set(sessionKey, encryptedData, timeout).Err(); err != nil {
@@ -281,6 +282,7 @@ func RedisSessionSet(sessionID string, timeout time.Duration, redisJson *RedisJs
 }
 
 // RedisSessionGet 基于SessionID的会话数据读取
+// 使用SessionID作为密钥解密，Remote端认领后使用此函数
 func RedisSessionGet(sessionID string, redisJson *RedisJsonType) error {
 	if m_redis_db == nil {
 		return errors.New("Redis未初始化")
@@ -292,7 +294,8 @@ func RedisSessionGet(sessionID string, redisJson *RedisJsonType) error {
 		return fmt.Errorf("获取会话数据失败: %v", err)
 	}
 
-	decryptedData := go2aes.Decrypt7(encryptedData, m_tun_key)
+	// 使用SessionID作为密钥解密
+	decryptedData := go2aes.Decrypt7(encryptedData, sessionID)
 	if err := json.Unmarshal(decryptedData, redisJson); err != nil {
 		return fmt.Errorf("解析会话数据失败: %v", err)
 	}

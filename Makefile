@@ -30,7 +30,7 @@ WINDOWS_PLATFORM_LIST = \
 	windows-amd64-ui \
 	windows-amd64-cmd \
 
-debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac
+debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64-cmd
 
 windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac strip
 
