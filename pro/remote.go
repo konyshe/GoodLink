@@ -22,7 +22,7 @@ var (
 
 // handleState1_SendRemoteAddr 处理 State 1: 发送 Remote 端地址，创建 TUN 连接
 func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun_active **tun.TunActive, tun_passive **tun.TunPassive, udp_conn **net.UDPConn, conn_type *int, tun_active_chain *chan quic.Connection, tun_passive_chain *chan quic.Connection) error {
-	log.Printf("[状态转换] 会话 %s State 1: 发送Remote端地址", sessionID)
+	log.Printf("会话 %s State 1: 发送Remote端地址", sessionID)
 
 	redisJson.RemoteVersion = GetVersion()
 	redisJson.State = 1
@@ -69,7 +69,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 
 // handleState2_WaitConnection 处理 State 2: 等待连接建立
 func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, conn_type int, tun_active *tun.TunActive, tun_passive *tun.TunPassive, tun_active_chain chan quic.Connection, tun_passive_chain chan quic.Connection) (bool, error) {
-	log.Printf("[状态转换] 会话 %s State 2: 等待连接建立", sessionID)
+	log.Printf("会话 %s State 2: 等待连接建立", sessionID)
 
 	switch conn_type {
 	case 0:
@@ -86,7 +86,7 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 	select {
 	case <-tun_active_chain:
 		redisJson.State = 3
-		log.Printf("[状态转换] 会话 %s State 2 -> State 3: Local端被动连接成功", sessionID)
+		log.Printf("会话 %s State 2 -> State 3: Local端被动连接成功", sessionID)
 		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
 		if tun_active != nil && tun_active.TunQuicConn != nil {
 			return true, nil
@@ -95,7 +95,7 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 
 	case <-tun_passive_chain:
 		redisJson.State = 3
-		log.Printf("[状态转换] 会话 %s State 2 -> State 3: Local端主动连接成功", sessionID)
+		log.Printf("会话 %s State 2 -> State 3: Local端主动连接成功", sessionID)
 		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
 		if tun_passive != nil && tun_passive.TunQuicConn != nil {
 			return true, nil
@@ -104,7 +104,7 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 
 	case <-time.After(time.Duration(config.Arg_p2p_timeout) * time.Second):
 		redisJson.State = 4
-		log.Printf("[状态转换] 会话 %s State 2 -> State 4: Local端连接超时", sessionID)
+		log.Printf("会话 %s State 2 -> State 4: Local端连接超时", sessionID)
 		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
 		return false, nil
 	}
@@ -112,7 +112,7 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 
 // handleRemoteState3_ConnectionSuccess 处理 Remote 端 State 3: 连接成功
 func handleRemoteState3_ConnectionSuccess(sessionID string, tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
-	log.Printf("[状态转换] 会话 %s State 3: 连接成功", sessionID)
+	log.Printf("会话 %s State 3: 连接成功", sessionID)
 
 	if tun_active != nil && tun_active.TunQuicConn != nil {
 		// 连接成功，启动代理和健康检查
@@ -125,7 +125,7 @@ func handleRemoteState3_ConnectionSuccess(sessionID string, tun_active *tun.TunA
 
 // handleRemoteState4_ConnectionTimeout 处理 Remote 端 State 4: 连接超时
 func handleRemoteState4_ConnectionTimeout(sessionID string) {
-	log.Printf("[状态转换] 会话 %s State 4: 连接超时", sessionID)
+	log.Printf("会话 %s State 4: 连接超时", sessionID)
 }
 
 // processSession 处理单个会话的完整生命周期
@@ -184,13 +184,13 @@ func processSession(redisJson *RedisJsonType) {
 		// 状态转换验证
 		if redisJson.State < last_state {
 			RedisSessionDel(redisJson.SessionID)
-			log.Printf("[状态验证] 会话 %s 状态异常回退: %d -> %d", redisJson.SessionID, last_state, redisJson.State)
+			log.Printf("会话 %s 状态异常回退: %d -> %d", redisJson.SessionID, last_state, redisJson.State)
 			return
 		}
 
 		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-last_state > 1 {
 			RedisSessionDel(redisJson.SessionID)
-			log.Printf("[状态验证] 会话 %s 状态异常跳跃: %d -> %d", redisJson.SessionID, last_state, redisJson.State)
+			log.Printf("会话 %s 状态异常跳跃: %d -> %d", redisJson.SessionID, last_state, redisJson.State)
 			return
 		}
 
@@ -202,15 +202,15 @@ func processSession(redisJson *RedisJsonType) {
 		case 1:
 			// State 1 已在开始时处理，这里不应该再次进入
 			if last_state != 0 && last_state != 1 {
-				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 0 或 State 1，当前 lastState: %d", redisJson.SessionID, last_state)
+				log.Printf("会话 %s 状态转换异常: 期望从 State 0 或 State 1，当前 lastState: %d", redisJson.SessionID, last_state)
 				continue
 			}
-			log.Printf("[状态转换] 会话 %s State 1: 等待Local端状态, Local: %v => Remote: %v", redisJson.SessionID, redisJson.LocalAddr, redisJson.RemoteAddr)
+			log.Printf("会话 %s State 1: 等待Local端状态, Local: %v => Remote: %v", redisJson.SessionID, redisJson.LocalAddr, redisJson.RemoteAddr)
 			last_state = redisJson.State
 
 		case 2:
 			if last_state != 1 && last_state != 2 {
-				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 1 或 State 2，当前 lastState: %d", redisJson.SessionID, last_state)
+				log.Printf("会话 %s 状态转换异常: 期望从 State 1 或 State 2，当前 lastState: %d", redisJson.SessionID, last_state)
 				continue
 			}
 			success, err := handleState2_WaitConnection(redisJson.SessionID, redisJson, conn_type, tun_active, tun_passive, tun_active_chain, tun_passive_chain)
@@ -231,7 +231,7 @@ func processSession(redisJson *RedisJsonType) {
 
 		case 3:
 			if last_state != 2 {
-				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 2，当前 lastState: %d", redisJson.SessionID, last_state)
+				log.Printf("会话 %s 状态转换异常: 期望从 State 2，当前 lastState: %d", redisJson.SessionID, last_state)
 				continue
 			}
 			go handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
@@ -239,14 +239,14 @@ func processSession(redisJson *RedisJsonType) {
 
 		case 4:
 			if last_state != 2 {
-				log.Printf("[状态验证] 会话 %s 状态转换异常: 期望从 State 2，当前 lastState: %d", redisJson.SessionID, last_state)
+				log.Printf("会话 %s 状态转换异常: 期望从 State 2，当前 lastState: %d", redisJson.SessionID, last_state)
 				continue
 			}
 			handleRemoteState4_ConnectionTimeout(redisJson.SessionID)
 			return
 
 		default:
-			log.Printf("[状态转换] 会话 %s 等待Local端状态: State %d, Local: %v => Remote: %v", redisJson.SessionID, redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
+			log.Printf("会话 %s 等待Local端状态: State %d, Local: %v => Remote: %v", redisJson.SessionID, redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 
 		last_state = redisJson.State
@@ -255,7 +255,7 @@ func processSession(redisJson *RedisJsonType) {
 
 // handleConnection 处理已建立的连接
 func handleConnection(sessionID string, quicConn quic.Connection, healthStream quic.Stream) {
-	log.Printf("[连接处理] 开始处理连接: %s", sessionID)
+	log.Printf("开始处理连接: %s", sessionID)
 
 	// 启动代理服务
 	go proxy.ProcessProxyServer(quicConn)
@@ -263,7 +263,7 @@ func handleConnection(sessionID string, quicConn quic.Connection, healthStream q
 	// 阻塞等待健康检查结束
 	tun.ProcessHealth(healthStream)
 
-	log.Printf("[连接处理] 释放连接: %v, SessionID: %s", quicConn.LocalAddr(), sessionID)
+	log.Printf("释放连接: %v, SessionID: %s", quicConn.LocalAddr(), sessionID)
 }
 
 func StopRemote() error {
