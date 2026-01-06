@@ -26,6 +26,12 @@ var (
 	m_upnp_bind   upnp.Upnp
 )
 
+const (
+	TagStatusPrefix     = "[GOODLINK_STATUS]"
+	TagStatusConnecting = "connecting"
+	TagStatusConnected  = "connected"
+)
+
 func SetVersion(v string) {
 	m_version = v
 }
@@ -157,7 +163,7 @@ func RedisSessionRegister(timeout time.Duration, redisJson *RedisJsonType) error
 	}
 
 	for m_redis_db.Exists(getSessionsKey()).Val() > 0 {
-		log.Printf("当前remote端正在处理其他会话，等待30秒后重试...")
+		log.Printf("remote端上一个会话未完成，等待30秒后重试...")
 		time.Sleep(30 * time.Second)
 	}
 
@@ -259,7 +265,7 @@ func RedisSessionUnregister(sessionID string) {
 	if m_redis_db == nil {
 		return
 	}
-	m_redis_db.HDel(getSessionsKey(), sessionID)
+	m_redis_db.Del(getSessionKey(sessionID))
 }
 
 func GetUDPLocalIPPort(level string) (string, int) {

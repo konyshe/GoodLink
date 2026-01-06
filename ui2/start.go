@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"goodlink/config"
+	"goodlink/pro"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -104,23 +105,17 @@ func StopCmdProcess() {
 	}
 }
 
-const (
-	statusPrefix     = "[GOODLINK_STATUS]"
-	statusConnecting = "connecting"
-	statusConnected  = "connected"
-)
-
 // parseStatusMessage 解析状态消息，返回状态值（connecting/connected/waiting）和是否成功解析
 // 支持带时间戳前缀的日志格式，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]connected"
 func parseStatusMessage(line string) (string, bool) {
 	// 查找前缀在行中的位置（可能不在行首，因为有时间戳）
-	idx := strings.Index(line, statusPrefix)
+	idx := strings.Index(line, pro.TagStatusPrefix)
 	if idx == -1 {
 		return "", false
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
-	status := strings.TrimSpace(line[idx+len(statusPrefix):])
-	if status == statusConnecting || status == statusConnected {
+	status := strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):])
+	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected {
 		return status, true
 	}
 	return "", false
@@ -150,11 +145,6 @@ var (
 		importance: widget.SuccessImportance,
 		icon:       theme.MediaStopIcon(),
 	}
-	buttonStateWaiting = buttonState{
-		text:       "当前有其他local端请求连接, 等待中",
-		importance: widget.MediumImportance,
-		icon:       theme.MediaStopIcon(),
-	}
 	buttonStateRunning = buttonState{
 		text:       "启动成功, 点击停止",
 		importance: widget.SuccessImportance,
@@ -179,9 +169,9 @@ func updateConnectionStatus(status string) {
 		return
 	}
 	switch status {
-	case statusConnecting:
+	case pro.TagStatusConnecting:
 		updateButtonState(buttonStateConnecting)
-	case statusConnected:
+	case pro.TagStatusConnected:
 		updateButtonState(buttonStateConnected)
 	}
 }
