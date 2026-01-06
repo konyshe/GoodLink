@@ -29,11 +29,11 @@ func handleState0_RegisterSession(sessionID string, redisJson *RedisJsonType, co
 	switch conn_type {
 	case 0:
 		log.Println("请求连接Remote端")
-		log.Println("[GOODLINK_STATUS]connecting")
+		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 	default:
 		redisJson.LocalAddr = *addr
 		log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
-		log.Println("[GOODLINK_STATUS]connecting")
+		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 	}
 
 	// 将SessionID注册到Hash中，等待Remote端认领
@@ -118,11 +118,11 @@ func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive 
 	log.Printf("State 3: 连接成功")
 
 	if tun_passive != nil && tun_passive.TunQuicConn != nil {
-		log.Println("[GOODLINK_STATUS]connected")
+		log.Printf("%s%s", TagStatusPrefix, TagStatusConnected)
 		return tun_passive.TunQuicConn, tun_passive.TunHealthStream, true
 	}
 	if tun_active != nil && tun_active.TunQuicConn != nil {
-		log.Println("[GOODLINK_STATUS]connected")
+		log.Printf("%s%s", TagStatusPrefix, TagStatusConnected)
 		return tun_active.TunQuicConn, tun_active.TunHealthStream, true
 	}
 
@@ -272,7 +272,7 @@ func RunLocal(tun_key string) error {
 		udp_conn, addr = GetUDPAddr()
 
 		log.Printf("Local端地址: %v", addr)
-		log.Println("[GOODLINK_STATUS]connecting")
+		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 
 		if !g_netstack_started {
 			if err := netstack.Start(); err != nil {
@@ -303,7 +303,7 @@ func RunLocal(tun_key string) error {
 		tun.ProcessHealth(health)
 		if m_local_state != 0 {
 			m_local_state = 1
-			log.Println("[GOODLINK_STATUS]connecting")
+			log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 		}
 		log.Printf("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive)
