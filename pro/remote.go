@@ -148,8 +148,7 @@ func decrementActiveConnCount() {
 
 // processSession 处理单个会话的完整生命周期
 // 由主循环认领会话后启动，接收已认领的 SessionID 和 redisJson
-func processSession(sessionID string, redisJson RedisJsonType, wg *sync.WaitGroup) {
-	defer wg.Done()
+func processSession(sessionID string, redisJson RedisJsonType) {
 	defer m_processing_sessions.Delete(sessionID) // 处理完成后从本地 map 移除
 	defer decrementActiveConnCount()              // 减少活跃连接数
 
@@ -327,8 +326,6 @@ func StopRemote() error {
 }
 
 func RunRemote(tun_key string) error {
-	var wg sync.WaitGroup
-
 	m_remote_stats = 1
 
 	m_tun_key = tun_key
@@ -395,27 +392,9 @@ func RunRemote(tun_key string) error {
 			m_processing_sessions.Store(session.SessionID, true)
 
 			log.Printf("[会话认领] 认领会话: %s，当前活跃连接数: %d/%d", session.SessionID, currentConnCount+1, m_max_concurrent_conn)
-			wg.Add(1)
-			go processSession(session.SessionID, redisJson, &wg)
-
-			// 只认领第一个会话，然后等待处理完成
-			break
-		}
-
-		// 定期输出连接统计信息
-		if len(pendingSessions) > 0 {
-			activeCount := getActiveConnCount()
-			processingCount := 0
-			m_processing_sessions.Range(func(key, value any) bool {
-				processingCount++
-				return true
-			})
-			log.Printf("[连接统计] 待处理会话: %d, 正在处理: %d, 活跃连接: %d/%d", len(pendingSessions), processingCount, activeCount, m_max_concurrent_conn)
+			processSession(session.SessionID, redisJson)
 		}
 	}
-
-	// 等待所有 Worker 协程结束
-	wg.Wait()
 
 	log.Println("Remote端已停止")
 	return nil
