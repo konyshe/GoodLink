@@ -8,7 +8,6 @@ import (
 	"goodlink/tun"
 	"log"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -171,7 +170,6 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	}
 
 	// 阶段2: 使用独立的session key进行后续通信
-	lastState := 0
 	for m_local_state == 1 {
 		time.Sleep(1 * time.Second)
 
@@ -181,50 +179,17 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 			return tun_active, tun_passive, nil, nil, nil
 		}
 
-		// 验证会话ID
-		if !strings.EqualFold(redisJson.SessionID, SessionID) {
-			log.Println("会话被重置")
-			return tun_active, tun_passive, nil, nil, nil
-		}
-
-		// 状态转换验证
-		if redisJson.State < lastState {
-			log.Printf("状态异常回退: %d -> %d", lastState, redisJson.State)
-			return tun_active, tun_passive, nil, nil, nil
-		}
-
-		// 检查状态跳跃（除了允许的最终状态）
-		if redisJson.State != 3 && redisJson.State != 4 && redisJson.State-lastState > 1 {
-			log.Printf("状态异常跳跃: %d -> %d", lastState, redisJson.State)
-			return tun_active, tun_passive, nil, nil, nil
-		}
-
 		// 根据状态进行处理
 		switch redisJson.State {
 		case 1:
-			if lastState != 0 && lastState != 1 {
-				log.Printf("状态转换异常: 期望从 State 0 或 State 1，当前 lastState: %d", lastState)
-				continue
-			}
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {
 				return tun_active, tun_passive, nil, nil, err
 			}
-			lastState = redisJson.State
 
 		case 2:
-			// State 2: 等待连接建立，继续循环等待 State 3 或 State 4
-			if lastState != 1 && lastState != 2 {
-				log.Printf("状态转换异常: 期望从 State 1 或 State 2，当前 lastState: %d", lastState)
-				continue
-			}
 			log.Printf("State 2: 等待连接建立, Local: %v => Remote: %v", redisJson.LocalAddr, redisJson.RemoteAddr)
-			lastState = redisJson.State
 
 		case 3:
-			if lastState != 2 {
-				log.Printf("状态转换异常: 期望从 State 2，当前 lastState: %d", lastState)
-				continue
-			}
 			quicConn, healthStream, success := handleLocalState3_ConnectionSuccess(tun_active, tun_passive)
 			if success {
 				return tun_active, tun_passive, quicConn, healthStream, nil
@@ -232,10 +197,6 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 			return tun_active, tun_passive, nil, nil, nil
 
 		case 4:
-			if lastState != 2 {
-				log.Printf("状态转换异常: 期望从 State 2，当前 lastState: %d", lastState)
-				continue
-			}
 			handleLocalState4_ConnectionTimeout()
 			return tun_active, tun_passive, nil, nil, nil
 
