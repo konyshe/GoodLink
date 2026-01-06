@@ -25,42 +25,6 @@ var (
 func handleState0_RegisterSession(sessionID string, redisJson *RedisJsonType, conn_type int, addr *tun.AddrType) (bool, error) {
 	log.Printf("[状态转换] State 0: 注册会话 %s", sessionID)
 
-	// 检查是否有其他待认领的会话
-	maxWaitAttempts := 30 // 最大等待次数（30秒）
-	waitAttempt := 0
-	for waitAttempt < maxWaitAttempts && m_local_state == 1 {
-		pendingSessions, err := RedisSessionScan()
-		if err != nil {
-			// 扫描失败，继续注册
-			break
-		}
-
-		// 统计其他待认领的会话（排除当前会话）
-		otherPendingCount := 0
-		for _, s := range pendingSessions {
-			if s.SessionID != sessionID {
-				otherPendingCount++
-			}
-		}
-
-		if otherPendingCount > 0 {
-			if waitAttempt == 0 {
-				log.Printf("检测到 %d 个待认领的会话，等待Remote端处理完成后再注册...", otherPendingCount)
-				log.Println("[GOODLINK_STATUS]waiting")
-			}
-			waitAttempt++
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		// 没有其他待认领的会话，可以注册
-		break
-	}
-
-	if waitAttempt >= maxWaitAttempts {
-		log.Printf("等待其他会话处理超时，继续注册当前会话")
-	}
-
 	// 根据连接类型设置初始信息
 	switch conn_type {
 	case 0:

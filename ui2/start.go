@@ -108,7 +108,6 @@ const (
 	statusPrefix     = "[GOODLINK_STATUS]"
 	statusConnecting = "connecting"
 	statusConnected  = "connected"
-	statusWaiting    = "waiting"
 )
 
 // parseStatusMessage 解析状态消息，返回状态值（connecting/connected/waiting）和是否成功解析
@@ -121,7 +120,7 @@ func parseStatusMessage(line string) (string, bool) {
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
 	status := strings.TrimSpace(line[idx+len(statusPrefix):])
-	if status == statusConnecting || status == statusConnected || status == statusWaiting {
+	if status == statusConnecting || status == statusConnected {
 		return status, true
 	}
 	return "", false
@@ -184,8 +183,6 @@ func updateConnectionStatus(status string) {
 		updateButtonState(buttonStateConnecting)
 	case statusConnected:
 		updateButtonState(buttonStateConnected)
-	case statusWaiting:
-		updateButtonState(buttonStateWaiting)
 	}
 }
 
