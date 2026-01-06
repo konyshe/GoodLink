@@ -4,9 +4,8 @@ go install github.com/akavel/rsrc@latest
 
 set -x
 
-rm -rf go2 goodlink2 proxy2 goroutine-pool
+rm -rf go2 proxy2 goroutine-pool
 cp -r ../go2 .
-cp -r ../goodlink2 .
 cp -r ../proxy proxy2
 cp -r ../goroutine-pool .
 
@@ -26,7 +25,7 @@ sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
 docker rmi dev/goodlink:latest -f
 docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
 
-rm -rf go2 goodlink2 proxy2 goroutine-pool upx
+rm -rf go2 proxy2 goroutine-pool upx
 
 sed -i "/$BUILD_TIME/s/$BUILD_TIME/111111111111/g" Dockerfile
 
