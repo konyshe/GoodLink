@@ -248,11 +248,12 @@ func RunRemote(tun_key string) error {
 	m_tun_key = tun_key
 	m_md5_tun_key = go2.Md5Encode(tun_key)
 
-	log.Printf("Remote端启动，等待Local端连接...")
 	log.Printf("%s%s", TagStatusPrefix, TagStatusRunning)
 
 	// 主循环扫描待处理的会话
 	for m_remote_stats == 1 {
+		log.Printf("等待Local端连接...")
+
 		// 每次只认领一个待处理的会话
 		redisJson, err := RedisSessionClaim()
 		if err != nil {
