@@ -146,7 +146,7 @@ var (
 		icon:       theme.MediaStopIcon(),
 	}
 	buttonStateConnectingNAT4 = buttonState{
-		text:       "local端和remote端都是NAT4, 尝试连接中...",
+		text:       "两端都是NAT4, 连接中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
 	}
