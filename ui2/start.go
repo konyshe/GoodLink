@@ -147,7 +147,7 @@ var (
 	}
 	buttonStateConnectingNAT4 = buttonState{
 		text:       "两端都是NAT4, 连接中...",
-		importance: widget.WarningImportance,
+		importance: widget.DangerImportance,
 		icon:       theme.MediaStopIcon(),
 	}
 	buttonStateConnected = buttonState{
