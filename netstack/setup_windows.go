@@ -98,7 +98,7 @@ func InitWintunDll() error {
 		},
 		Timeout: 3 * time.Second,
 	}
-	if resp, err = client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll"); err != nil {
+	if resp, err = client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/wintun-0.14.1/amd64/wintun.dll"); err != nil {
 		return err
 	}
 	defer resp.Body.Close()
