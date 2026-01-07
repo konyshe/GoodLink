@@ -65,6 +65,8 @@ func (this *Upnp) Init() (err error) {
 		log.Printf("upnp: GatewayOutsideIP: %s", this.GatewayOutsideIP)
 	}
 
+	this.CleanMappings()
+
 	return nil
 }
 
@@ -152,6 +154,8 @@ func (this *Upnp) CleanMappings() error {
 	for _, entry := range toDelete {
 		this.DelPortMapping(entry.ExternalPort, entry.Protocol)
 	}
+
+	log.Println("upnp: CleanMappings done")
 
 	return nil
 }
