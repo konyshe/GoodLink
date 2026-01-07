@@ -115,7 +115,7 @@ func parseStatusMessage(line string) (string, bool) {
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
 	status := strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):])
-	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning {
+	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning || status == pro.TagStatusConnectingNAT4 {
 		return status, true
 	}
 	return "", false
@@ -142,6 +142,11 @@ var (
 	}
 	buttonStateConnecting = buttonState{
 		text:       "连接中...",
+		importance: widget.WarningImportance,
+		icon:       theme.MediaStopIcon(),
+	}
+	buttonStateConnectingNAT4 = buttonState{
+		text:       "local端和remote端都是NAT4, 尝试连接中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
 	}
@@ -177,6 +182,8 @@ func updateConnectionStatus(status string) {
 			updateButtonState(buttonStateConnecting)
 		case pro.TagStatusConnected:
 			updateButtonState(buttonStateConnected)
+		case pro.TagStatusConnectingNAT4:
+			updateButtonState(buttonStateConnectingNAT4)
 		}
 	case workTypeRemote:
 		switch status {

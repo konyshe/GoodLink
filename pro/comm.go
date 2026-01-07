@@ -27,10 +27,11 @@ var (
 )
 
 const (
-	TagStatusPrefix     = "[GOODLINK_STATUS]"
-	TagStatusConnecting = "connecting"
-	TagStatusConnected  = "connected"
-	TagStatusRunning    = "running"
+	TagStatusPrefix         = "[GOODLINK_STATUS]"
+	TagStatusConnecting     = "connecting"
+	TagStatusConnectingNAT4 = "connecting_nat4"
+	TagStatusConnected      = "connected"
+	TagStatusRunning        = "running"
 )
 
 func SetVersion(v string) {
