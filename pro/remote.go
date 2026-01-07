@@ -226,6 +226,7 @@ func handleConnection(sessionID string, quicConn quic.Connection, healthStream q
 	tun.ProcessHealth(healthStream)
 
 	m_upnp_bind.RemoveKeepPort(quicConn.LocalAddr().(*net.UDPAddr).Port)
+	m_upnp_bind.CleanMappings()
 
 	log.Printf("释放连接: %v, SessionID: %s", quicConn.LocalAddr(), sessionID)
 }
