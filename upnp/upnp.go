@@ -123,6 +123,8 @@ func (this *Upnp) CleanMappings() error {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 
+	log.Println("upnp: CleanMappings")
+
 	if this.GatewayOutsideIP == "" {
 		return errors.New("upnp: 无Upnp设备")
 	}
@@ -131,7 +133,8 @@ func (this *Upnp) CleanMappings() error {
 	toDelete := make([]PortMappingEntry, 0)
 	getter := GetPortMappingEntry{upnp: this}
 
-	for index := 0; ; index++ {
+	index := 0
+	for ; ; index++ {
 		entry, ok := getter.Send(index)
 		if !ok {
 			// 没有更多映射了
@@ -142,6 +145,8 @@ func (this *Upnp) CleanMappings() error {
 			toDelete = append(toDelete, *entry)
 		}
 	}
+
+	log.Printf("upnp: CleanMappings %d/%d", len(toDelete), index)
 
 	// 删除所有标记为删除的映射
 	for _, entry := range toDelete {

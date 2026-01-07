@@ -145,12 +145,16 @@ func processSession(redisJson *RedisJsonType) {
 	var tun_active_chain chan quic.Connection
 	var tun_passive_chain chan quic.Connection
 
+	defer func() {
+		m_upnp_bind.CleanMappings()
+	}()
+
 	log.Printf("收到Local端请求: %v", redisJson)
 
 	// 阶段1: 处理 State 0 -> State 1 - 认领会话并发送 Remote 端地址
 	if err := handleState1_SendRemoteAddr(redisJson.SessionID, redisJson, &tun_active, &tun_passive, &udp_conn, &conn_type, &tun_active_chain, &tun_passive_chain); err != nil {
 		log.Printf("会话 %s 处理 State 1 失败: %v", redisJson.SessionID, err)
-		return
+		goto Release
 	}
 
 	// 阶段2: 使用独立的session key进行后续通信
@@ -160,7 +164,7 @@ func processSession(redisJson *RedisJsonType) {
 		// 读取会话状态
 		if RedisSessionGet(redisJson.SessionID, redisJson) != nil {
 			log.Printf("会话 %s 超时", redisJson.SessionID)
-			break
+			goto Release
 		}
 
 		redisJson.RemoteVersion = GetVersion()
@@ -176,7 +180,7 @@ func processSession(redisJson *RedisJsonType) {
 			success, err := handleState2_WaitConnection(redisJson.SessionID, redisJson, conn_type, tun_active, tun_passive, tun_active_chain, tun_passive_chain)
 			if err != nil {
 				log.Printf("会话 %s 处理 State 2 失败: %v", redisJson.SessionID, err)
-				break
+				goto Release
 			}
 			if success {
 				// 连接成功，进入 State 3
@@ -188,7 +192,7 @@ func processSession(redisJson *RedisJsonType) {
 			} else if redisJson.State == 4 {
 				// 连接超时，进入 State 4
 				handleRemoteState4_ConnectionTimeout(redisJson.SessionID)
-				break
+				goto Release
 			}
 
 		case 3:
@@ -200,13 +204,14 @@ func processSession(redisJson *RedisJsonType) {
 
 		case 4:
 			handleRemoteState4_ConnectionTimeout(redisJson.SessionID)
-			break
+			goto Release
 
 		default:
 			log.Printf("会话 %s 等待Local端状态: State %d, Local: %v => Remote: %v", redisJson.SessionID, redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
 
+Release:
 	Release(tun_active, tun_passive, udp_conn)
 }
 
