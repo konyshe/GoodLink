@@ -81,33 +81,100 @@ func DeleteAdapterByGUID(guid *windows.GUID) error {
 	return nil
 }
 
+const (
+	// wintunDllURL wintun.dll 下载地址
+	wintunDllURL = "https://gitee.com/konyshe/goodlink_conf/raw/master/wintun-0.14.1/amd64/wintun.dll"
+	// wintunDllName wintun.dll 文件名
+	wintunDllName = "wintun.dll"
+	// downloadTimeout 下载超时时间
+	downloadTimeout = 30 * time.Second
+	// maxRetries 最大重试次数
+	maxRetries = 3
+	// retryDelay 重试延迟时间
+	retryDelay = 2 * time.Second
+)
+
+// InitWintunDll 初始化 wintun.dll，如果文件不存在则从网络下载
 func InitWintunDll() error {
-	if _, err := os.Stat("wintun.dll"); os.IsExist(err) {
+	// 检查文件是否已存在
+	if _, err := os.Stat(wintunDllName); err == nil {
+		log.Printf("wintun.dll 已存在，跳过下载")
 		return nil
 	}
 
-	var res []byte
-	var err error
-	var resp *http.Response
+	log.Printf("开始下载 wintun.dll...")
 
+	// 创建 HTTP 客户端
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, // 跳过证书验证
 			},
 		},
-		Timeout: 3 * time.Second,
+		Timeout: downloadTimeout,
 	}
-	if resp, err = client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/wintun-0.14.1/amd64/wintun.dll"); err != nil {
-		return err
+
+	var lastErr error
+	// 重试机制
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			log.Printf("第 %d 次尝试下载 wintun.dll...", attempt)
+			time.Sleep(retryDelay)
+		}
+
+		// 执行下载
+		data, err := downloadFile(client, wintunDllURL)
+		if err != nil {
+			lastErr = fmt.Errorf("下载失败: %w", err)
+			continue
+		}
+
+		// 验证文件大小（wintun.dll 通常不会太小）
+		if len(data) < 1024 {
+			lastErr = fmt.Errorf("下载的文件大小异常: %d 字节", len(data))
+			continue
+		}
+
+		// 写入文件
+		if !go2.FileAppend(wintunDllName, data) {
+			lastErr = fmt.Errorf("写入文件失败")
+			continue
+		}
+
+		// 验证文件是否成功写入
+		if info, err := os.Stat(wintunDllName); err != nil {
+			lastErr = fmt.Errorf("验证文件失败: %w", err)
+			continue
+		} else if info.Size() != int64(len(data)) {
+			lastErr = fmt.Errorf("文件大小不匹配: 期望 %d 字节，实际 %d 字节", len(data), info.Size())
+			continue
+		}
+
+		log.Printf("wintun.dll 下载成功，文件大小: %d 字节", len(data))
+		return nil
+	}
+
+	return fmt.Errorf("下载 wintun.dll 失败，已重试 %d 次: %w", maxRetries, lastErr)
+}
+
+// downloadFile 下载文件内容
+func downloadFile(client *http.Client, url string) ([]byte, error) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP 请求失败: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if res, err = io.ReadAll(resp.Body); err != nil {
-		return err
+	// 检查 HTTP 状态码
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP 状态码异常: %d %s", resp.StatusCode, resp.Status)
 	}
 
-	go2.FileAppend("wintun.dll", res)
+	// 读取响应体
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应体失败: %w", err)
+	}
 
-	return nil
+	return data, nil
 }
