@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"runtime"
 	"time"
 
 	"golang.org/x/sys/windows"
@@ -83,7 +84,7 @@ func DeleteAdapterByGUID(guid *windows.GUID) error {
 
 const (
 	// wintunDllURL wintun.dll 下载地址
-	wintunDllURL = "https://gitee.com/konyshe/goodlink_conf/raw/master/wintun-0.14.1/amd64/wintun.dll"
+	wintunDllURL = "https://gitee.com/konyshe/goodlink_conf/raw/master/wintun-0.14.1"
 	// wintunDllName wintun.dll 文件名
 	wintunDllName = "wintun.dll"
 	// downloadTimeout 下载超时时间
@@ -123,7 +124,7 @@ func InitWintunDll() error {
 		}
 
 		// 执行下载
-		data, err := downloadFile(client, wintunDllURL)
+		data, err := downloadFile(client)
 		if err != nil {
 			lastErr = fmt.Errorf("下载失败: %w", err)
 			continue
@@ -158,7 +159,10 @@ func InitWintunDll() error {
 }
 
 // downloadFile 下载文件内容
-func downloadFile(client *http.Client, url string) ([]byte, error) {
+func downloadFile(client *http.Client) ([]byte, error) {
+
+	url := fmt.Sprintf("%s/%s/wintun.dll", wintunDllURL, runtime.GOARCH)
+
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP 请求失败: %w", err)
