@@ -94,6 +94,7 @@ func Init() error {
 	}
 
 	m_upnp_bind.Init()
+	m_upnp_bind.CleanMappings()
 
 	return nil
 }

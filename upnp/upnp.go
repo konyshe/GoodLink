@@ -65,8 +65,6 @@ func (this *Upnp) Init() (err error) {
 		log.Printf("upnp: GatewayOutsideIP: %s", this.GatewayOutsideIP)
 	}
 
-	this.CleanMappings()
-
 	return nil
 }
 
@@ -89,10 +87,7 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 	}
 }
 
-func (this *Upnp) DelPortMapping(remotePort int, protocol string) bool {
-	this.lock.Lock()
-	defer this.lock.Unlock()
-
+func (this *Upnp) delPortMapping(remotePort int, protocol string) bool {
 	if this.GatewayOutsideIP == "" {
 		return false
 	}
@@ -152,7 +147,7 @@ func (this *Upnp) CleanMappings() error {
 
 	// 删除所有标记为删除的映射
 	for _, entry := range toDelete {
-		this.DelPortMapping(entry.ExternalPort, entry.Protocol)
+		this.delPortMapping(entry.ExternalPort, entry.Protocol)
 	}
 
 	log.Println("upnp: CleanMappings done")
