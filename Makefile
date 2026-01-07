@@ -26,9 +26,17 @@ LINUX_PLATFORM_LIST = \
 	linux-riscv64-cmd \
 	linux-mips64le-cmd \
 
+DARWIN_PLATFORM_LIST = \
+	darwin-amd64-cmd \
+	darwin-arm64-cmd \
+
 WINDOWS_PLATFORM_LIST = \
 	windows-amd64-ui \
 	windows-amd64-cmd \
+
+WINDOWS_PLATFORM2_LIST = \
+	windows-386-cmd \
+	windows-arm-cmd \
 
 debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64-cmd
 
@@ -84,8 +92,13 @@ windows-arm64-cmd:
 windows-amd64-ui:
 #	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 fyne package -os windows -icon theme/favicon.ico
 #	go build -ldflags -H=windowsgui
-	mkdir bin; fyne package; mv *.exe bin/
+	mkdir bin; fyne package -release; mv *.exe bin/
 
+windows-386-cmd:
+	GOARCH=386 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
+
+windows-arm-cmd:
+	GOARCH=arm GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
 create_nac:
 	rsrc -manifest nac.manifest -o nac.syso
 
