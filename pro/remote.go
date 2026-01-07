@@ -252,15 +252,12 @@ func RunRemote(tun_key string) error {
 
 	// 主循环扫描待处理的会话
 	for m_remote_stats == 1 {
-		log.Printf("等待Local端连接...")
+		log.Printf("检测是否有Local端连接...")
 
-		// 每次只认领一个待处理的会话
-		redisJson, err := RedisSessionClaim()
-		if err != nil {
-			time.Sleep(3 * time.Second)
-			continue
+		if redisJson, err := RedisSessionClaim(); err == nil && redisJson != nil {
+			processSession(redisJson)
 		}
-		processSession(redisJson)
+		time.Sleep(5 * time.Second)
 	}
 
 	log.Println("Remote端已停止")
