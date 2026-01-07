@@ -97,12 +97,15 @@ func Init() error {
 	return nil
 }
 
-func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
+func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive, udp_conn *net.UDPConn) {
 	if tun_active != nil {
 		tun_active.Release()
 	}
 	if tun_passive != nil {
 		tun_passive.Release()
+	}
+	if udp_conn != nil {
+		udp_conn.Close()
 	}
 }
 

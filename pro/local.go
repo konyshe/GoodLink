@@ -214,7 +214,7 @@ func GetLocalStats() int {
 
 func StopLocal() error {
 	m_local_state = 0
-	Release(m_tun_active, m_tun_passive)
+	Release(m_tun_active, m_tun_passive, nil)
 	return nil
 }
 
@@ -250,11 +250,11 @@ func RunLocal(tun_key string) error {
 
 		tun_active, tun_passive, quic_conn, health, err := GetLocalQuicConn(udp_conn, &addr, count)
 		if err != nil {
-			Release(tun_active, tun_passive)
+			Release(tun_active, tun_passive, nil)
 			return err
 		}
 		if quic_conn == nil {
-			Release(tun_active, tun_passive)
+			Release(tun_active, tun_passive, nil)
 			continue
 		}
 
@@ -271,7 +271,7 @@ func RunLocal(tun_key string) error {
 			log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 		}
 		log.Printf("释放连接: %v", quic_conn.LocalAddr())
-		Release(tun_active, tun_passive)
+		Release(tun_active, tun_passive, nil)
 
 		netstack.SetForWarder(nil)
 		count = 0

@@ -145,19 +145,6 @@ func processSession(redisJson *RedisJsonType) {
 	var tun_active_chain chan quic.Connection
 	var tun_passive_chain chan quic.Connection
 
-	// 清理函数，确保资源正确释放
-	defer func() {
-		if tun_active != nil {
-			tun_active.Release()
-		}
-		if tun_passive != nil {
-			tun_passive.Release()
-		}
-		if udp_conn != nil {
-			udp_conn.Close()
-		}
-	}()
-
 	log.Printf("收到Local端请求: %v", redisJson)
 
 	// 阶段1: 处理 State 0 -> State 1 - 认领会话并发送 Remote 端地址
@@ -173,7 +160,7 @@ func processSession(redisJson *RedisJsonType) {
 		// 读取会话状态
 		if RedisSessionGet(redisJson.SessionID, redisJson) != nil {
 			log.Printf("会话 %s 超时", redisJson.SessionID)
-			return
+			break
 		}
 
 		redisJson.RemoteVersion = GetVersion()
@@ -189,30 +176,38 @@ func processSession(redisJson *RedisJsonType) {
 			success, err := handleState2_WaitConnection(redisJson.SessionID, redisJson, conn_type, tun_active, tun_passive, tun_active_chain, tun_passive_chain)
 			if err != nil {
 				log.Printf("会话 %s 处理 State 2 失败: %v", redisJson.SessionID, err)
-				return
+				break
 			}
 			if success {
 				// 连接成功，进入 State 3
-				go handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
+				go func() {
+					handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
+					Release(tun_active, tun_passive, udp_conn)
+				}()
 				return
 			} else if redisJson.State == 4 {
 				// 连接超时，进入 State 4
 				handleRemoteState4_ConnectionTimeout(redisJson.SessionID)
-				return
+				break
 			}
 
 		case 3:
-			go handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
+			go func() {
+				handleRemoteState3_ConnectionSuccess(redisJson.SessionID, tun_active, tun_passive)
+				Release(tun_active, tun_passive, udp_conn)
+			}()
 			return
 
 		case 4:
 			handleRemoteState4_ConnectionTimeout(redisJson.SessionID)
-			return
+			break
 
 		default:
 			log.Printf("会话 %s 等待Local端状态: State %d, Local: %v => Remote: %v", redisJson.SessionID, redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
+
+	Release(tun_active, tun_passive, udp_conn)
 }
 
 // handleConnection 处理已建立的连接
