@@ -49,18 +49,18 @@ func main2() {
 
 	// 第三方集成, 关注以下代码即可
 	go func() {
-		if err := pro.Init(); err != nil {
+		if err := pro.Init(config.Arg_tun_key); err != nil {
 			log.Println(err)
 			return
 		}
 
 		if *config.Arg_tun_local {
-			if err := pro.RunLocal(config.Arg_tun_key); err != nil {
+			if err := pro.RunLocal(); err != nil {
 				log.Println(err)
 				os.Exit(0)
 			}
 		} else if *config.Arg_tun_remote {
-			pro.RunRemote(config.Arg_tun_key)
+			pro.RunRemote()
 		} else {
 			log.Println("参数错误")
 			os.Exit(0)

@@ -2,7 +2,6 @@ package pro
 
 import (
 	"errors"
-	"go2"
 	"goodlink/config"
 	"goodlink/proxy"
 	"goodlink/tun"
@@ -244,11 +243,8 @@ func StopRemote() error {
 	return nil
 }
 
-func RunRemote(tun_key string) error {
+func RunRemote() error {
 	m_remote_stats = 1
-
-	m_tun_key = tun_key
-	m_md5_tun_key = go2.Md5Encode(tun_key)
 
 	log.Printf("%s%s", TagStatusPrefix, TagStatusRunning)
 	log.Printf("Remote端已启动，等待Local端连接...")

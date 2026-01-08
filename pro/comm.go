@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go2"
 	go2aes "go2/aes"
 	"goodlink/config"
 	"goodlink/stun2"
@@ -42,10 +43,14 @@ func GetVersion() string {
 	return m_version
 }
 
-func Init() error {
+func Init(tun_key string) error {
 	var redis_addr string
 	var redis_pass string
 	var redis_id int
+
+	m_tun_key = tun_key
+	m_md5_tun_key = go2.Md5Encode(tun_key)
+
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true, // 如果使用自签名证书，设置为true跳过证书验证（仅用于测试
 		//Certificates:       []tls.Certificate{cert},
@@ -113,41 +118,14 @@ type RedisJsonType struct {
 	LocalAddr     tun.AddrType  `bson:"local_addr" json:"local_addr"`
 }
 
-func RedisSet(time_out time.Duration, redisJson *RedisJsonType) error {
-	if m_redis_db == nil {
-		return errors.New("Redis为初始化")
-	}
-	if jsonByte, err := json.Marshal(*redisJson); err == nil {
-		m_redis_db.Set(m_md5_tun_key, go2aes.Encrypt7(jsonByte, m_tun_key), time_out)
-	}
-	return nil
-}
-
-func RedisGet(redisJson *RedisJsonType) error {
-	if m_redis_db == nil {
-		return errors.New("Redis为初始化")
-	}
-
-	aes_res, err := m_redis_db.Get(m_md5_tun_key).Bytes()
-	if err != nil || aes_res == nil || len(aes_res) == 0 {
-		return fmt.Errorf("获取信令数据失败: %v", err)
-	}
-
-	if err = json.Unmarshal(go2aes.Decrypt7(aes_res, m_tun_key), redisJson); err != nil {
-		return fmt.Errorf("解析信令数据失败: %v", err)
-	}
-
-	return nil
-}
-
-// 获取会话注册表的 Redis key
-func getSessionsKey() string {
-	return m_md5_tun_key
-}
-
 // 获取单个会话的 Redis key
 func getSessionKey(sessionID string) string {
 	return m_md5_tun_key + ":" + sessionID
+}
+
+// 获取单个会话的 Redis key
+func getSessionKeyMd5(sessionID string) string {
+	return go2.Md5Encode(sessionID)
 }
 
 // RedisSessionRegister Local端注册新SessionID到Hash
@@ -157,7 +135,7 @@ func RedisSessionRegister(timeout time.Duration, redisJson *RedisJsonType) error
 		return errors.New("Redis未初始化")
 	}
 
-	for m_redis_db.Exists(getSessionsKey()).Val() > 0 {
+	for m_redis_db.Exists(m_md5_tun_key).Val() > 0 {
 		log.Printf("remote端上一个会话未完成，等待30秒后重试...")
 		time.Sleep(30 * time.Second)
 	}
@@ -170,7 +148,7 @@ func RedisSessionRegister(timeout time.Duration, redisJson *RedisJsonType) error
 	encryptedData := go2aes.Encrypt7(jsonByte, m_tun_key)
 
 	// 使用 HSET 将会话注册到 Hash 中
-	if err := m_redis_db.Set(getSessionsKey(), encryptedData, timeout).Err(); err != nil {
+	if err := m_redis_db.Set(m_md5_tun_key, encryptedData, timeout).Err(); err != nil {
 		return fmt.Errorf("注册会话失败: %v", err)
 	}
 
@@ -185,7 +163,7 @@ func RedisSessionClaim() (*RedisJsonType, error) {
 	}
 
 	// 获取Hash中所有会话
-	encryptedData, err := m_redis_db.Get(getSessionsKey()).Result()
+	encryptedData, err := m_redis_db.Get(m_md5_tun_key).Result()
 	if err != nil {
 		return nil, fmt.Errorf("扫描会话失败: %v", err)
 	}
@@ -197,7 +175,7 @@ func RedisSessionClaim() (*RedisJsonType, error) {
 	}
 
 	// 认领后从redis中删除，防止重复认领
-	m_redis_db.Del(getSessionsKey())
+	m_redis_db.Del(m_md5_tun_key)
 
 	return &redisJson, nil
 }

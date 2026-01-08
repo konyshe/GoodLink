@@ -219,11 +219,8 @@ func StopLocal() error {
 	return nil
 }
 
-func RunLocal(tun_key string) error {
+func RunLocal() error {
 	m_local_state = 1
-
-	m_tun_key = tun_key
-	m_md5_tun_key = go2.Md5Encode(tun_key)
 
 	count := 0
 
