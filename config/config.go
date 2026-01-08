@@ -1,13 +1,13 @@
 package config
 
 import (
-	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"go2"
 	go2aes "go2/aes"
-	"io"
-	"net/http"
-	"time"
+	go2http "go2/http"
+	"log"
+	"os"
 )
 
 type RedisInfo struct {
@@ -31,35 +31,36 @@ type ConfigInfo struct {
 	DingTalkUrl string    `bson:"ding_talk_url" json:"ding_talk_url"`
 }
 
-var configInfo ConfigInfo
+var (
+	configFileName = "config.json"
+	configInfo     ConfigInfo
+)
+
+func DeleteLocalConfig() {
+	log.Println("删除本地配置")
+	os.Remove(configFileName)
+}
 
 func Init() error {
 	var res []byte
 	var err error
-	var resp *http.Response
+
+	log.Println("加载本地配置开始")
 
 	if res = go2.FileReadAll("config.json"); res == nil {
-		client := &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // 跳过证书验证
-				},
-			},
-			Timeout: 3 * time.Second,
-		}
-		if resp, err = client.Get("https://gitee.com/konyshe/goodlink_conf/raw/master/config.json"); err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if res, err = io.ReadAll(resp.Body); err != nil {
-			return err
-		}
+		DeleteLocalConfig()
+		log.Println("本地配置不存在，从网络下载配置")
+		url := fmt.Sprintf("https://gitee.com/konyshe/goodlink_conf/raw/master/%s", configFileName)
+		go2http.DownloadSimple(url, configFileName)
+		res = go2.FileReadAll("config.json")
 	}
 
 	if err = json.Unmarshal(go2aes.Decrypt7(res, "goodlink"), &configInfo); err != nil {
+		DeleteLocalConfig()
 		return err
 	}
+
+	log.Println("加载本地配置完成")
 
 	/*
 		var StunList []string

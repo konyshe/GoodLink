@@ -23,10 +23,13 @@ var (
 	Arg_conn_n1                int
 	Arg_conn_active_send_time  int
 	Arg_conn_passive_send_time int
+	Arg_local_config           *bool
 )
 
 func Help(ver string) {
 	v := flag.Bool("v", false, "查看版本信息")
+
+	Arg_local_config = flag.Bool("local_config", false, "不清理本地配置文件")
 
 	Arg_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
 	flag.StringVar(&Arg_pprof_addr, "pprof_addr", "", "如果CPU/内存/网络异常, 可监测运行, 例如: 0.0.0.0:6060")

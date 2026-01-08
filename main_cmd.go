@@ -78,6 +78,12 @@ func main2() {
 func main() {
 	config.Help(GetVersion())
 
+	if !*config.Arg_local_config {
+		config.DeleteLocalConfig()
+	}
+
+	config.Init()
+
 	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
 		stun2.TestStun()
 		os.Exit(0)

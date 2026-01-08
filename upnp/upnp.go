@@ -120,7 +120,7 @@ func (this *Upnp) CleanMappings() error {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 
-	log.Println("upnp: CleanMappings")
+	log.Println("upnp: CleanMappings start")
 
 	if this.GatewayOutsideIP == "" {
 		return errors.New("upnp: 无Upnp设备")
@@ -130,6 +130,8 @@ func (this *Upnp) CleanMappings() error {
 	toDelete := make([]PortMappingEntry, 0)
 	getter := GetPortMappingEntry{upnp: this}
 
+	goodlink_port_count := 0
+
 	index := 0
 	for ; ; index++ {
 		entry, ok := getter.Send(index)
@@ -138,12 +140,15 @@ func (this *Upnp) CleanMappings() error {
 			break
 		}
 		// 如果是 goodlink 的映射，且端口号不在保留列表中，则标记为删除
-		if entry.Description == "goodlink" && !this.KeepPorts[entry.ExternalPort] {
-			toDelete = append(toDelete, *entry)
+		if entry.Description == "goodlink" {
+			goodlink_port_count++
+			if !this.KeepPorts[entry.ExternalPort] {
+				toDelete = append(toDelete, *entry)
+			}
 		}
 	}
 
-	log.Printf("upnp: CleanMappings %d/%d", len(toDelete), index)
+	log.Printf("upnp: CleanMappings %d/%d/%d", len(toDelete), goodlink_port_count, index)
 
 	// 删除所有标记为删除的映射
 	for _, entry := range toDelete {

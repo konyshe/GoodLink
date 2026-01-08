@@ -33,6 +33,7 @@ func GuardStart(proc_handler func(), time_out time.Duration, err_handle func(err
 	if !fork {
 		log.Println("父进程开始")
 		for {
+			args = append(args, "--local_config")
 			cmd := exec.Command(os.Args[0], args...)
 			cmd.Env = os.Environ()
 			cmd.Stdin = os.Stdin

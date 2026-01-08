@@ -3,13 +3,10 @@
 package netstack
 
 import (
-	"crypto/tls"
 	"fmt"
-	"go2"
+	go2http "go2/http"
 	"goodlink/winipcfg"
-	"io"
 	"log"
-	"net/http"
 	"net/netip"
 	"os"
 	"runtime"
@@ -105,80 +102,28 @@ func InitWintunDll() error {
 
 	log.Printf("开始下载 wintun.dll...")
 
-	// 创建 HTTP 客户端
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // 跳过证书验证
-			},
-		},
-		Timeout: downloadTimeout,
-	}
+	url := fmt.Sprintf("%s/%s/%s", wintunDllURL, runtime.GOARCH, wintunDllName)
 
-	var lastErr error
-	// 重试机制
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		if attempt > 1 {
-			log.Printf("第 %d 次尝试下载 wintun.dll...", attempt)
-			time.Sleep(retryDelay)
-		}
+	/*
+		// 简单下载
+		err := utils.DownloadSimple(wintunDllURL, wintunDllName)
 
-		// 执行下载
-		data, err := downloadFile(client)
-		if err != nil {
-			lastErr = fmt.Errorf("下载失败: %w", err)
-			continue
-		}
+		// 带进度监控的下载
+		err := utils.DownloadWithProgress(wintunDllURL, wintunDllName,
+		    func(downloaded, total int64) {
+		        if total > 0 {
+		            percent := float64(downloaded) / float64(total) * 100
+		            log.Printf("下载进度: %.2f%% (%d/%d 字节)", percent, downloaded, total)
+		        }
+		    })
 
-		// 验证文件大小（wintun.dll 通常不会太小）
-		if len(data) < 1024 {
-			lastErr = fmt.Errorf("下载的文件大小异常: %d 字节", len(data))
-			continue
-		}
+		// 自定义配置下载
+		config := utils.DefaultDownloadConfig("https://example.com/file.zip", "file.zip")
+		config.MaxRetries = 5
+		config.RetryDelay = 3 * time.Second
+		config.Timeout = 60 * time.Second
+		err := utils.Download(config)
+	*/
 
-		// 写入文件
-		if !go2.FileAppend(wintunDllName, data) {
-			lastErr = fmt.Errorf("写入文件失败")
-			continue
-		}
-
-		// 验证文件是否成功写入
-		if info, err := os.Stat(wintunDllName); err != nil {
-			lastErr = fmt.Errorf("验证文件失败: %w", err)
-			continue
-		} else if info.Size() != int64(len(data)) {
-			lastErr = fmt.Errorf("文件大小不匹配: 期望 %d 字节，实际 %d 字节", len(data), info.Size())
-			continue
-		}
-
-		log.Printf("wintun.dll 下载成功，文件大小: %d 字节", len(data))
-		return nil
-	}
-
-	return fmt.Errorf("下载 wintun.dll 失败，已重试 %d 次: %w", maxRetries, lastErr)
-}
-
-// downloadFile 下载文件内容
-func downloadFile(client *http.Client) ([]byte, error) {
-
-	url := fmt.Sprintf("%s/%s/wintun.dll", wintunDllURL, runtime.GOARCH)
-
-	resp, err := client.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP 请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// 检查 HTTP 状态码
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP 状态码异常: %d %s", resp.StatusCode, resp.Status)
-	}
-
-	// 读取响应体
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("读取响应体失败: %w", err)
-	}
-
-	return data, nil
+	return go2http.DownloadSimple(url, wintunDllName)
 }

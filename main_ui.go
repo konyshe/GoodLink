@@ -27,6 +27,8 @@ func main() {
 
 	config.Help(GetVersion())
 
+	config.DeleteLocalConfig()
+
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
 	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + GetVersion()) //myApp.Metadata().Version)

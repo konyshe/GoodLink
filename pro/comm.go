@@ -43,17 +43,6 @@ func GetVersion() string {
 }
 
 func Init() error {
-	log.Println("初始化配置中")
-	for {
-		if err := config.Init(); err != nil {
-			log.Println(err.Error())
-			time.Sleep(3 * time.Second)
-			continue
-		}
-		break
-	}
-	log.Println("初始化配置完成")
-
 	var redis_addr string
 	var redis_pass string
 	var redis_id int
