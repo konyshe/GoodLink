@@ -225,10 +225,11 @@ func handleConnection(sessionID string, quicConn quic.Connection, healthStream q
 	// 阻塞等待健康检查结束
 	tun.ProcessHealth(healthStream)
 
-	m_upnp_bind.RemoveKeepPort(quicConn.LocalAddr().(*net.UDPAddr).Port)
-	m_upnp_bind.CleanMappings()
+	port := quicConn.LocalAddr().(*net.UDPAddr).Port
+	m_upnp_bind.RemoveKeepPort(port)
+	m_upnp_bind.DelPortMapping(true, port, "udp")
 
-	log.Printf("释放连接: %v, SessionID: %s", quicConn.LocalAddr(), sessionID)
+	log.Printf("释放连接: %d, SessionID: %s", port, sessionID)
 }
 
 func StopRemote() error {

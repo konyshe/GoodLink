@@ -23,6 +23,11 @@ type Upnp struct {
 	http_client        *http.Client
 }
 
+// 检查upnp设备是否有效
+func (this *Upnp) IsValid() bool {
+	return this.GatewayOutsideIP != "" && this.Gateway.ServiceType != "" && this.CtrlUrl != "" && this.LocalHost != ""
+}
+
 // 查看设备描述，得到控制请求url
 func (this *Upnp) deviceDesc() (err error) {
 	device := DeviceDesc{upnp: this}
@@ -34,6 +39,10 @@ func (this *Upnp) deviceDesc() (err error) {
 func (this *Upnp) Init() (err error) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
+
+	if this.IsValid() {
+		return nil
+	}
 
 	this.KeepPorts = make(map[int]bool)
 
@@ -86,7 +95,7 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 	this.lock.Lock()
 	defer this.lock.Unlock()
 
-	if this.GatewayOutsideIP == "" {
+	if !this.IsValid() {
 		return errors.New("upnp: 无Upnp设备")
 	}
 
@@ -99,8 +108,13 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 	return errors.New("upnp: 添加一个端口映射失败")
 }
 
-func (this *Upnp) delPortMapping(remotePort int, protocol string) (err error) {
-	if this.GatewayOutsideIP == "" {
+func (this *Upnp) DelPortMapping(lock bool, remotePort int, protocol string) (err error) {
+	if lock {
+		this.lock.Lock()
+		defer this.lock.Unlock()
+	}
+
+	if !this.IsValid() {
 		return errors.New("upnp: 无Upnp设备")
 	}
 
@@ -129,15 +143,15 @@ func (this *Upnp) RemoveKeepPort(port int) {
 // CleanMappings 清理之前添加的端口映射
 // 通过枚举路由器上所有端口映射，筛选描述为 "goodlink" 的映射
 // keepPorts 为需要保留的端口号 map，不在该 map 中的端口映射将被删除
-func (this *Upnp) CleanMappings() error {
+func (this *Upnp) CleanMappings() {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 
-	log.Println("upnp: CleanMappings start")
-
-	if this.GatewayOutsideIP == "" {
-		return errors.New("upnp: 无Upnp设备")
+	if !this.IsValid() {
+		return
 	}
+
+	log.Println("upnp: CleanMappings start")
 
 	// 先收集所有需要删除的映射
 	toDelete := make([]PortMappingEntry, 0)
@@ -165,10 +179,8 @@ func (this *Upnp) CleanMappings() error {
 
 	// 删除所有标记为删除的映射
 	for _, entry := range toDelete {
-		this.delPortMapping(entry.ExternalPort, entry.Protocol)
+		this.DelPortMapping(false, entry.ExternalPort, entry.Protocol)
 	}
 
 	log.Println("upnp: CleanMappings done")
-
-	return nil
 }
