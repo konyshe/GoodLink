@@ -17,9 +17,6 @@ type AddPortMapping struct {
 
 func (this *AddPortMapping) Send(localPort, remotePort int, protocol string) bool {
 	request := this.buildRequest(localPort, remotePort, protocol)
-	if this.http_client == nil {
-		this.http_client = &http.Client{}
-	}
 	response, err := this.http_client.Do(request)
 	if err != nil {
 		return false

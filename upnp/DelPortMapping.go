@@ -16,9 +16,6 @@ type DelPortMapping struct {
 
 func (this *DelPortMapping) Send(remotePort int, protocol string) bool {
 	request := this.buildRequest(remotePort, protocol)
-	if this.http_client == nil {
-		this.http_client = &http.Client{}
-	}
 	response, err := this.http_client.Do(request)
 	if err != nil {
 		return false

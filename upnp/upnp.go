@@ -1,9 +1,12 @@
 package upnp
 
 import (
+	"crypto/tls"
 	"errors"
 	"log"
+	"net/http"
 	"sync"
+	"time"
 )
 
 type Upnp struct {
@@ -17,6 +20,7 @@ type Upnp struct {
 	CtrlUrl            string         //控制请求url
 	KeepPorts          map[int]bool   //需要保留映射的端口号
 	lock               sync.Mutex
+	http_client        *http.Client
 }
 
 // 查看设备描述，得到控制请求url
@@ -32,6 +36,15 @@ func (this *Upnp) Init() (err error) {
 	defer this.lock.Unlock()
 
 	this.KeepPorts = make(map[int]bool)
+
+	this.http_client = &http.Client{
+		Timeout: 1 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // 跳过证书验证
+			},
+		},
+	}
 
 	defer func(err error) {
 		if errTemp := recover(); errTemp != nil {
@@ -76,27 +89,27 @@ func (this *Upnp) AddPortMapping(localPort, remotePort int, protocol string) (er
 	if this.GatewayOutsideIP == "" {
 		return errors.New("upnp: 无Upnp设备")
 	}
-	addPort := AddPortMapping{upnp: this, http_client: nil}
+
+	addPort := AddPortMapping{upnp: this, http_client: this.http_client}
 	if issuccess := addPort.Send(localPort, remotePort, protocol); issuccess {
-		// log.Println("添加一个端口映射：protocol:", protocol, "local:", localPort, "remote:", remotePort)
 		return nil
-	} else {
-		this.Active = false
-		// log.Println("添加一个端口映射失败")
-		return errors.New("upnp: 添加一个端口映射失败")
 	}
+
+	this.Active = false
+	return errors.New("upnp: 添加一个端口映射失败")
 }
 
-func (this *Upnp) delPortMapping(remotePort int, protocol string) bool {
+func (this *Upnp) delPortMapping(remotePort int, protocol string) (err error) {
 	if this.GatewayOutsideIP == "" {
-		return false
+		return errors.New("upnp: 无Upnp设备")
 	}
-	delMapping := DelPortMapping{upnp: this, http_client: nil}
+
+	delMapping := DelPortMapping{upnp: this, http_client: this.http_client}
 	issuccess := delMapping.Send(remotePort, protocol)
 	if issuccess {
-		//log.Println("删除了一个端口映射： remote:", remotePort)
+		return nil
 	}
-	return issuccess
+	return errors.New("upnp: 删除一个端口映射失败")
 }
 
 func (this *Upnp) AddKeepPort(port int) {
