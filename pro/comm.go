@@ -129,7 +129,6 @@ func getSessionKeyMd5(sessionID string) string {
 }
 
 // RedisSessionRegister Local端注册新SessionID到Hash
-// 返回注册的SessionID
 func RedisSessionRegister(timeout time.Duration, redisJson *RedisJsonType) error {
 	if m_redis_db == nil {
 		return errors.New("Redis未初始化")
@@ -156,7 +155,6 @@ func RedisSessionRegister(timeout time.Duration, redisJson *RedisJsonType) error
 }
 
 // RedisSessionScan Remote端扫描待处理的SessionID列表
-// 返回所有state=0的待处理会话
 func RedisSessionClaim() (*RedisJsonType, error) {
 	if m_redis_db == nil {
 		return nil, errors.New("Redis未初始化")
