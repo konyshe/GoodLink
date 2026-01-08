@@ -27,6 +27,9 @@ func main() {
 
 	config.Help(GetVersion())
 
+	// 启动前清理遗留的cmd进程
+	utils.CleanupOrphanedCmdProcesses()
+
 	config.DeleteLocalConfig()
 
 	myApp := app.New()

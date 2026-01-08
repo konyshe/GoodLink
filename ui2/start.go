@@ -18,6 +18,7 @@ import (
 
 	"goodlink/config"
 	"goodlink/pro"
+	"goodlink/utils"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -76,33 +77,18 @@ func enable_other() {
 	m_activity_start_button.Hide()
 }
 
-// 获取 cmd 版本可执行文件路径
-func getCmdExePath() string {
-	exePath, err := os.Executable()
-	if err != nil {
-		return "goodlink-windows-amd64-cmd.exe"
-	}
-	dir := filepath.Dir(exePath)
-	return filepath.Join(dir, "goodlink-windows-amd64-cmd.exe")
-}
-
-// killProcess 强制终止进程（使用 taskkill 确保终止）
-func killProcess(pid int) {
-	// 先尝试用 taskkill /F /T 强制终止进程树
-	cmd := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", pid))
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	cmd.Run()
-}
-
 // StopCmdProcess 停止子进程（供外部调用，如窗口关闭时）
 func StopCmdProcess() {
 	m_cmd_mutex.Lock()
 	defer m_cmd_mutex.Unlock()
 
 	if m_cmd_process != nil && m_cmd_process.Process != nil {
-		killProcess(m_cmd_process.Process.Pid)
+		utils.KillProcess(m_cmd_process.Process.Pid)
 		m_cmd_process = nil
 	}
+
+	// 清理所有遗留的cmd进程
+	utils.CleanupOrphanedCmdProcesses()
 }
 
 // parseStatusMessage 解析状态消息，返回状态值（connecting/connected/waiting）和是否成功解析
@@ -196,7 +182,7 @@ func updateConnectionStatus(status string) {
 // startCmdProcess 启动cmd进程（提取的公共逻辑，用于初始启动和自动重启）
 func startCmdProcess() error {
 	// 构建命令行参数
-	cmdPath := getCmdExePath()
+	cmdPath := utils.GetCmdExePath()
 
 	// 检查 cmd 程序是否存在
 	if _, err := os.Stat(cmdPath); os.IsNotExist(err) {
