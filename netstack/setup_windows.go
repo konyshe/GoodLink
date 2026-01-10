@@ -105,11 +105,8 @@ func InitWintunDll() error {
 	url := fmt.Sprintf("%s/%s/%s", wintunDllURL, runtime.GOARCH, wintunDllName)
 
 	/*
-		// 简单下载
-		err := utils.DownloadSimple(wintunDllURL, wintunDllName)
-
 		// 带进度监控的下载
-		err := utils.DownloadWithProgress(wintunDllURL, wintunDllName,
+		err := go2http.DownloadWithProgress(wintunDllURL, wintunDllName,
 		    func(downloaded, total int64) {
 		        if total > 0 {
 		            percent := float64(downloaded) / float64(total) * 100
@@ -118,11 +115,11 @@ func InitWintunDll() error {
 		    })
 
 		// 自定义配置下载
-		config := utils.DefaultDownloadConfig("https://example.com/file.zip", "file.zip")
+		config := go2http.DefaultDownloadConfig("https://example.com/file.zip", "file.zip")
 		config.MaxRetries = 5
 		config.RetryDelay = 3 * time.Second
 		config.Timeout = 60 * time.Second
-		err := utils.Download(config)
+		err := go2http.Download(config)
 	*/
 
 	return go2http.DownloadSimple(url, wintunDllName)
