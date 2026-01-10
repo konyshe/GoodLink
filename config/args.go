@@ -19,8 +19,8 @@ var (
 	Arg_stun_test              *bool
 	Arg_p2p_timeout            int
 	Arg_conn_type              int
-	Arg_conn_n0                int
-	Arg_conn_n1                int
+	Arg_conn_active_n0         int
+	Arg_conn_active_n1         int
 	Arg_conn_active_send_time  int
 	Arg_conn_passive_send_time int
 	Arg_local_config           *bool
@@ -45,10 +45,10 @@ func Help(ver string) {
 	flag.StringVar(&Arg_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
 	flag.IntVar(&Arg_p2p_timeout, "time_out", 15, "最大连接超时, 单位: 秒")
 
-	flag.IntVar(&Arg_conn_n0, "n0", 256, "dev n0")
-	flag.IntVar(&Arg_conn_n1, "n1", 4, "dev n1")
-	flag.IntVar(&Arg_conn_active_send_time, "n2", 7, "dev n0")
-	flag.IntVar(&Arg_conn_passive_send_time, "n3", 2, "dev n1")
+	flag.IntVar(&Arg_conn_active_n0, "n0", 256, "active n0")
+	flag.IntVar(&Arg_conn_active_n1, "n1", 4, "active n1")
+	flag.IntVar(&Arg_conn_active_send_time, "n2", 7, "active send time")
+	flag.IntVar(&Arg_conn_passive_send_time, "n3", 2, "passive send time")
 
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")
