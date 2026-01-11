@@ -86,10 +86,10 @@ replace proxy => ../proxy
 
 replace goroutine-pool => ../goroutine-pool
 
-replace github.com/quic-go/quic-go => github.com/quic-go/quic-go v0.50.1
-
 replace github.com/imroc/req/v3 => github.com/imroc/req/v3 v3.50.0
 
-replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20250317184159-a24f13b091dc
-
 replace github.com/quic-go/qpack => github.com/quic-go/qpack v0.5.1
+
+replace github.com/quic-go/quic-go => github.com/quic-go/quic-go v0.50.1
+
+replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20250317184159-a24f13b091dc
