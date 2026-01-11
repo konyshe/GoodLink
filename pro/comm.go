@@ -118,16 +118,6 @@ type RedisJsonType struct {
 	LocalAddr     tun.AddrType  `bson:"local_addr" json:"local_addr"`
 }
 
-// 获取单个会话的 Redis key
-func getSessionKey(sessionID string) string {
-	return m_md5_tun_key + ":" + sessionID
-}
-
-// 获取单个会话的 Redis key
-func getSessionKeyMd5(sessionID string) string {
-	return go2.Md5Encode(sessionID)
-}
-
 // RedisSessionRegister Local端注册新SessionID到Hash
 func RedisSessionRegister(timeout time.Duration, redisJson *RedisJsonType) error {
 	if m_redis_db == nil {
@@ -192,9 +182,8 @@ func RedisSessionSet(sessionID string, timeout time.Duration, redisJson *RedisJs
 
 	// 使用SessionID作为密钥加密（Remote端认领后，后续交互都使用SessionID作为密钥）
 	encryptedData := go2aes.Encrypt7(jsonByte, sessionID)
-	sessionKey := getSessionKey(sessionID)
 
-	if err := m_redis_db.Set(sessionKey, encryptedData, timeout).Err(); err != nil {
+	if err := m_redis_db.Set(go2.Md5Encode(sessionID), encryptedData, timeout).Err(); err != nil {
 		return fmt.Errorf("写入会话数据失败: %v", err)
 	}
 
@@ -208,8 +197,7 @@ func RedisSessionGet(sessionID string, redisJson *RedisJsonType) error {
 		return errors.New("Redis未初始化")
 	}
 
-	sessionKey := getSessionKey(sessionID)
-	encryptedData, err := m_redis_db.Get(sessionKey).Bytes()
+	encryptedData, err := m_redis_db.Get(go2.Md5Encode(sessionID)).Bytes()
 	if err != nil || encryptedData == nil || len(encryptedData) == 0 {
 		return fmt.Errorf("获取会话数据失败: %v", err)
 	}
@@ -228,7 +216,7 @@ func RedisSessionDel(sessionID string) {
 	if m_redis_db == nil {
 		return
 	}
-	m_redis_db.Del(getSessionKey(sessionID))
+	m_redis_db.Del(go2.Md5Encode(sessionID))
 }
 
 // RedisSessionUnregister 从Hash中移除会话注册
@@ -236,7 +224,7 @@ func RedisSessionUnregister(sessionID string) {
 	if m_redis_db == nil {
 		return
 	}
-	m_redis_db.Del(getSessionKey(sessionID))
+	m_redis_db.Del(go2.Md5Encode(sessionID))
 }
 
 func GetUDPLocalIPPort(level string) (string, int) {
