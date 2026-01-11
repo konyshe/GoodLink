@@ -10,7 +10,6 @@ import (
 	"net/netip"
 	"os"
 	"runtime"
-	"time"
 
 	"golang.org/x/sys/windows"
 	"golang.zx2c4.com/wintun"
@@ -84,12 +83,6 @@ const (
 	wintunDllURL = "https://gitee.com/konyshe/goodlink_conf/raw/master/wintun-0.14.1"
 	// wintunDllName wintun.dll 文件名
 	wintunDllName = "wintun.dll"
-	// downloadTimeout 下载超时时间
-	downloadTimeout = 30 * time.Second
-	// maxRetries 最大重试次数
-	maxRetries = 3
-	// retryDelay 重试延迟时间
-	retryDelay = 2 * time.Second
 )
 
 // InitWintunDll 初始化 wintun.dll，如果文件不存在则从网络下载
