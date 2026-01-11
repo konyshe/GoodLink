@@ -100,8 +100,6 @@ func InitWintunDll() error {
 		return nil
 	}
 
-	log.Printf("开始下载 wintun.dll...")
-
 	url := fmt.Sprintf("%s/%s/%s", wintunDllURL, runtime.GOARCH, wintunDllName)
 
 	/*
