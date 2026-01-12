@@ -45,13 +45,9 @@ func Init() error {
 	var res []byte
 	var err error
 
-	log.Println("加载本地配置开始")
-
 	if res = go2.FileReadAll("config.json"); res == nil {
 		DeleteLocalConfig()
-		log.Println("本地配置不存在，从网络下载配置")
-		url := fmt.Sprintf("https://gitee.com/konyshe/goodlink_conf/raw/master/%s", configFileName)
-		go2http.DownloadSimple(url, configFileName)
+		go2http.DownloadSimple(fmt.Sprintf("https://gitee.com/konyshe/goodlink_conf/raw/master/%s", configFileName), configFileName)
 		res = go2.FileReadAll("config.json")
 	}
 
@@ -59,9 +55,6 @@ func Init() error {
 		DeleteLocalConfig()
 		return err
 	}
-
-	log.Println("加载本地配置完成")
-
 	/*
 		var StunList []string
 		StunList = append(StunList, "stun.easyvoip.com:3478")
