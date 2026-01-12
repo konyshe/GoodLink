@@ -40,9 +40,9 @@ func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 		if err != nil {
 			// 区分连接关闭和其他错误
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				// log.Info("quic stream closed")
+				// 连接关闭是正常情况，不需要记录错误日志
 			} else {
-				log.Error("read quic head: ", err)
+				log.Error("read quic head error: ", err)
 			}
 			new_quic_stream.Close()
 			continue
@@ -74,14 +74,17 @@ func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 					go ForwardT2Q(new_conn, new_quic_stream)
 					go ForwardQ2T(new_quic_stream, new_conn)
 				} else {
-					log.Error("dial tcp error: ", err)
+					// 区分连接关闭和其他错误
+					if err == io.EOF || err == io.ErrUnexpectedEOF {
+						// 连接关闭是正常情况，不需要记录错误日志
+					} else {
+						log.Error("dial tcp error: ", err)
+					}
 					new_quic_stream.Close()
 				}
 			}
 		case 0x01: // UDP
 			switch remotePort {
-			//case 1080:
-
 			default:
 				new_conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{
 					IP:   net.IPv4(127, 0, 0, 1),
@@ -91,7 +94,12 @@ func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 					go ForwardT2Q(new_conn, new_quic_stream)
 					go ForwardQ2T(new_quic_stream, new_conn)
 				} else {
-					log.Error("dial udp error: ", err)
+					// 区分连接关闭和其他错误
+					if err == io.EOF || err == io.ErrUnexpectedEOF {
+						// 连接关闭是正常情况，不需要记录错误日志
+					} else {
+						log.Error("dial udp error: ", err)
+					}
 					new_quic_stream.Close()
 				}
 			}
