@@ -12,37 +12,53 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func ProcessProxyServer(stun_quic_conn *quic.Conn) {
-	head_len := 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
+const (
+	head_len = 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
+)
 
+func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 	proxy_handle.Init()
 	log.Info("开启代理模式")
+
+	// 提前获取并缓存远程地址，避免在 goroutine 中重复调用
+	remoteAddr := stun_quic_conn.RemoteAddr().(*net.UDPAddr)
+	remoteAddrStr := remoteAddr.String()
+
+	// 复用头部缓冲区，减少内存分配开销
+	headerBuf := go2pool.Malloc(head_len)
+	defer go2pool.Free(headerBuf)
 
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
 		if err != nil {
+			// 连接关闭是正常情况，不需要记录错误日志
 			return
 		}
 
-		buf := go2pool.Malloc(head_len)
-		_, err = io.ReadFull(new_quic_stream, buf[:head_len])
+		// 读取头部数据
+		_, err = io.ReadFull(new_quic_stream, headerBuf[:head_len])
 		if err != nil {
-			log.Error("read quic head: ", err)
+			// 区分连接关闭和其他错误
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				// log.Info("quic stream closed")
+			} else {
+				log.Error("read quic head: ", err)
+			}
 			new_quic_stream.Close()
-			go2pool.Free(buf)
 			continue
 		}
-		remotePort := binary.BigEndian.Uint16(buf[head_len-2 : head_len])
-		go2pool.Free(buf)
 
-		switch buf[0] {
+		// 在释放缓冲区前提取所有需要的数据
+		protocolType := headerBuf[0]
+		remotePort := binary.BigEndian.Uint16(headerBuf[head_len-2 : head_len])
+
+		switch protocolType {
 		case 0x00: // TCP
 			switch remotePort {
 			case 1080:
 				go func() {
 					defer new_quic_stream.Close()
-					remoteAddr := stun_quic_conn.RemoteAddr().(*net.UDPAddr)
-					proxy_handle.Serve(new_quic_stream, remoteAddr.String())
+					proxy_handle.Serve(new_quic_stream, remoteAddrStr)
 				}()
 			default:
 				// 用户反馈无法连接3389端口，修改端口后可以连接
