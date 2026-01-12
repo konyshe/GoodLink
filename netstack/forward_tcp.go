@@ -14,7 +14,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func ForwardTCPConn(originConn *TcpConn, stun_quic_conn quic.Connection) {
+func ForwardTCPConn(originConn *TcpConn, stun_quic_conn *quic.Conn) {
 	new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
 	if err != nil {
 		log.Println("打开quic流失败", err)
@@ -49,7 +49,7 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn quic.Connection) {
 	go proxy.ForwardT2Q(originConn, new_quic_stream)
 }
 
-func NewTcpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *tcp.Forwarder {
+func NewTcpForwarder(s *stack.Stack, stun_quic_conn *quic.Conn) *tcp.Forwarder {
 	return tcp.NewForwarder(s, 0, 2048, func(r *tcp.ForwarderRequest) {
 		var (
 			wq  waiter.Queue

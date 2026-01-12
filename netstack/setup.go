@@ -74,7 +74,7 @@ func Start() error {
 	return nil
 }
 
-func SetForWarder(stun_quic_conn quic.Connection) {
+func SetForWarder(stun_quic_conn *quic.Conn) {
 	netstack_stack.SetTransportProtocolHandler(tcp.ProtocolNumber, NewTcpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
 	netstack_stack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUdpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
 }

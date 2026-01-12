@@ -118,7 +118,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 }
 
 // handleLocalState3_ConnectionSuccess 处理 Local 端 State 3: 连接成功
-func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive *tun.TunPassive) (quic.Connection, quic.Stream, bool) {
+func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive *tun.TunPassive) (*quic.Conn, *quic.Stream, bool) {
 	log.Printf("State 3: 连接成功")
 
 	if tun_passive != nil && tun_passive.TunQuicConn != nil {
@@ -139,7 +139,7 @@ func handleLocalState4_ConnectionTimeout() {
 	log.Printf("State 4: 连接超时")
 }
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, quic.Connection, quic.Stream, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, *quic.Conn, *quic.Stream, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 

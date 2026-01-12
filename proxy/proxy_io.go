@@ -8,7 +8,7 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func ForwardT2Q(tc net.Conn, qc quic.Stream) {
+func ForwardT2Q(tc net.Conn, qc *quic.Stream) {
 	defer func() {
 		qc.Close()
 		tc.Close()
@@ -19,7 +19,7 @@ func ForwardT2Q(tc net.Conn, qc quic.Stream) {
 	io.CopyBuffer(qc, tc, buf) // 从TCP复制到QUIC
 }
 
-func ForwardQ2T(qc quic.Stream, tc net.Conn) {
+func ForwardQ2T(qc *quic.Stream, tc net.Conn) {
 	defer func() {
 		qc.Close()
 		tc.Close()

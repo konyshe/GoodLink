@@ -12,7 +12,7 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-func ProcessProxyServer(stun_quic_conn quic.Connection) {
+func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 	head_len := 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
 
 	proxy_handle.Init()

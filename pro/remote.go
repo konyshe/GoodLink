@@ -19,7 +19,7 @@ var (
 )
 
 // handleState1_SendRemoteAddr 处理 State 1: 发送 Remote 端地址，创建 TUN 连接
-func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun_active **tun.TunActive, tun_passive **tun.TunPassive, udp_conn **net.UDPConn, conn_type *int, tun_active_chain *chan quic.Connection, tun_passive_chain *chan quic.Connection) error {
+func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun_active **tun.TunActive, tun_passive **tun.TunPassive, udp_conn **net.UDPConn, conn_type *int, tun_active_chain *chan *quic.Conn, tun_passive_chain *chan *quic.Conn) error {
 	log.Printf("会话 %s State 1: 发送Remote端地址", sessionID)
 
 	redisJson.RemoteVersion = GetVersion()
@@ -71,7 +71,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 }
 
 // handleState2_WaitConnection 处理 State 2: 等待连接建立
-func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, conn_type int, tun_active *tun.TunActive, tun_passive *tun.TunPassive, tun_active_chain chan quic.Connection, tun_passive_chain chan quic.Connection) (bool, error) {
+func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, conn_type int, tun_active *tun.TunActive, tun_passive *tun.TunPassive, tun_active_chain chan *quic.Conn, tun_passive_chain chan *quic.Conn) (bool, error) {
 	log.Printf("会话 %s State 2: 等待连接建立", sessionID)
 
 	switch conn_type {
@@ -141,8 +141,8 @@ func processSession(redisJson *RedisJsonType) {
 
 	conn_type := 0 // 主动连接
 
-	var tun_active_chain chan quic.Connection
-	var tun_passive_chain chan quic.Connection
+	var tun_active_chain chan *quic.Conn
+	var tun_passive_chain chan *quic.Conn
 
 	defer func() {
 		m_upnp_bind.CleanMappings()
@@ -215,7 +215,7 @@ Release:
 }
 
 // handleConnection 处理已建立的连接
-func handleConnection(sessionID string, quicConn quic.Connection, healthStream quic.Stream) {
+func handleConnection(sessionID string, quicConn *quic.Conn, healthStream *quic.Stream) {
 	log.Printf("开始处理连接: %s", sessionID)
 
 	// 启动代理服务

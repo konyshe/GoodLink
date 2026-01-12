@@ -13,7 +13,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func ForwardUdpConn(originConn *udpConn, stun_quic_conn quic.Connection) {
+func ForwardUdpConn(originConn *udpConn, stun_quic_conn *quic.Conn) {
 	new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
 	if err != nil {
 		log.Println("打开quic流失败", err)
@@ -48,15 +48,15 @@ func ForwardUdpConn(originConn *udpConn, stun_quic_conn quic.Connection) {
 	go proxy.ForwardT2Q(originConn, new_quic_stream)
 }
 
-func NewUdpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *udp.Forwarder {
-	return udp.NewForwarder(s, func(r *udp.ForwarderRequest) {
+func NewUdpForwarder(s *stack.Stack, stun_quic_conn *quic.Conn) *udp.Forwarder {
+	return udp.NewForwarder(s, func(r *udp.ForwarderRequest) bool {
 		var (
 			wq waiter.Queue
 			id = r.ID()
 		)
 
 		if stun_quic_conn == nil {
-			return
+			return false
 		}
 
 		// 创建UDP端点
@@ -64,12 +64,13 @@ func NewUdpForwarder(s *stack.Stack, stun_quic_conn quic.Connection) *udp.Forwar
 		if err != nil {
 			// 记录UDP转发请求错误
 			log.Printf("forward udp request: %s:%d->%s:%d: %s", id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
-			return
+			return false
 		}
 
 		ForwardUdpConn(&udpConn{
 			UDPConn: gonet.NewUDPConn(&wq, ep),
 			id:      id,
 		}, stun_quic_conn)
+		return true
 	})
 }
