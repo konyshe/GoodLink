@@ -141,7 +141,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP
 
-    举例: 在Local端打开 windows 远程桌面, 填写Remote端IP, 即可访问Remote端的远程桌面。如果无法连接，可在IP后面加上:13389
+    举例: 在Local端打开 windows 远程桌面, 填写: Remote端IP:13389, 即可访问Remote端的远程桌面
 
 ### 代理模式
 
