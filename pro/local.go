@@ -186,7 +186,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case -1: // Remote端检测到版本不一致
 			log.Printf("%s%s", TagStatusPrefix, TagStatusVersionMismatch)
 			RedisSessionDel(SessionID)
-			return tun_active, tun_passive, nil, nil, fmt.Errorf("Remote端检测到版本不兼容: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
+			return tun_active, tun_passive, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
 
 		case 1:
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {
