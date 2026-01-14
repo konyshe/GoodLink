@@ -25,9 +25,6 @@
 
 **郑重声明：严禁用于违法行为！！！**
 
-<img src="https://gitee.com/konyshe/goodlink/raw/master/assert/gitee.png" width="440" height="978">
-
-
 # 特点
 
 1. 两台主机之间直连！直连！直连！不经过第三方服务器, 不用担心数据泄露
