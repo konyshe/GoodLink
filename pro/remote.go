@@ -30,6 +30,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 	// 版本兼容性检查
 	if redisJson.LocalVersion != GetVersion() {
 		log.Printf("会话 %s 两端版本不兼容: Local: %s => Remote: %s", sessionID, redisJson.LocalVersion, GetVersion())
+		redisJson.State = -1 // 设置版本不一致状态，告知Local端
 		RedisSessionSet(sessionID, redisJson.SocketTimeOut*3, redisJson)
 		return errors.New("两端版本不兼容")
 	}

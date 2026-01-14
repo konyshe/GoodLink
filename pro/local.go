@@ -2,6 +2,7 @@ package pro
 
 import (
 	"errors"
+	"fmt"
 	"go2"
 	"goodlink/config"
 	"goodlink/netstack"
@@ -72,6 +73,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 	// 版本兼容性检查
 	if redisJson.RemoteVersion != GetVersion() {
 		log.Printf("两端版本不兼容: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
+		log.Printf("%s%s", TagStatusPrefix, TagStatusVersionMismatch)
 		RedisSessionDel(sessionID)
 		return errors.New("两端版本不兼容")
 	}
@@ -176,12 +178,16 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 		// 读取会话状态
 		if RedisSessionGet(SessionID, &redisJson) != nil {
-			log.Println("会话超时")
-			return tun_active, tun_passive, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, fmt.Errorf("会话超时")
 		}
 
 		// 根据状态进行处理
 		switch redisJson.State {
+		case -1: // Remote端检测到版本不一致
+			log.Printf("%s%s", TagStatusPrefix, TagStatusVersionMismatch)
+			RedisSessionDel(SessionID)
+			return tun_active, tun_passive, nil, nil, fmt.Errorf("Remote端检测到版本不兼容: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
+
 		case 1:
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {
 				return tun_active, tun_passive, nil, nil, err
