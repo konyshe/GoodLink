@@ -23,16 +23,16 @@ const (
 )
 
 func main() {
-	pro.SetVersion(GetVersion())
-
-	config.Help(GetVersion())
-
 	// 检查单实例，如果不是第一个实例则退出
 	// 必须在创建任何UI资源之前检查，避免影响已运行的实例
 	if !utils.CheckSingleInstance() {
 		// 已有实例运行，直接退出
 		return
 	}
+
+	pro.SetVersion(GetVersion())
+
+	config.Help(GetVersion())
 
 	// 启动前清理遗留的cmd进程
 	utils.CleanupOrphanedCmdProcesses()
