@@ -27,6 +27,13 @@ func main() {
 
 	config.Help(GetVersion())
 
+	// 检查单实例，如果不是第一个实例则退出
+	// 必须在创建任何UI资源之前检查，避免影响已运行的实例
+	if !utils.CheckSingleInstance() {
+		// 已有实例运行，直接退出
+		return
+	}
+
 	// 启动前清理遗留的cmd进程
 	utils.CleanupOrphanedCmdProcesses()
 
@@ -35,12 +42,6 @@ func main() {
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
 	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + GetVersion()) //myApp.Metadata().Version)
-
-	// 检查单实例，如果不是第一个实例则退出
-	if !utils.CheckSingleInstance() {
-		// 已有实例运行，直接退出
-		return
-	}
 
 	// 监听显示窗口请求
 	// Fyne的Show()方法会自动处理线程安全，可以直接在goroutine中调用

@@ -5,4 +5,4 @@ Icon = "assert/favicon.ico"
 Name = "goodlink-windows-amd64-ui"
 ID = "goodlink.kony.vip"
 Version = "2.4.13"
-Build = 0
+Build = 1
