@@ -30,14 +30,14 @@ func main() {
 		return
 	}
 
-	pro.SetVersion(GetVersion())
-
-	config.Help(GetVersion())
-
 	// 启动前清理遗留的cmd进程
 	utils.CleanupOrphanedCmdProcesses()
 
 	config.DeleteLocalConfig()
+
+	config.Help(GetVersion())
+
+	pro.SetVersion(GetVersion())
 
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
