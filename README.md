@@ -147,7 +147,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     举例: 在Local端配置socket5代理: socks5://192.17.19.1:1080, 即可利用Remote端做跳板, 访问所有的网络资源
 
-**Linux平台代理配置示例**
+**Linux平台如何使用代理**
 ```bash
 # 代理地址配置
 export all_proxy="http://192.17.19.1:1080"
