@@ -150,16 +150,16 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 **Linux平台代理配置示例**
 ```bash
 # 代理地址配置
-export all_proxy="http://127.0.0.1:1080"
-export http_proxy="http://127.0.0.1:1080"
-export https_proxy="http://127.0.0.1:1080"
+export all_proxy="http://Remote端IP:1080"
+export http_proxy="http://Remote端IP:1080"
+export https_proxy="http://Remote端IP:1080"
 
 # Git代理配置
-git config --global http.proxy http://127.0.0.1:1080
-git config --global https.proxy http://127.0.0.1:1080
+git config --global http.proxy http://Remote端IP:1080
+git config --global https.proxy http://Remote端IP:1080
 
 # SSH代理配置（通过ProxyCommand）
-ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:1080 %h %p' user@target_host
+ssh -o ProxyCommand='nc -X 5 -x Remote端IP:1080 %h %p' user@target_host
 ```
 
 **浏览器代理配置**
