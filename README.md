@@ -136,7 +136,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 ### TUN模式
 
-    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP (默认: 192.17.19.1)
+    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP (192.17.19.1)
 
     访问192.17.19.1，就等于内网直接访问Remote端
 
