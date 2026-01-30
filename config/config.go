@@ -57,7 +57,7 @@ func Init() error {
 	}
 	/*
 		var StunList []string
-		StunList = append(StunList, "stun.easyvoip.com:3478")
+		StunList = append(StunList, "stun.kony.vip:3478")
 		configInfo.StunList = StunList
 
 		configInfo.Redis.TlsAddr = "goodlink.kony.vip:16378"
