@@ -26,13 +26,13 @@ func (m MyTheme) Font(fyne.TextStyle) fyne.Resource {
 }
 
 func (*MyTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
-	return theme.DarkTheme().Color(n, v)
+	return theme.DefaultTheme().Color(n, theme.VariantDark)
 }
 
 func (*MyTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
-	return theme.DarkTheme().Icon(n)
+	return theme.DefaultTheme().Icon(n)
 }
 
 func (*MyTheme) Size(n fyne.ThemeSizeName) float32 {
-	return theme.DarkTheme().Size(n)
+	return theme.DefaultTheme().Size(n)
 }
