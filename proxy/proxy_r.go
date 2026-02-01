@@ -84,24 +84,21 @@ func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 				}
 			}
 		case 0x01: // UDP
-			switch remotePort {
-			default:
-				new_conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{
-					IP:   net.IPv4(127, 0, 0, 1),
-					Port: int(remotePort),
-				})
-				if err == nil {
-					go ForwardT2Q(new_conn, new_quic_stream)
-					go ForwardQ2T(new_quic_stream, new_conn)
+			new_conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{
+				IP:   net.IPv4(127, 0, 0, 1),
+				Port: int(remotePort),
+			})
+			if err == nil {
+				go ForwardT2Q(new_conn, new_quic_stream)
+				go ForwardQ2T(new_quic_stream, new_conn)
+			} else {
+				// 区分连接关闭和其他错误
+				if err == io.EOF || err == io.ErrUnexpectedEOF {
+					// 连接关闭是正常情况，不需要记录错误日志
 				} else {
-					// 区分连接关闭和其他错误
-					if err == io.EOF || err == io.ErrUnexpectedEOF {
-						// 连接关闭是正常情况，不需要记录错误日志
-					} else {
-						log.Error("dial udp error: ", err)
-					}
-					new_quic_stream.Close()
+					log.Error("dial udp error: ", err)
 				}
+				new_quic_stream.Close()
 			}
 		}
 	}
