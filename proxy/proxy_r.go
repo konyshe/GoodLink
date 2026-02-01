@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"go2/log"
-	go2pool "go2/pool"
 	"io"
 	"net"
 	proxy_handle "proxy/handle"
@@ -25,8 +24,7 @@ func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 	remoteAddrStr := remoteAddr.String()
 
 	// 复用头部缓冲区，减少内存分配开销
-	headerBuf := go2pool.Malloc(head_len)
-	defer go2pool.Free(headerBuf)
+	var headerBuf [head_len]byte
 
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
