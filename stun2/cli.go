@@ -169,25 +169,17 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 	return wan_ip1, wan_port1, change_ip, change_port
 }
 
-func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
+func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int, err error) {
 	var change_ip string
 	var change_port int
 	var ips []net.IP
 
-	log.Println("stun ip found")
-
-	stun_list := config.GetStunList()
-	for _, stun_ip := range stun_list {
-		ips2, err := net.LookupIP(stun_ip)
-		if err != nil {
-			log.Printf("lookup stun ip error: %v", err)
-			continue
-		}
-		ips = append(ips, ips2...)
+	ips, err = net.LookupIP(stun_svr)
+	if err != nil {
+		return "", 0, 0, 0, fmt.Errorf("lookup stun ip: %s, %v", stun_svr, err)
 	}
 	if len(ips) == 0 {
-		log.Printf("stun ip found failed")
-		os.Exit(1)
+		return "", 0, 0, 0, fmt.Errorf("stun ip not found: %s", stun_svr)
 	}
 
 	// STUN message header
@@ -201,7 +193,7 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 	buf.Write(transactionID)
 
 	for _, ip := range ips {
-		log.Printf("stun ip: %s", ip.String())
+		log.Printf("stun_svr: %s => %s", stun_svr, ip.String())
 
 		wan_ip, wan_port1, change_ip, change_port = getStunIpPort2(conn, ip.String()+":3478", &buf, magicCookie, transactionID)
 		if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 {
@@ -221,11 +213,27 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 			continue
 		}
 
-		return
+		return wan_ip, wan_port1, wan_port2, wan_port3, nil
+	}
+
+	return "", 0, 0, 0, fmt.Errorf("stun ip found failed")
+}
+
+func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
+	var err error
+
+	stun_svr_list := config.GetStunList()
+	for _, stun_svr := range stun_svr_list {
+		wan_ip, wan_port1, wan_port2, wan_port3, err = GetStunIpPort2(stun_svr, conn)
+		if err != nil {
+			log.Printf("%v", err)
+			continue
+		}
+		return wan_ip, wan_port1, wan_port2, wan_port3
 	}
 
 	os.Exit(1)
-	return
+	return "", 0, 0, 0
 }
 
 func TestStun() {
