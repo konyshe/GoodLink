@@ -55,17 +55,18 @@ func Init() error {
 		DeleteLocalConfig()
 		return err
 	}
+
 	/*
 		var StunList []string
-		StunList = append(StunList, "stun.kony.vip:3478")
+		StunList = append(StunList, "stun.easyvoip.com")
 		configInfo.StunList = StunList
 
 		configInfo.Redis.TlsAddr = "goodlink.kony.vip:16378"
 
 		body, _ := json.Marshal(configInfo)
-		temp3 := aes.Encrypt(body, "goodlink")
-		go2.Utils().FileDel("config.json")
-		go2.Utils().FileAppend("config.json", []byte(temp3))
+		temp3 := go2aes.Encrypt7(body, "goodlink")
+		os.Remove("config.json")
+		go2.FileAppend("config.json", []byte(temp3))
 	*/
 	return nil
 }
@@ -75,6 +76,10 @@ func GetConfig() ConfigInfo {
 		Init()
 	}
 	return configInfo
+}
+
+func GetStunList() []string {
+	return GetConfig().StunList
 }
 
 func GetAddr() string {

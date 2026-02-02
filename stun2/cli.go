@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"goodlink/config"
 	"log"
 	"net"
 	"os"
@@ -171,13 +172,22 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
 	var change_ip string
 	var change_port int
+	var ips []net.IP
 
-	log.Println("获取本端地址")
+	log.Println("stun ip found")
 
-	ips, err := net.LookupIP("stun.easyvoip.com")
-	if err != nil {
-		log.Printf("lookup stun ip error: %v", err)
-		return
+	stun_list := config.GetStunList()
+	for _, stun_ip := range stun_list {
+		ips2, err := net.LookupIP(stun_ip)
+		if err != nil {
+			log.Printf("lookup stun ip error: %v", err)
+			continue
+		}
+		ips = append(ips, ips2...)
+	}
+	if len(ips) == 0 {
+		log.Printf("stun ip found failed")
+		os.Exit(1)
 	}
 
 	// STUN message header
