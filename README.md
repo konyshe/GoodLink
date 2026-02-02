@@ -135,6 +135,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     举例: 在Local端打开 windows 远程桌面, 填写: 192.17.19.1:13389, 即可访问Remote端的远程桌面
 
+    注: 无法ping通remote端，属于正常，不影响远程桌面等其他使用
+
 ### 代理模式
 
     socket5代理地址端口: socket5://192.17.19.1:1080
