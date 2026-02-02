@@ -8,7 +8,6 @@ import (
 	"goodlink/config"
 	"log"
 	"net"
-	"os"
 	"time"
 )
 
@@ -222,18 +221,18 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
 	var err error
 
-	stun_svr_list := config.GetStunList()
-	for _, stun_svr := range stun_svr_list {
-		wan_ip, wan_port1, wan_port2, wan_port3, err = GetStunIpPort2(stun_svr, conn)
-		if err != nil {
-			log.Printf("%v", err)
-			continue
+	for {
+		stun_svr_list := config.GetStunList()
+		for _, stun_svr := range stun_svr_list {
+			wan_ip, wan_port1, wan_port2, wan_port3, err = GetStunIpPort2(stun_svr, conn)
+			if err != nil {
+				log.Printf("%v", err)
+				continue
+			}
+			return wan_ip, wan_port1, wan_port2, wan_port3
 		}
-		return wan_ip, wan_port1, wan_port2, wan_port3
+		time.Sleep(5 * time.Second)
 	}
-
-	os.Exit(1)
-	return "", 0, 0, 0
 }
 
 func TestStun() {
