@@ -57,12 +57,8 @@ func Init() error {
 	}
 
 	/*
-		var StunList []string
-		StunList = append(StunList, "stun.easyvoip.com")
-		configInfo.StunList = StunList
-
+		configInfo.StunList = []string{"stun.kony.vip", "stun.easyvoip.com"}
 		configInfo.Redis.TlsAddr = "goodlink.kony.vip:16378"
-
 		body, _ := json.Marshal(configInfo)
 		temp3 := go2aes.Encrypt7(body, "goodlink")
 		os.Remove("config.json")
