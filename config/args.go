@@ -24,6 +24,8 @@ var (
 	Arg_conn_active_send_time  int
 	Arg_conn_passive_send_time int
 	Arg_local_config           *bool
+	Arg_stun_svr_ip            string
+	Arg_stun_svr_port          int
 )
 
 func Help(ver string) {
@@ -31,6 +33,8 @@ func Help(ver string) {
 
 	Arg_local_config = flag.Bool("local_config", false, "优先加载本地配置")
 
+	flag.StringVar(&Arg_stun_svr_ip, "stun_svr_ip", "", "STUN服务IP地址")
+	flag.IntVar(&Arg_stun_svr_port, "stun_svr_port", 0, "STUN服务端口")
 	Arg_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
 	flag.StringVar(&Arg_pprof_addr, "pprof_addr", "", "如果CPU/内存/网络异常, 可监测运行, 例如: 0.0.0.0:6060")
 

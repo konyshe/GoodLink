@@ -78,6 +78,11 @@ func main2() {
 func main() {
 	config.Help(GetVersion())
 
+	if config.Arg_stun_svr_ip != "" && config.Arg_stun_svr_port > 0 {
+		stun2.StartSvr(config.Arg_stun_svr_ip, config.Arg_stun_svr_port)
+		return
+	}
+
 	if !*config.Arg_local_config {
 		config.DeleteLocalConfig()
 	}

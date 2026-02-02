@@ -1,162 +1,538 @@
 package stun2
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"log"
 	"net"
-	_ "net/http/pprof"
-	"strconv"
-	"strings"
+	"sync"
+	"time"
+)
 
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+const (
+	// STUN Message Types
+	MsgTypeBindingRequest  = 0x0001
+	MsgTypeBindingResponse = 0x0101
 
-	"github.com/pion/stun/v2"
+	// STUN Attribute Types
+	AttrMappedAddress    = 0x0001
+	AttrChangedAddress   = 0x0005
+	AttrXorMappedAddress = 0x0020
+	AttrFingerprint      = 0x8028
+
+	// Address Family
+	FamilyIPv4 = 0x01
+	FamilyIPv6 = 0x02
+
+	// STUN Magic Cookie (RFC 5389)
+	MagicCookie = 0x2112A442
+
+	// Fingerprint XOR value
+	FingerprintXor = 0x5354554e
 )
 
 var (
-	stun_svr_addr string
-	stun_port_2   int
+	magicCookieBytes = []byte{0x21, 0x12, 0xA4, 0x42}
 )
 
-// Server is RFC 5389 basic server implementation.
-//
-// Current implementation is UDP only and not utilizes FINGERPRINT mechanism,
-// nor ALTERNATE-SERVER, nor credentials mechanisms. It does not support
-// backwards compatibility with RFC 3489.
-type Server struct {
-	Addr         string
-	LogAllErrors bool
-	log          Logger
+// StunServer represents a STUN server instance
+type StunServer struct {
+	primaryAddr   string
+	secondaryAddr string
+	primaryConn   *net.UDPConn
+	secondaryConn *net.UDPConn
+	wg            sync.WaitGroup
+	stopCh        chan struct{}
 }
 
-// Logger is used for logging formatted messages.
-type Logger interface {
-	// Printf must have the same semantics as log.Printf.
-	Printf(format string, args ...interface{})
+// StartSvr starts the STUN server on the specified IP and port
+// It listens on two ports: port (primary) and port+1 (secondary)
+func StartSvr(ip string, port int) {
+	server := &StunServer{
+		primaryAddr:   net.JoinHostPort(ip, itoa(port)),
+		secondaryAddr: net.JoinHostPort(ip, itoa(port+1)),
+		stopCh:        make(chan struct{}),
+	}
+
+	var err error
+
+	// Start primary UDP listener
+	server.primaryConn, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: port})
+	if err != nil {
+		log.Fatalf("Failed to start primary UDP listener on %d: %v", port, err)
+	}
+	log.Printf("STUN server primary listener started on %d", port)
+
+	// Start secondary UDP listener
+	server.secondaryConn, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: port + 1})
+	if err != nil {
+		log.Fatalf("Failed to start secondary UDP listener on %d: %v", port+1, err)
+	}
+	log.Printf("STUN server secondary listener started on %d", port+1)
+
+	// Start handlers
+	server.wg.Add(2)
+	go server.handleConnection(server.primaryConn, server.secondaryAddr)
+	go server.handleConnection(server.secondaryConn, server.primaryAddr)
+
+	// Wait for all handlers to finish
+	server.wg.Wait()
 }
 
-var (
-	defaultLogger     = logrus.New()
-	software          = stun.NewSoftware("goodlink/stund")
-	errNotSTUNMessage = errors.New("not stun message")
-)
+// handleConnection handles incoming STUN requests on a UDP connection
+func (s *StunServer) handleConnection(conn *net.UDPConn, changedAddr string) {
+	defer s.wg.Done()
+	defer conn.Close()
 
-func basicProcess(addr net.Addr, b []byte, req, res *stun.Message) error {
-	if !stun.IsMessage(b) {
-		return errNotSTUNMessage
-	}
-	if _, err := req.Write(b); err != nil {
-		return errors.Wrap(err, "failed to read message")
-	}
-	var (
-		ip   net.IP
-		port int
-	)
-	switch a := addr.(type) {
-	case *net.UDPAddr:
-		ip = a.IP
-		port = a.Port
-	default:
-		log.Panicf("unknown addr: %v", addr)
-	}
-
-	return res.Build(req,
-		stun.BindingSuccess,
-		&stun.MappedAddress{
-			IP:   ip,
-			Port: port,
-		},
-		&stun.OtherAddress{
-			IP:   net.ParseIP(stun_svr_addr),
-			Port: stun_port_2,
-		},
-		software,
-		//stun.Fingerprint,
-	)
-}
-
-func (s *Server) serveConn(c net.PacketConn, res, req *stun.Message) error {
-	if c == nil {
-		return nil
-	}
 	buf := make([]byte, 1024)
-	n, addr, err := c.ReadFrom(buf)
-	if err != nil {
-		s.log.Printf("ReadFrom: %v", err)
-		return nil
-	}
-	// s.log().Printf("read %d bytes from %s", n, addr)
-	if _, err = req.Write(buf[:n]); err != nil {
-		s.log.Printf("Write: %v", err)
-		return err
-	}
-	if err = basicProcess(addr, buf[:n], req, res); err != nil {
-		if err == errNotSTUNMessage {
-			return nil
-		}
-		s.log.Printf("basicProcess: %v", err)
-		return nil
-	}
-	log.Println(string(res.Raw))
-	_, err = c.WriteTo(res.Raw, addr)
-	if err != nil {
-		s.log.Printf("WriteTo: %v", err)
-	}
-	return err
-}
 
-// Serve reads packets from connections and responds to BINDING requests.
-func (s *Server) Serve(c net.PacketConn) error {
-	var (
-		res = new(stun.Message)
-		req = new(stun.Message)
-	)
 	for {
-		if err := s.serveConn(c, res, req); err != nil {
-			s.log.Printf("serve: %v", err)
-			return err
+		select {
+		case <-s.stopCh:
+			return
+		default:
 		}
-		res.Reset()
-		req.Reset()
+
+		n, remoteAddr, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			log.Printf("Error reading from UDP: %v", err)
+			continue
+		}
+
+		if n < 20 {
+			log.Printf("Received packet too short: %d bytes", n)
+			continue
+		}
+
+		go s.handleStunRequest(conn, remoteAddr, buf[:n], changedAddr)
 	}
 }
 
-// ListenUDPAndServe listens on laddr and pro incoming packets.
-func ListenUDPAndServe(serverNet, laddr string) error {
-	c, err := net.ListenPacket(serverNet, laddr)
+// handleStunRequest processes a STUN request and sends a response
+func (s *StunServer) handleStunRequest(conn *net.UDPConn, remoteAddr *net.UDPAddr, data []byte, changedAddr string) {
+	// Parse STUN message header
+	// Bytes 0-1: Message Type
+	// Bytes 2-3: Message Length
+	// Bytes 4-7: Magic Cookie
+	// Bytes 8-19: Transaction ID
+
+	msgType := binary.BigEndian.Uint16(data[0:2])
+
+	// Verify Magic Cookie (RFC 5389)
+	if !bytes.Equal(data[4:8], magicCookieBytes) {
+		log.Printf("Invalid magic cookie from %s", remoteAddr.String())
+		return
+	}
+
+	transactionID := data[8:20]
+
+	// Only handle Binding Request
+	if msgType != MsgTypeBindingRequest {
+		log.Printf("Unsupported message type 0x%04x from %s", msgType, remoteAddr.String())
+		return
+	}
+
+	// Build response
+	response := s.buildBindingResponse(remoteAddr, transactionID, changedAddr)
+
+	// Send response
+	_, err := conn.WriteToUDP(response, remoteAddr)
 	if err != nil {
-		return err
+		log.Printf("Error sending response to %s: %v", remoteAddr.String(), err)
+		return
 	}
-	s := &Server{
-		log: defaultLogger,
-	}
-	return s.Serve(c)
+
+	log.Printf("Responded to %s with mapped address", remoteAddr.String())
 }
 
-func normalize(address string) string {
-	if len(address) == 0 {
-		address = "0.0.0.0"
-	}
-	if !strings.Contains(address, ":") {
-		address = fmt.Sprintf("%s:%d", address, stun.DefaultPort)
-	}
-	return address
+// buildBindingResponse constructs a STUN Binding Response message
+func (s *StunServer) buildBindingResponse(remoteAddr *net.UDPAddr, transactionID []byte, changedAddr string) []byte {
+	var buf bytes.Buffer
+
+	// Build attributes first to calculate total length
+	mappedAddr := buildMappedAddress(remoteAddr)
+	xorMappedAddr := buildXorMappedAddress(remoteAddr, transactionID)
+	changedAddrAttr := buildChangedAddress(changedAddr)
+
+	// Calculate attributes length (without fingerprint)
+	attrsLen := len(mappedAddr) + len(xorMappedAddr) + len(changedAddrAttr)
+
+	// Write STUN header
+	// Message Type: Binding Response (0x0101)
+	buf.Write([]byte{0x01, 0x01})
+
+	// Message Length (will be updated after adding fingerprint)
+	// Fingerprint adds 8 bytes (4 type+length + 4 value)
+	totalLen := attrsLen + 8
+	lenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenBytes, uint16(totalLen))
+	buf.Write(lenBytes)
+
+	// Magic Cookie
+	buf.Write(magicCookieBytes)
+
+	// Transaction ID
+	buf.Write(transactionID)
+
+	// Write attributes
+	buf.Write(mappedAddr)
+	buf.Write(xorMappedAddr)
+	buf.Write(changedAddrAttr)
+
+	// Calculate and add FINGERPRINT
+	fingerprint := calcFingerprint(buf.Bytes())
+	buf.Write(buildFingerprint(fingerprint))
+
+	return buf.Bytes()
 }
 
-func svr(address string) {
+// buildMappedAddress creates a MAPPED-ADDRESS attribute
+func buildMappedAddress(addr *net.UDPAddr) []byte {
+	var buf bytes.Buffer
 
-	normalized := normalize(address)
-	log.Println("goodlink/stund listening on", normalized, "via", "udp4")
-	log.Fatal(ListenUDPAndServe("udp4", normalized))
+	// Attribute Type: MAPPED-ADDRESS (0x0001)
+	buf.Write([]byte{0x00, 0x01})
+
+	ip4 := addr.IP.To4()
+	if ip4 != nil {
+		// Attribute Length: 8 bytes for IPv4
+		buf.Write([]byte{0x00, 0x08})
+		// Reserved byte
+		buf.WriteByte(0x00)
+		// Family: IPv4
+		buf.WriteByte(FamilyIPv4)
+		// Port
+		portBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(portBytes, uint16(addr.Port))
+		buf.Write(portBytes)
+		// Address
+		buf.Write(ip4)
+	} else {
+		// Attribute Length: 20 bytes for IPv6
+		buf.Write([]byte{0x00, 0x14})
+		// Reserved byte
+		buf.WriteByte(0x00)
+		// Family: IPv6
+		buf.WriteByte(FamilyIPv6)
+		// Port
+		portBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(portBytes, uint16(addr.Port))
+		buf.Write(portBytes)
+		// Address
+		buf.Write(addr.IP.To16())
+	}
+
+	return buf.Bytes()
 }
 
-func StartSvr(svr_addr string, svr_port int) {
-	stun_svr_addr = svr_addr
-	stun_port_2 = svr_port + 1
+// buildXorMappedAddress creates an XOR-MAPPED-ADDRESS attribute
+func buildXorMappedAddress(addr *net.UDPAddr, transactionID []byte) []byte {
+	var buf bytes.Buffer
 
-	log.Printf("stun server listen on %s:%d", svr_addr, svr_port)
+	// Attribute Type: XOR-MAPPED-ADDRESS (0x0020)
+	buf.Write([]byte{0x00, 0x20})
 
-	go svr("0.0.0.0:" + strconv.Itoa(svr_port))
-	svr("0.0.0.0:" + strconv.Itoa(stun_port_2))
+	ip4 := addr.IP.To4()
+	if ip4 != nil {
+		// Attribute Length: 8 bytes for IPv4
+		buf.Write([]byte{0x00, 0x08})
+		// Reserved byte
+		buf.WriteByte(0x00)
+		// Family: IPv4
+		buf.WriteByte(FamilyIPv4)
+
+		// X-Port: Port XOR'd with most significant 16 bits of magic cookie
+		xPort := uint16(addr.Port) ^ 0x2112
+		portBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(portBytes, xPort)
+		buf.Write(portBytes)
+
+		// X-Address: IP XOR'd with magic cookie
+		xAddr := make([]byte, 4)
+		for i := 0; i < 4; i++ {
+			xAddr[i] = ip4[i] ^ magicCookieBytes[i]
+		}
+		buf.Write(xAddr)
+	} else {
+		// Attribute Length: 20 bytes for IPv6
+		buf.Write([]byte{0x00, 0x14})
+		// Reserved byte
+		buf.WriteByte(0x00)
+		// Family: IPv6
+		buf.WriteByte(FamilyIPv6)
+
+		// X-Port: Port XOR'd with most significant 16 bits of magic cookie
+		xPort := uint16(addr.Port) ^ 0x2112
+		portBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(portBytes, xPort)
+		buf.Write(portBytes)
+
+		// X-Address: IP XOR'd with magic cookie + transaction ID
+		ip16 := addr.IP.To16()
+		xAddr := make([]byte, 16)
+		for i := 0; i < 4; i++ {
+			xAddr[i] = ip16[i] ^ magicCookieBytes[i]
+		}
+		for i := 4; i < 16; i++ {
+			xAddr[i] = ip16[i] ^ transactionID[i-4]
+		}
+		buf.Write(xAddr)
+	}
+
+	return buf.Bytes()
+}
+
+// buildChangedAddress creates a CHANGED-ADDRESS attribute
+func buildChangedAddress(addr string) []byte {
+	var buf bytes.Buffer
+
+	host, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		log.Printf("Invalid changed address: %s", addr)
+		return nil
+	}
+
+	port := 0
+	for _, c := range portStr {
+		port = port*10 + int(c-'0')
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		log.Printf("Invalid IP in changed address: %s", host)
+		return nil
+	}
+
+	// Attribute Type: CHANGED-ADDRESS (0x0005)
+	buf.Write([]byte{0x00, 0x05})
+
+	ip4 := ip.To4()
+	if ip4 != nil {
+		// Attribute Length: 8 bytes for IPv4
+		buf.Write([]byte{0x00, 0x08})
+		// Reserved byte
+		buf.WriteByte(0x00)
+		// Family: IPv4
+		buf.WriteByte(FamilyIPv4)
+		// Port
+		portBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(portBytes, uint16(port))
+		buf.Write(portBytes)
+		// Address
+		buf.Write(ip4)
+	} else {
+		// Attribute Length: 20 bytes for IPv6
+		buf.Write([]byte{0x00, 0x14})
+		// Reserved byte
+		buf.WriteByte(0x00)
+		// Family: IPv6
+		buf.WriteByte(FamilyIPv6)
+		// Port
+		portBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(portBytes, uint16(port))
+		buf.Write(portBytes)
+		// Address
+		buf.Write(ip.To16())
+	}
+
+	return buf.Bytes()
+}
+
+// buildFingerprint creates a FINGERPRINT attribute
+func buildFingerprint(crc uint32) []byte {
+	var buf bytes.Buffer
+
+	// Attribute Type: FINGERPRINT (0x8028)
+	buf.Write([]byte{0x80, 0x28})
+	// Attribute Length: 4 bytes
+	buf.Write([]byte{0x00, 0x04})
+	// CRC-32 value
+	crcBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(crcBytes, crc)
+	buf.Write(crcBytes)
+
+	return buf.Bytes()
+}
+
+// calcFingerprint calculates the STUN fingerprint (CRC-32 XOR 0x5354554e)
+func calcFingerprint(data []byte) uint32 {
+	return crc32.ChecksumIEEE(data) ^ FingerprintXor
+}
+
+// itoa converts an integer to a string (simple implementation)
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+
+	var result []byte
+	negative := n < 0
+	if negative {
+		n = -n
+	}
+
+	for n > 0 {
+		result = append([]byte{byte('0' + n%10)}, result...)
+		n /= 10
+	}
+
+	if negative {
+		result = append([]byte{'-'}, result...)
+	}
+
+	return string(result)
+}
+
+// TestLocalStun tests the STUN server running on localhost
+func TestLocalStun(port int) {
+	conn, err := net.ListenUDP("udp4", nil)
+	if err != nil {
+		log.Printf("Failed to create UDP connection: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	// STUN message header
+	var buf bytes.Buffer
+	// Message type: Binding Request (0x0001), message length: 0x0000
+	buf.Write([]byte{0x00, 0x01, 0x00, 0x00})
+	// Magic Cookie
+	buf.Write(magicCookieBytes)
+	// Transaction ID (12 bytes)
+	transactionID := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c}
+	buf.Write(transactionID)
+
+	// Send to local STUN server
+	serverAddr := net.JoinHostPort("127.0.0.1", itoa(port))
+	udpAddr, err := net.ResolveUDPAddr("udp4", serverAddr)
+	if err != nil {
+		log.Printf("Failed to resolve server address: %v", err)
+		return
+	}
+
+	_, err = conn.WriteToUDP(buf.Bytes(), udpAddr)
+	if err != nil {
+		log.Printf("Failed to send STUN request: %v", err)
+		return
+	}
+
+	// Wait for response
+	response := make([]byte, 1024)
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	n, _, err := conn.ReadFromUDP(response)
+	if err != nil {
+		log.Printf("Failed to receive STUN response: %v", err)
+		return
+	}
+
+	log.Printf("Received %d bytes response from STUN server", n)
+
+	// Parse response
+	if n < 20 {
+		log.Printf("Response too short")
+		return
+	}
+
+	// Verify message type is Binding Response
+	msgType := binary.BigEndian.Uint16(response[0:2])
+	if msgType != MsgTypeBindingResponse {
+		log.Printf("Unexpected message type: 0x%04x", msgType)
+		return
+	}
+
+	// Verify magic cookie
+	if !bytes.Equal(response[4:8], magicCookieBytes) {
+		log.Printf("Invalid magic cookie in response")
+		return
+	}
+
+	// Verify transaction ID
+	if !bytes.Equal(response[8:20], transactionID) {
+		log.Printf("Transaction ID mismatch")
+		return
+	}
+
+	log.Printf("STUN response verified successfully!")
+
+	// Parse attributes
+	msgLen := binary.BigEndian.Uint16(response[2:4])
+	log.Printf("Message length: %d bytes", msgLen)
+
+	attrs := response[20 : 20+msgLen]
+	offset := 0
+	for offset < len(attrs)-4 {
+		attrType := binary.BigEndian.Uint16(attrs[offset : offset+2])
+		attrLen := binary.BigEndian.Uint16(attrs[offset+2 : offset+4])
+
+		switch attrType {
+		case AttrMappedAddress:
+			ip, port, _ := parseAddressAttr(attrs[offset+4:offset+4+int(attrLen)], false, nil)
+			log.Printf("MAPPED-ADDRESS: %s:%d", ip, port)
+		case AttrXorMappedAddress:
+			ip, port, _ := parseAddressAttr(attrs[offset+4:offset+4+int(attrLen)], true, transactionID)
+			log.Printf("XOR-MAPPED-ADDRESS: %s:%d", ip, port)
+		case AttrChangedAddress:
+			ip, port, _ := parseAddressAttr(attrs[offset+4:offset+4+int(attrLen)], false, nil)
+			log.Printf("CHANGED-ADDRESS: %s:%d", ip, port)
+		case AttrFingerprint:
+			fp := binary.BigEndian.Uint32(attrs[offset+4 : offset+8])
+			log.Printf("FINGERPRINT: 0x%08x", fp)
+		default:
+			log.Printf("Unknown attribute: 0x%04x (len=%d)", attrType, attrLen)
+		}
+
+		// Move to next attribute (4-byte aligned)
+		offset += 4 + int(attrLen)
+		if attrLen%4 != 0 {
+			offset += 4 - int(attrLen%4)
+		}
+	}
+}
+
+// parseAddressAttr parses MAPPED-ADDRESS or XOR-MAPPED-ADDRESS attribute value
+func parseAddressAttr(data []byte, xor bool, transactionID []byte) (string, int, error) {
+	if len(data) < 4 {
+		return "", 0, nil
+	}
+
+	family := data[1]
+	portBytes := data[2:4]
+	var ip []byte
+
+	switch family {
+	case FamilyIPv4:
+		if len(data) < 8 {
+			return "", 0, nil
+		}
+		ip = make([]byte, 4)
+		copy(ip, data[4:8])
+	case FamilyIPv6:
+		if len(data) < 20 {
+			return "", 0, nil
+		}
+		ip = make([]byte, 16)
+		copy(ip, data[4:20])
+	default:
+		return "", 0, nil
+	}
+
+	port := binary.BigEndian.Uint16(portBytes)
+
+	if xor {
+		// XOR port with magic cookie high 16 bits
+		port ^= 0x2112
+		// XOR IP with magic cookie
+		for i := 0; i < 4 && i < len(ip); i++ {
+			ip[i] ^= magicCookieBytes[i]
+		}
+		// For IPv6, also XOR with transaction ID
+		if family == FamilyIPv6 && transactionID != nil {
+			for i := 4; i < 16 && i-4 < len(transactionID); i++ {
+				ip[i] ^= transactionID[i-4]
+			}
+		}
+	}
+
+	return net.IP(ip).String(), int(port), nil
 }
