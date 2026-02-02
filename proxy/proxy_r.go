@@ -43,10 +43,8 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 	case 0x00: // TCP
 		switch remotePort {
 		case 1080:
-			go func() {
-				defer new_quic_stream.Close()
-				proxy_handle.Serve(new_quic_stream, remoteAddrStr)
-			}()
+			proxy_handle.Serve(new_quic_stream, remoteAddrStr)
+			new_quic_stream.Close()
 		default:
 			// 用户反馈无法连接3389端口，修改端口后可以连接
 			// 这里是为了方便用户，直接访问13389端口就可以连接到3389端口
@@ -59,7 +57,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 			})
 			if err == nil {
 				go ForwardT2Q(new_conn, new_quic_stream)
-				go ForwardQ2T(new_quic_stream, new_conn)
+				ForwardQ2T(new_quic_stream, new_conn)
 			} else {
 				// 区分连接关闭和其他错误
 				if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -77,7 +75,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 		})
 		if err == nil {
 			go ForwardT2Q(new_conn, new_quic_stream)
-			go ForwardQ2T(new_quic_stream, new_conn)
+			ForwardQ2T(new_quic_stream, new_conn)
 		} else {
 			// 区分连接关闭和其他错误
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
