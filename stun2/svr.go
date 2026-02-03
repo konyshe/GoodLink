@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
 )
 
 const (
@@ -382,112 +381,6 @@ func itoa(n int) string {
 	}
 
 	return string(result)
-}
-
-// TestLocalStun tests the STUN server running on localhost
-func TestLocalStun(port int) {
-	conn, err := net.ListenUDP("udp4", nil)
-	if err != nil {
-		log.Printf("Failed to create UDP connection: %v", err)
-		return
-	}
-	defer conn.Close()
-
-	// STUN message header
-	var buf bytes.Buffer
-	// Message type: Binding Request (0x0001), message length: 0x0000
-	buf.Write([]byte{0x00, 0x01, 0x00, 0x00})
-	// Magic Cookie
-	buf.Write(magicCookieBytes)
-	// Transaction ID (12 bytes)
-	transactionID := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c}
-	buf.Write(transactionID)
-
-	// Send to local STUN server
-	serverAddr := net.JoinHostPort("127.0.0.1", itoa(port))
-	udpAddr, err := net.ResolveUDPAddr("udp4", serverAddr)
-	if err != nil {
-		log.Printf("Failed to resolve server address: %v", err)
-		return
-	}
-
-	_, err = conn.WriteToUDP(buf.Bytes(), udpAddr)
-	if err != nil {
-		log.Printf("Failed to send STUN request: %v", err)
-		return
-	}
-
-	// Wait for response
-	response := make([]byte, 1024)
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	n, _, err := conn.ReadFromUDP(response)
-	if err != nil {
-		log.Printf("Failed to receive STUN response: %v", err)
-		return
-	}
-
-	log.Printf("Received %d bytes response from STUN server", n)
-
-	// Parse response
-	if n < 20 {
-		log.Printf("Response too short")
-		return
-	}
-
-	// Verify message type is Binding Response
-	msgType := binary.BigEndian.Uint16(response[0:2])
-	if msgType != MsgTypeBindingResponse {
-		log.Printf("Unexpected message type: 0x%04x", msgType)
-		return
-	}
-
-	// Verify magic cookie
-	if !bytes.Equal(response[4:8], magicCookieBytes) {
-		log.Printf("Invalid magic cookie in response")
-		return
-	}
-
-	// Verify transaction ID
-	if !bytes.Equal(response[8:20], transactionID) {
-		log.Printf("Transaction ID mismatch")
-		return
-	}
-
-	log.Printf("STUN response verified successfully!")
-
-	// Parse attributes
-	msgLen := binary.BigEndian.Uint16(response[2:4])
-	log.Printf("Message length: %d bytes", msgLen)
-
-	attrs := response[20 : 20+msgLen]
-	offset := 0
-	for offset < len(attrs)-4 {
-		attrType := binary.BigEndian.Uint16(attrs[offset : offset+2])
-		attrLen := binary.BigEndian.Uint16(attrs[offset+2 : offset+4])
-
-		switch attrType {
-		case AttrMappedAddress:
-			ip, port, _ := parseAddressAttr(attrs[offset+4:offset+4+int(attrLen)], false, nil)
-			log.Printf("MAPPED-ADDRESS: %s:%d", ip, port)
-		case AttrXorMappedAddress:
-			ip, port, _ := parseAddressAttr(attrs[offset+4:offset+4+int(attrLen)], true, transactionID)
-			log.Printf("XOR-MAPPED-ADDRESS: %s:%d", ip, port)
-		case AttrChangedAddress:
-			ip, port, _ := parseAddressAttr(attrs[offset+4:offset+4+int(attrLen)], false, nil)
-			log.Printf("CHANGED-ADDRESS: %s:%d", ip, port)
-		case AttrFingerprint:
-			fp := binary.BigEndian.Uint32(attrs[offset+4 : offset+8])
-			log.Printf("FINGERPRINT: 0x%08x", fp)
-		default:
-			log.Printf("Unknown attribute: 0x%04x (len=%d)", attrType, attrLen)
-		}
-
-		// Move to next attribute (4-byte aligned)
-		offset += 4 + int(attrLen)
-		if attrLen%4 != 0 {
-			offset += 4 - int(attrLen%4)
-		}
-	}
 }
 
 // parseAddressAttr parses MAPPED-ADDRESS or XOR-MAPPED-ADDRESS attribute value
