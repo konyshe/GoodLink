@@ -169,9 +169,10 @@ func (s *StunServer) handleStunRequest(conn *net.UDPConn, remoteAddr *net.UDPAdd
 	}
 
 	// Only correlate packets that arrive on the configured primary/secondary ports
-	if localPort == s.primaryPort {
+	switch localPort {
+	case s.primaryPort:
 		state.primaryAddr = remoteAddr
-	} else if localPort == s.secondaryPort {
+	case s.secondaryPort:
 		state.secondaryAddr = remoteAddr
 	}
 
