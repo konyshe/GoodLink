@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 const (
@@ -35,6 +36,12 @@ var (
 	magicCookieBytes = []byte{0x21, 0x12, 0xA4, 0x42}
 )
 
+type txnState struct {
+	primaryAddr   *net.UDPAddr
+	secondaryAddr *net.UDPAddr
+	firstSeen     time.Time
+}
+
 // StunServer represents a STUN server instance
 type StunServer struct {
 	primaryAddr   string
@@ -43,6 +50,11 @@ type StunServer struct {
 	secondaryConn *net.UDPConn
 	wg            sync.WaitGroup
 	stopCh        chan struct{}
+
+	mu            sync.Mutex
+	txns          map[string]*txnState
+	primaryPort   int
+	secondaryPort int
 }
 
 // StartSvr starts the STUN server on the specified IP and port
@@ -52,6 +64,9 @@ func StartSvr(ip string, port int) {
 		primaryAddr:   net.JoinHostPort(ip, itoa(port)),
 		secondaryAddr: net.JoinHostPort(ip, itoa(port+1)),
 		stopCh:        make(chan struct{}),
+		txns:          make(map[string]*txnState),
+		primaryPort:   port,
+		secondaryPort: port + 1,
 	}
 
 	var err error
@@ -126,6 +141,56 @@ func (s *StunServer) handleStunRequest(conn *net.UDPConn, remoteAddr *net.UDPAdd
 
 	transactionID := data[8:20]
 
+	// Track requests by Transaction ID across primary/secondary ports within 3 seconds
+	localAddr, ok := conn.LocalAddr().(*net.UDPAddr)
+	if !ok {
+		log.Printf("Unexpected local address type: %T", conn.LocalAddr())
+		return
+	}
+	localPort := localAddr.Port
+
+	now := time.Now()
+
+	s.mu.Lock()
+	// Simple expiration of old entries
+	for k, v := range s.txns {
+		if now.Sub(v.firstSeen) > 3*time.Second {
+			delete(s.txns, k)
+		}
+	}
+
+	tidKey := string(transactionID)
+	state, exists := s.txns[tidKey]
+	if !exists || now.Sub(state.firstSeen) > 3*time.Second {
+		state = &txnState{
+			firstSeen: now,
+		}
+		s.txns[tidKey] = state
+	}
+
+	// Only correlate packets that arrive on the configured primary/secondary ports
+	if localPort == s.primaryPort {
+		state.primaryAddr = remoteAddr
+	} else if localPort == s.secondaryPort {
+		state.secondaryAddr = remoteAddr
+	}
+
+	if state.primaryAddr != nil && state.secondaryAddr != nil && now.Sub(state.firstSeen) <= 3*time.Second {
+		natType := "NAT1-NAT3"
+		if !addrEqual(state.primaryAddr, state.secondaryAddr) {
+			natType = "NAT4"
+		}
+
+		log.Printf("primary(%d)->%s secondary(%d)->%s => %s",
+			s.primaryPort, state.primaryAddr.String(),
+			s.secondaryPort, state.secondaryAddr.String(),
+			natType,
+		)
+
+		delete(s.txns, tidKey)
+	}
+	s.mu.Unlock()
+
 	// Only handle Binding Request
 	if msgType != MsgTypeBindingRequest {
 		log.Printf("Unsupported message type 0x%04x from %s", msgType, remoteAddr.String())
@@ -141,8 +206,6 @@ func (s *StunServer) handleStunRequest(conn *net.UDPConn, remoteAddr *net.UDPAdd
 		log.Printf("Error sending response to %s: %v", remoteAddr.String(), err)
 		return
 	}
-
-	log.Printf("Responded to %s with mapped address", remoteAddr.String())
 }
 
 // buildBindingResponse constructs a STUN Binding Response message
@@ -357,6 +420,13 @@ func buildFingerprint(crc uint32) []byte {
 // calcFingerprint calculates the STUN fingerprint (CRC-32 XOR 0x5354554e)
 func calcFingerprint(data []byte) uint32 {
 	return crc32.ChecksumIEEE(data) ^ FingerprintXor
+}
+
+func addrEqual(a, b *net.UDPAddr) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	return a.IP.Equal(b.IP) && a.Port == b.Port
 }
 
 // itoa converts an integer to a string (simple implementation)
