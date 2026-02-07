@@ -2,12 +2,14 @@ package netstack
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/icmp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
@@ -51,6 +53,7 @@ func Start() error {
 		TransportProtocols: []stack.TransportProtocolFactory{
 			tcp.NewProtocol,
 			udp.NewProtocol,
+			icmp.NewProtocol4,
 		},
 	})
 
@@ -65,6 +68,19 @@ func Start() error {
 	nicID := tcpip.NICID(1)
 	if err := netstack_stack.CreateNIC(nicID, wintunEP); err != nil {
 		return fmt.Errorf("设备注册: %v", err)
+	}
+
+	// 将虚拟IP地址绑定到NIC，使协议栈能够响应ICMP Echo Request（ping）
+	remoteIP := net.ParseIP(GetRemoteIP()).To4()
+	protoAddr := tcpip.ProtocolAddress{
+		Protocol: ipv4.ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address:   tcpip.AddrFromSlice(remoteIP),
+			PrefixLen: 32,
+		},
+	}
+	if err := netstack_stack.AddProtocolAddress(nicID, protoAddr, stack.AddressProperties{}); err != nil {
+		return fmt.Errorf("绑定IP地址: %v", err)
 	}
 
 	setNetStack(netstack_stack, nicID)
