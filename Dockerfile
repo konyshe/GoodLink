@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:bookworm AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.25-bookworm AS builder
 
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 RUN sed -i 's@deb.debian.org@mirrors.ustc.edu.cn@g' /etc/apt/sources.list.d/debian.sources
