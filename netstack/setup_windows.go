@@ -89,7 +89,7 @@ const (
 func InitWintunDll() error {
 	// 检查文件是否已存在
 	if _, err := os.Stat(wintunDllName); err == nil {
-		log.Printf("wintun.dll 已存在，跳过下载")
+		log.Printf("%s 已存在，跳过下载", wintunDllName)
 		return nil
 	}
 
