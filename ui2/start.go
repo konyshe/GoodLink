@@ -264,27 +264,13 @@ func start_button_click() {
 	case 0:
 		switch GetWorkType() {
 		case workTypeLocal:
-			if m_ui_local.GetLocalPort() == "" {
-				//SetLogLabel("请填写访问端口号")
-				//return
-			}
 		case workTypeRemote:
-			switch m_ui_remote.GetRemoteType() {
-			case "代理模式":
-			case "转发模式":
-			}
 		}
 
 		// 保存配置文件, 下次启动加载
 		configByte, _ := json.Marshal(&config.ConfigInfo{
-			WorkType:   GetWorkType(),
-			TunKey:     m_validated_key.Text,
-			ConnType:   m_ui_local.GetConnType2(),
-			LocalIP:    m_ui_local.GetLocalIP(),
-			LocalPort:  m_ui_local.GetLocalPort(),
-			RemoteType: m_ui_remote.GetRemoteType(),
-			RemoteIP:   m_ui_remote.GetRemoteIP(),
-			RemotePort: m_ui_remote.GetRemotePort(),
+			WorkType: GetWorkType(),
+			TunKey:   m_validated_key.Text,
 		})
 		log.Println(string(configByte))
 		os.Remove("goodlink.json")

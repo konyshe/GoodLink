@@ -4,16 +4,12 @@ package ui2
 
 import (
 	"fmt"
-	"regexp"
 	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
-
-// 匹配日志日期前缀的正则表达式，如 "2024/01/01 " 或 "2024-01-01 "，保留时间部分
-var logDateTimeRegex = regexp.MustCompile(`^\d{4}[/-]\d{2}[/-]\d{2}\s+`)
 
 const (
 	// 日志最大条目数，避免内存占用过大

@@ -42,8 +42,6 @@ var (
 	m_btn_local         *widget.Button
 	m_btn_remote        *widget.Button
 	m_validated_key     *widget.Entry
-	m_ui_local          *LocalUI
-	m_ui_remote         *RemoteUI
 	m_button_key_create *widget.Button
 	m_button_key_paste  *widget.Button
 	m_btn_local_bg      *canvas.Rectangle // 本地端按钮高亮背景
@@ -215,9 +213,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		log.Println("自动生成密钥:", configInfo.TunKey)
 	}
 
-	m_ui_local = NewLocalUI(myWindow, &configInfo)
-	m_ui_remote = NewRemoteUI(myWindow, &configInfo)
-
 	// 创建各个UI组件
 	workTypeSelector := createWorkTypeSelector(&configInfo)
 	keyInputSection := createKeyInputSection(&configInfo)
@@ -225,8 +220,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 
 	// 设置需要控制的UI组件列表（必须在所有组件创建后设置）
 	setUIComponents([]uiComponent{
-		m_ui_local,
-		m_ui_remote,
 		&entryWrapper{entry: m_validated_key},
 		&buttonWrapper{btn: m_button_key_create},
 		&buttonWrapper{btn: m_button_key_paste},
@@ -248,11 +241,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	// 根据工作模式显示对应的配置
 	updateConfigDisplay := func() {
 		configContainer.RemoveAll()
-		if GetWorkType() == workTypeLocal {
-			configContainer.Add(m_ui_local.GetContainer())
-		} else {
-			configContainer.Add(m_ui_remote.GetContainer())
-		}
 		configContainer.Refresh()
 	}
 
