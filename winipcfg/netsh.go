@@ -56,10 +56,13 @@ const (
 
 func (luid LUID) fallbackSetDNSForFamily(family AddressFamily, dnses []netip.Addr) error {
 	var templateFlush string
-	if family == windows.AF_INET {
+	switch family {
+	case windows.AF_INET:
 		templateFlush = netshCmdTemplateFlush4
-	} else if family == windows.AF_INET6 {
+	case windows.AF_INET6:
 		templateFlush = netshCmdTemplateFlush6
+	default:
+		return fmt.Errorf("invalid family: %d", family)
 	}
 
 	cmds := make([]string, 0, 1+len(dnses))
