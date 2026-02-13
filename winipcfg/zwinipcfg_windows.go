@@ -155,7 +155,6 @@ func deleteUnicastIPAddressEntry(row *MibUnicastIPAddressRow) (ret error) {
 
 func freeMibTable(memory unsafe.Pointer) {
 	syscall.SyscallN(procFreeMibTable.Addr(), uintptr(memory))
-	return
 }
 
 func getAnycastIPAddressEntry(row *MibAnycastIPAddressRow) (ret error) {
@@ -240,17 +239,14 @@ func getUnicastIPAddressTable(family AddressFamily, table **mibUnicastIPAddressT
 
 func initializeIPForwardEntry(route *MibIPforwardRow2) {
 	syscall.SyscallN(procInitializeIpForwardEntry.Addr(), uintptr(unsafe.Pointer(route)))
-	return
 }
 
 func initializeIPInterfaceEntry(row *MibIPInterfaceRow) {
 	syscall.SyscallN(procInitializeIpInterfaceEntry.Addr(), uintptr(unsafe.Pointer(row)))
-	return
 }
 
 func initializeUnicastIPAddressEntry(row *MibUnicastIPAddressRow) {
 	syscall.SyscallN(procInitializeUnicastIpAddressEntry.Addr(), uintptr(unsafe.Pointer(row)))
-	return
 }
 
 func notifyIPInterfaceChange(family AddressFamily, callback uintptr, callerContext uintptr, initialNotification bool, notificationHandle *windows.Handle) (ret error) {
