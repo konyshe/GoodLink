@@ -61,8 +61,6 @@ func (luid LUID) fallbackSetDNSForFamily(family AddressFamily, dnses []netip.Add
 		templateFlush = netshCmdTemplateFlush4
 	case windows.AF_INET6:
 		templateFlush = netshCmdTemplateFlush6
-	default:
-		return fmt.Errorf("invalid family: %d", family)
 	}
 
 	cmds := make([]string, 0, 1+len(dnses))
