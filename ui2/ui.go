@@ -21,6 +21,10 @@ import (
 	"github.com/atotto/clipboard"
 )
 
+const (
+	goodlinkFileName = "goodlink.json"
+)
+
 // entryWrapper 包装 Entry 以实现 uiComponent 接口
 type entryWrapper struct {
 	entry *widget.Entry
@@ -204,7 +208,7 @@ func createKeyButtons() fyne.CanvasObject {
 
 func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	var configInfo config.ConfigInfo
-	json.Unmarshal(go2.FileReadAll("goodlink.json"), &configInfo)
+	json.Unmarshal(go2.FileReadAll(goodlinkFileName), &configInfo)
 	log.Println(configInfo)
 
 	// 如果密钥为空，自动生成密钥

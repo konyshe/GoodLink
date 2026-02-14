@@ -31,9 +31,12 @@ type ConfigInfo struct {
 	DingTalkUrl string    `bson:"ding_talk_url" json:"ding_talk_url"`
 }
 
-var (
+const (
 	configFileName = "config.json"
-	configInfo     ConfigInfo
+)
+
+var (
+	configInfo ConfigInfo
 )
 
 func DeleteLocalConfig() {

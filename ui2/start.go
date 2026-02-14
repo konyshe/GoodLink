@@ -273,8 +273,8 @@ func start_button_click() {
 			TunKey:   m_validated_key.Text,
 		})
 		log.Println(string(configByte))
-		os.Remove("goodlink.json")
-		go2.FileAppend("goodlink.json", configByte)
+		os.Remove(goodlinkFileName)
+		go2.FileAppend(goodlinkFileName, configByte)
 	}
 
 	switch m_stats_start_button {
