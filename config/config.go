@@ -45,10 +45,10 @@ func Init() error {
 	var res []byte
 	var err error
 
-	if res = go2.FileReadAll("config.json"); res == nil {
+	if res = go2.FileReadAll(configFileName); res == nil {
 		DeleteLocalConfig()
 		go2http.DownloadSimple(fmt.Sprintf("https://gitee.com/konyshe/goodlink_conf/raw/master/%s", configFileName), configFileName)
-		res = go2.FileReadAll("config.json")
+		res = go2.FileReadAll(configFileName)
 	}
 
 	if err = json.Unmarshal(go2aes.Decrypt7(res, "goodlink"), &configInfo); err != nil {
@@ -61,8 +61,8 @@ func Init() error {
 		configInfo.Redis.TlsAddr = "goodlink.kony.vip:16378"
 		body, _ := json.Marshal(configInfo)
 		temp3 := go2aes.Encrypt7(body, "goodlink")
-		os.Remove("config.json")
-		go2.FileAppend("config.json", []byte(temp3))
+		os.Remove(configFileName)
+		go2.FileAppend(configFileName, []byte(temp3))
 	*/
 	return nil
 }
