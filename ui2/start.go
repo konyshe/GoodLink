@@ -160,16 +160,17 @@ func updateButtonState(state buttonState) {
 }
 
 // updateConnectionStatus 根据连接状态更新按钮（Local端直接映射，Remote端在连接成功后才切换为运行状态）
+// 由 handleProcessOutput goroutine 调用，UI 更新通过 fyne.Do 调度到主线程
 func updateConnectionStatus(status string) {
 	switch GetWorkType() {
 	case workTypeLocal:
 		switch status {
 		case pro.TagStatusConnecting:
-			updateButtonState(buttonStateConnecting)
+			fyne.Do(func() { updateButtonState(buttonStateConnecting) })
 		case pro.TagStatusConnected:
-			updateButtonState(buttonStateConnected)
+			fyne.Do(func() { updateButtonState(buttonStateConnected) })
 		case pro.TagStatusConnectingNAT4:
-			updateButtonState(buttonStateConnectingNAT4)
+			fyne.Do(func() { updateButtonState(buttonStateConnectingNAT4) })
 		case pro.TagStatusVersionMismatch:
 			// 版本不一致，禁用自动重启并停止进程
 			m_lock_start.Lock()
@@ -183,7 +184,7 @@ func updateConnectionStatus(status string) {
 	case workTypeRemote:
 		switch status {
 		case pro.TagStatusRunning:
-			updateButtonState(buttonStateRunning)
+			fyne.Do(func() { updateButtonState(buttonStateRunning) })
 		}
 	}
 }
@@ -308,36 +309,40 @@ func start_button_click() {
 			m_auto_restart_enabled = false
 			StopCmdProcess()
 
-			m_stats_start_button = 0
-			enable_other()
-			updateButtonState(buttonStateIdle)
-			m_button_start.Enable()
+			fyne.Do(func() {
+				m_stats_start_button = 0
+				enable_other()
+				updateButtonState(buttonStateIdle)
+				m_button_start.Enable()
+			})
 		}()
 	}
 }
 
-// waitForProcessAndHandleExit 等待进程结束并处理退出逻辑
+// waitForProcessAndHandleExit 等待进程结束并处理退出逻辑（在 goroutine 中运行，UI 更新通过 fyne.Do 调度到主线程）
 func waitForProcessAndHandleExit(isRestart bool) {
 	time.Sleep(time.Second * 1)
 	if m_stats_start_button != 1 {
 		if !isRestart {
-			m_activity_start_button.Stop()
-			m_activity_start_button.Hide()
+			fyne.Do(func() {
+				m_activity_start_button.Stop()
+				m_activity_start_button.Hide()
+			})
 		}
 		return
 	}
-	m_button_start.Enable()
-
-	// 根据模式设置初始按钮状态
-	if GetWorkType() == workTypeLocal {
-		updateButtonState(buttonStateConnecting)
-	} else {
-		updateButtonState(buttonStateStarting)
-	}
-	if !isRestart {
-		m_activity_start_button.Stop()
-		m_activity_start_button.Hide()
-	}
+	fyne.Do(func() {
+		m_button_start.Enable()
+		if GetWorkType() == workTypeLocal {
+			updateButtonState(buttonStateConnecting)
+		} else {
+			updateButtonState(buttonStateStarting)
+		}
+		if !isRestart {
+			m_activity_start_button.Stop()
+			m_activity_start_button.Hide()
+		}
+	})
 
 	// 等待子进程结束
 	m_cmd_mutex.Lock()
@@ -358,14 +363,16 @@ func waitForProcessAndHandleExit(isRestart bool) {
 		autoRestartProcess()
 	} else {
 		// 正常停止，恢复 UI
-		m_stats_start_button = 0
-		updateButtonState(buttonStateIdle)
-		m_button_start.Enable()
-		enable_other()
+		fyne.Do(func() {
+			m_stats_start_button = 0
+			updateButtonState(buttonStateIdle)
+			m_button_start.Enable()
+			enable_other()
+		})
 	}
 }
 
-// autoRestartProcess 自动重启进程（当进程异常退出时调用）
+// autoRestartProcess 自动重启进程（当进程异常退出时调用，在 goroutine 中运行）
 func autoRestartProcess() {
 	// 短暂延迟，避免频繁重启
 	time.Sleep(500 * time.Millisecond)
@@ -383,20 +390,22 @@ func autoRestartProcess() {
 	// 重启进程
 	if err := startCmdProcess(); err != nil {
 		UILogPrintF("自动重启失败: %v", err)
-		// 重启失败，恢复UI
-		m_stats_start_button = 0
-		updateButtonState(buttonStateIdle)
-		m_button_start.Enable()
-		enable_other()
+		fyne.Do(func() {
+			m_stats_start_button = 0
+			updateButtonState(buttonStateIdle)
+			m_button_start.Enable()
+			enable_other()
+		})
 		return
 	}
 
-	// 根据模式设置按钮状态
-	if GetWorkType() == workTypeLocal {
-		updateButtonState(buttonStateConnecting)
-	} else {
-		updateButtonState(buttonStateStarting)
-	}
+	fyne.Do(func() {
+		if GetWorkType() == workTypeLocal {
+			updateButtonState(buttonStateConnecting)
+		} else {
+			updateButtonState(buttonStateStarting)
+		}
+	})
 
 	// 启动新的等待goroutine
 	go waitForProcessAndHandleExit(true)

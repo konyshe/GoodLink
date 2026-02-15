@@ -38,11 +38,12 @@ func appendLogEntry(content string) {
 	}
 	m_log_mutex.Unlock()
 
-	// 在锁外刷新列表，避免死锁
+	// 在锁外、主线程上刷新列表（UILogPrintF 可能从 goroutine 调用）
 	if m_log_list != nil {
-		m_log_list.Refresh()
-		// 滚动到最底部
-		m_log_list.ScrollToBottom()
+		fyne.Do(func() {
+			m_log_list.Refresh()
+			m_log_list.ScrollToBottom()
+		})
 	}
 }
 
