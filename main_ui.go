@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	M_APP_TITLE = "GoodLink"
+	M_APP_TITLE = "Goodlink"
 )
 
 func main() {
