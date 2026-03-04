@@ -4,5 +4,5 @@ Website = "https://goodlink.kony.vip"
 Icon = "assert/favicon.ico"
 Name = "goodlink-windows-amd64-ui"
 ID = "goodlink.kony.vip"
-Version = "2.4.15"
+Version = "2.4.16"
 Build = 1
