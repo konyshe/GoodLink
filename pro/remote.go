@@ -223,7 +223,7 @@ func handleConnection(sessionID string, quicConn *quic.Conn, healthStream *quic.
 	go proxy.ProcessProxyServer(quicConn)
 
 	// 阻塞等待健康检查结束
-	tun.ProcessHealth(healthStream)
+	tun.ProcessHealth(healthStream, []byte(sessionID))
 
 	port := quicConn.LocalAddr().(*net.UDPAddr).Port
 	m_upnp_bind.RemoveKeepPort(port)

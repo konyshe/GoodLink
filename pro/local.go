@@ -141,11 +141,12 @@ func handleLocalState4_ConnectionTimeout() {
 	log.Printf("State 4: 连接超时")
 }
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, *quic.Conn, *quic.Stream, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, *quic.Conn, *quic.Stream, []byte, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
-	SessionID := string(go2.RandomBytes(24))
+	sessionIDBytes := go2.RandomBytes(24)
+	SessionID := string(sessionIDBytes)
 	log.Printf("会话ID: %s", SessionID)
 
 	redisJson := RedisJsonType{
@@ -166,10 +167,10 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	// 阶段1: 处理 State 0 - 注册会话并等待认领
 	sessionClaimed, err := handleState0_RegisterSession(SessionID, &redisJson, conn_type, addr)
 	if err != nil {
-		return tun_active, tun_passive, nil, nil, err
+		return tun_active, tun_passive, nil, nil, nil, err
 	}
 	if !sessionClaimed {
-		return tun_active, tun_passive, nil, nil, nil
+		return tun_active, tun_passive, nil, nil, nil, nil
 	}
 
 	// 阶段2: 使用独立的session key进行后续通信
@@ -178,7 +179,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 		// 读取会话状态
 		if RedisSessionGet(SessionID, &redisJson) != nil {
-			return tun_active, tun_passive, nil, nil, fmt.Errorf("会话超时")
+			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("会话超时")
 		}
 
 		// 根据状态进行处理
@@ -186,11 +187,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case -1: // Remote端检测到版本不一致
 			log.Printf("%s%s", TagStatusPrefix, TagStatusVersionMismatch)
 			RedisSessionDel(SessionID)
-			return tun_active, tun_passive, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
+			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
 
 		case 1:
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {
-				return tun_active, tun_passive, nil, nil, err
+				return tun_active, tun_passive, nil, nil, nil, err
 			}
 
 		case 2:
@@ -199,20 +200,20 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case 3:
 			quicConn, healthStream, success := handleLocalState3_ConnectionSuccess(tun_active, tun_passive)
 			if success {
-				return tun_active, tun_passive, quicConn, healthStream, nil
+				return tun_active, tun_passive, quicConn, healthStream, sessionIDBytes, nil
 			}
-			return tun_active, tun_passive, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil, nil
 
 		case 4:
 			handleLocalState4_ConnectionTimeout()
-			return tun_active, tun_passive, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil, nil
 
 		default:
 			log.Printf("等待Remote端状态: State %d, Local: %v => Remote: %v", redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
 
-	return tun_active, tun_passive, nil, nil, nil
+	return tun_active, tun_passive, nil, nil, nil, nil
 }
 
 func GetLocalStats() int {
@@ -252,7 +253,7 @@ func RunLocal() error {
 
 		count++
 
-		tun_active, tun_passive, quic_conn, health, err := GetLocalQuicConn(udp_conn, &addr, count)
+		tun_active, tun_passive, quic_conn, health, sessionID, err := GetLocalQuicConn(udp_conn, &addr, count)
 		if err != nil {
 			Release(tun_active, tun_passive, nil)
 			return err
@@ -269,7 +270,7 @@ func RunLocal() error {
 		log.Printf("Remote端IP: %s", netstack.GetRemoteIP())
 
 		m_local_state = 2
-		tun.ProcessHealth(health)
+		tun.ProcessHealth(health, sessionID)
 		if m_local_state != 0 {
 			m_local_state = 1
 			log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
