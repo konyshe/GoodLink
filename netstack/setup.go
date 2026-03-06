@@ -2,7 +2,10 @@ package netstack
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"sync"
+	"time"
 
 	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -14,19 +17,24 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
-func setNetStack(s *stack.Stack, nicID tcpip.NICID) error {
+const (
+	healthCheckInterval = 30 * time.Second
+	nicID               = tcpip.NICID(1)
+)
+
+func setNetStack(s *stack.Stack, id tcpip.NICID) error {
 	s.SetRouteTable([]tcpip.Route{
 		{
 			Destination: header.IPv4EmptySubnet,
-			NIC:         nicID,
+			NIC:         id,
 		},
 	})
 
-	if err := netstack_stack.SetPromiscuousMode(nicID, true); err != nil {
+	if err := s.SetPromiscuousMode(id, true); err != nil {
 		return fmt.Errorf("promisc: %s", err)
 	}
 
-	if err := netstack_stack.SetSpoofing(nicID, true); err != nil {
+	if err := s.SetSpoofing(id, true); err != nil {
 		return fmt.Errorf("spoofing: %s", err)
 	}
 
@@ -34,16 +42,13 @@ func setNetStack(s *stack.Stack, nicID tcpip.NICID) error {
 }
 
 var (
-	init_stack_suss = false
-	netstack_stack  *stack.Stack
+	mu             sync.Mutex
+	initStackDone  bool
+	netstack_stack *stack.Stack
+	currentDevice  Device
 )
 
-func Start() error {
-	if init_stack_suss {
-		return nil
-	}
-
-	// 先清理之前可能残留的虚拟网卡
+func initStack() error {
 	CleanupOldAdapter(GetName())
 
 	netstack_stack = stack.New(stack.Options{
@@ -57,20 +62,18 @@ func Start() error {
 		},
 	})
 
-	wintunEP, err := Open(GetName(), 0)
+	dev, err := Open(GetName(), 0)
 	if err != nil {
 		return fmt.Errorf("请管理员权限运行")
 	}
+	currentDevice = dev
 
-	SetTunIP(&wintunEP, GetRemoteIP(), 32)
+	SetTunIP(&dev, GetRemoteIP(), 32)
 
-	// 将TUN设备注册到协议栈中，使用NIC ID 1
-	nicID := tcpip.NICID(1)
-	if err := netstack_stack.CreateNIC(nicID, wintunEP); err != nil {
+	if err := netstack_stack.CreateNIC(nicID, dev); err != nil {
 		return fmt.Errorf("设备注册: %v", err)
 	}
 
-	// 将虚拟IP地址绑定到NIC，使协议栈能够响应ICMP Echo Request（ping）
 	remoteIP := net.ParseIP(GetRemoteIP()).To4()
 	protoAddr := tcpip.ProtocolAddress{
 		Protocol: ipv4.ProtocolNumber,
@@ -83,14 +86,79 @@ func Start() error {
 		return fmt.Errorf("绑定IP地址: %v", err)
 	}
 
-	setNetStack(netstack_stack, nicID)
-
-	init_stack_suss = true
+	if err := setNetStack(netstack_stack, nicID); err != nil {
+		return err
+	}
 
 	return nil
 }
 
+func Start() error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if initStackDone {
+		return nil
+	}
+
+	if err := initStack(); err != nil {
+		return err
+	}
+
+	initStackDone = true
+	go healthCheckLoop()
+
+	return nil
+}
+
+// healthCheckLoop 定期检查协议栈 NIC 状态，如果发现异常则尝试重建
+func healthCheckLoop() {
+	for {
+		time.Sleep(healthCheckInterval)
+
+		mu.Lock()
+		if !initStackDone || netstack_stack == nil {
+			mu.Unlock()
+			continue
+		}
+
+		nicInfo, ok := netstack_stack.NICInfo()[nicID]
+		if !ok || nicInfo.Flags.Running == false {
+			log.Printf("[netstack] 健康检查: NIC %d 异常 (exists=%v), 尝试重建协议栈...", nicID, ok)
+			rebuildStack()
+		}
+		mu.Unlock()
+	}
+}
+
+// rebuildStack 重建整个协议栈（调用方需持有 mu 锁）
+func rebuildStack() {
+	if currentDevice != nil {
+		currentDevice.Close()
+		currentDevice = nil
+	}
+
+	if netstack_stack != nil {
+		netstack_stack.Close()
+		netstack_stack = nil
+	}
+
+	if err := initStack(); err != nil {
+		log.Printf("[netstack] 重建协议栈失败: %v", err)
+		initStackDone = false
+		return
+	}
+
+	log.Printf("[netstack] 协议栈重建成功")
+}
+
 func SetForWarder(stun_quic_conn *quic.Conn) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if netstack_stack == nil {
+		return
+	}
 	netstack_stack.SetTransportProtocolHandler(tcp.ProtocolNumber, NewTcpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
 	netstack_stack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUdpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
 }

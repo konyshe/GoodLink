@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"goodlink/proxy"
 	"log"
+	"time"
 
 	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -14,10 +15,15 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
+const quicOpenStreamTimeout = 10 * time.Second
+
 func ForwardTCPConn(originConn *TcpConn, stun_quic_conn *quic.Conn) {
-	new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), quicOpenStreamTimeout)
+	defer cancel()
+
+	new_quic_stream, err := stun_quic_conn.OpenStreamSync(ctx)
 	if err != nil {
-		log.Println("打开quic流失败", err)
+		log.Printf("[netstack] TCP转发打开quic流失败 %s:%d: %v", originConn.ID().LocalAddress, originConn.ID().LocalPort, err)
 		originConn.Close()
 		return
 	}

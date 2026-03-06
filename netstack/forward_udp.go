@@ -13,10 +13,15 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
+const quicOpenStreamTimeoutUDP = quicOpenStreamTimeout
+
 func ForwardUdpConn(originConn *udpConn, stun_quic_conn *quic.Conn) {
-	new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), quicOpenStreamTimeoutUDP)
+	defer cancel()
+
+	new_quic_stream, err := stun_quic_conn.OpenStreamSync(ctx)
 	if err != nil {
-		log.Println("打开quic流失败", err)
+		log.Printf("[netstack] UDP转发打开quic流失败 %s:%d: %v", originConn.ID().LocalAddress, originConn.ID().LocalPort, err)
 		originConn.Close()
 		return
 	}
