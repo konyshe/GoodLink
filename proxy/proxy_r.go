@@ -31,6 +31,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 		} else {
 			log.Error("read quic head error: ", err)
 		}
+		new_quic_stream.CancelRead(0)
 		new_quic_stream.Close()
 		return
 	}
@@ -44,6 +45,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 		switch remotePort {
 		case 1080:
 			proxy_handle.Serve(new_quic_stream, remoteAddrStr)
+			new_quic_stream.CancelRead(0)
 			new_quic_stream.Close()
 		default:
 			// 用户反馈无法连接3389端口，修改端口后可以连接
@@ -65,6 +67,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 				} else {
 					log.Error("dial tcp error: ", err)
 				}
+				new_quic_stream.CancelRead(0)
 				new_quic_stream.Close()
 			}
 		}
@@ -83,6 +86,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 			} else {
 				log.Error("dial udp error: ", err)
 			}
+			new_quic_stream.CancelRead(0)
 			new_quic_stream.Close()
 		}
 	}

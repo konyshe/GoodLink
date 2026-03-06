@@ -47,6 +47,7 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn *quic.Conn) {
 	if _, err := new_quic_stream.Write(ioBuf[:7]); err != nil {
 		log.Println("写入头部失败", err)
 		originConn.Close()
+		new_quic_stream.CancelRead(0)
 		new_quic_stream.Close()
 		return
 	}

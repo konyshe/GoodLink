@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"time"
 
 	"github.com/quic-go/quic-go"
 )
@@ -18,7 +19,9 @@ func ProcessProxyClient(listener net.Listener, stun_quic_conn *quic.Conn) {
 			break
 		}
 
-		new_quic_stream, err := stun_quic_conn.OpenStreamSync(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		new_quic_stream, err := stun_quic_conn.OpenStreamSync(ctx)
+		cancel()
 		if err != nil {
 			log.Println("open stream error:", err)
 			new_tcp_conn.Close()

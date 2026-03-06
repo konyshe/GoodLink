@@ -10,6 +10,7 @@ import (
 
 func ForwardT2Q(tc net.Conn, qc *quic.Stream) {
 	defer func() {
+		qc.CancelRead(0)
 		qc.Close()
 		tc.Close()
 	}()
@@ -21,6 +22,7 @@ func ForwardT2Q(tc net.Conn, qc *quic.Stream) {
 
 func ForwardQ2T(qc *quic.Stream, tc net.Conn) {
 	defer func() {
+		qc.CancelRead(0)
 		qc.Close()
 		tc.Close()
 	}()
