@@ -2,6 +2,7 @@ package netstack
 
 import (
 	"bytes"
+	go2pool "go2/pool"
 	"log"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -26,14 +27,16 @@ func handleConnection(ep tcpip.Endpoint, wq *waiter.Queue) {
 	defer wq.EventUnregister(&waitEntry)
 
 	// 使用缓冲池获取I/O缓冲区，减少内存分配
-	ioBuf := getIOBuffer()
-	defer putIOBuffer(ioBuf)
+	ioBuf := go2pool.Malloc(32 * 1024)
+	defer go2pool.Free(ioBuf)
+
+	buf := bytes.NewBuffer(ioBuf)
 
 	// 连接处理主循环
 	for {
-		var buf bytes.Buffer
+		buf.Reset()
 		// 尝试读取数据（非阻塞模式）
-		_, err := ep.Read(&buf, tcpip.ReadOptions{})
+		_, err := ep.Read(buf, tcpip.ReadOptions{})
 		if err != nil {
 			switch err.(type) {
 			case *tcpip.ErrWouldBlock: // 处理暂时无数据的情况

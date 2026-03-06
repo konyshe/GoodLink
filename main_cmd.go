@@ -5,6 +5,7 @@ package main
 import (
 	"flag"
 	go2log "go2/log"
+	go2pool "go2/pool"
 	"goodlink/config"
 	"goodlink/pro"
 	_ "goodlink/pro"
@@ -46,6 +47,8 @@ func main2() {
 	}()
 
 	pro.SetVersion(GetVersion())
+
+	go2pool.Init()
 
 	// 第三方集成, 关注以下代码即可
 	go func() {
