@@ -6,6 +6,7 @@ import (
 	go2pool "go2/pool"
 	"goodlink/proxy"
 	"log"
+	"os"
 
 	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -24,6 +25,7 @@ func ForwardUdpConn(originConn *udpConn, stun_quic_conn *quic.Conn) {
 	if err != nil {
 		log.Printf("[netstack] UDP转发打开quic流失败 %s:%d: %v", originConn.ID().LocalAddress, originConn.ID().LocalPort, err)
 		originConn.Close()
+		os.Exit(0)
 		return
 	}
 
