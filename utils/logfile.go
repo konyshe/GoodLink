@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"sync"
+
+	go2pool "go2/pool"
 )
 
 const (
@@ -63,6 +65,7 @@ func (w *RotatingFileWriter) Write(p []byte) (n int, err error) {
 		}
 
 		var keepData []byte
+		var poolBuf []byte
 		if keepSize > 0 {
 			// 读取文件末尾的内容
 			oldFile, err := os.Open(w.filename)
@@ -73,7 +76,8 @@ func (w *RotatingFileWriter) Write(p []byte) (n int, err error) {
 					offset = 0
 				}
 				oldFile.Seek(offset, 0)
-				keepData = make([]byte, keepSize)
+				poolBuf = go2pool.Malloc(int(keepSize))
+				keepData = poolBuf
 				if n, err := oldFile.Read(keepData); err == nil && n > 0 {
 					keepData = keepData[:n]
 				} else {
@@ -95,6 +99,7 @@ func (w *RotatingFileWriter) Write(p []byte) (n int, err error) {
 				// 如果写入保留内容失败，继续写入新数据
 			}
 		}
+		go2pool.Free(poolBuf)
 	}
 
 	// 写入新数据

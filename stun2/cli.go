@@ -9,6 +9,8 @@ import (
 	"log"
 	"net"
 	"time"
+
+	go2pool "go2/pool"
 )
 
 func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magicCookie []byte, transactionID []byte) (string, int, error) {
@@ -95,7 +97,8 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 		return nil, 0, err
 	}
 
-	response := make([]byte, 1024)
+	response := go2pool.Malloc(1024)
+	defer go2pool.Free(response)
 
 	conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 	n, err := conn.Read(response)
@@ -187,7 +190,8 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 	buf.Write([]byte{0x00, 0x01, 0x00, 0x00})
 	magicCookie := []byte{0x21, 0x12, 0xA4, 0x42}
 	buf.Write(magicCookie)
-	transactionID := make([]byte, 12)
+	transactionID := go2pool.Malloc(12)
+	defer go2pool.Free(transactionID)
 	rand.Read(transactionID)
 	buf.Write(transactionID)
 

@@ -6,7 +6,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
-	// "net/http"
+
+	go2pool "go2/pool"
 )
 
 type Gateway struct {
@@ -91,7 +92,8 @@ func (this *SearchGateway) send(remoteAddr, searchMessage string, c chan string)
 	if err != nil {
 		log.Fatal("发送msg到组播地址出错")
 	}
-	buf := make([]byte, 1024)
+	buf := go2pool.Malloc(1024)
+	defer go2pool.Free(buf)
 	n, _, err := conn.ReadFromUDP(buf)
 	if err != nil {
 		log.Fatal("从组播地址接搜消息出错")

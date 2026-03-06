@@ -8,6 +8,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	go2pool "go2/pool"
 )
 
 const (
@@ -99,7 +101,8 @@ func (s *StunServer) handleConnection(conn *net.UDPConn, changedAddr string) {
 	defer s.wg.Done()
 	defer conn.Close()
 
-	buf := make([]byte, 1024)
+	buf := go2pool.Malloc(1024)
+	defer go2pool.Free(buf)
 
 	for {
 		select {
