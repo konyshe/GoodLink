@@ -70,11 +70,6 @@ func NewTcpForwarder(s *stack.Stack, stun_quic_conn *quic.Conn) *tcp.Forwarder {
 			return
 		}
 
-		if id.LocalPort == 31337 {
-			// 31337端口仅用于UDP
-			return
-		}
-
 		// 开始三次握手
 		ep, err = r.CreateEndpoint(&wq)
 		if err != nil {
