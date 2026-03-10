@@ -6,53 +6,103 @@ import (
 	go2pool "go2/pool"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/quic-go/quic-go"
 )
 
-// Local端
-func ProcessProxyClient(listener net.Listener, stun_quic_conn *quic.Conn) {
+// ProxyClient 管理 TCP 监听和 QUIC 隧道转发。
+// listener 只创建一次，隧道重连时通过 SetQuicConn/ClearQuicConn 热替换 QUIC 连接。
+type ProxyClient struct {
+	listener net.Listener
+	mu       sync.RWMutex
+	quicConn *quic.Conn
+}
+
+func NewProxyClient(listenAddr string) (*ProxyClient, error) {
+	ln, err := net.Listen("tcp", listenAddr)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("[proxy] TCP代理监听: %s", listenAddr)
+	return &ProxyClient{listener: ln}, nil
+}
+
+func (p *ProxyClient) SetQuicConn(conn *quic.Conn) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.quicConn = conn
+	log.Println("[proxy] QUIC连接已设置，开始转发")
+}
+
+func (p *ProxyClient) ClearQuicConn() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.quicConn = nil
+	log.Println("[proxy] QUIC连接已清除，暂停转发")
+}
+
+func (p *ProxyClient) getQuicConn() *quic.Conn {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.quicConn
+}
+
+func (p *ProxyClient) Serve() {
 	for {
-		new_tcp_conn, err := listener.Accept()
+		tcpConn, err := p.listener.Accept()
 		if err != nil {
-			log.Println("接受连接失败:", err)
-			break
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		new_quic_stream, err := stun_quic_conn.OpenStreamSync(ctx)
-		cancel()
-		if err != nil {
-			log.Println("打开流失败:", err)
-			new_tcp_conn.Close()
-			break
-		}
-
-		// 批量构建头部数据：协议类型(1字节) + IP地址(4字节) + 端口(2字节)
-		// 使用缓冲池获取头部缓冲区
-		ioBuf := go2pool.Malloc(HEAD_LEN)
-		defer go2pool.Free(ioBuf)
-
-		ioBuf[0] = 0x00 // TCP协议标识
-
-		// 写入IPv4地址
-		ipv4Bytes := new_tcp_conn.LocalAddr().(*net.TCPAddr).IP.To4()
-		copy(ioBuf[1:5], ipv4Bytes[:])
-
-		// 写入端口（大端序）
-		binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], uint16(PROXY_PORT))
-
-		// 一次性写入所有头部数据
-		if _, err := new_quic_stream.Write(ioBuf[:HEAD_LEN]); err != nil {
-			log.Println("写入头部失败", err)
-			new_tcp_conn.Close()
-			new_quic_stream.CancelRead(0)
-			new_quic_stream.Close()
+			log.Printf("[proxy] listener已关闭: %v", err)
 			return
 		}
 
-		go ForwardT2Q(new_tcp_conn, new_quic_stream)
-		go ForwardQ2T(new_quic_stream, new_tcp_conn)
+		quicConn := p.getQuicConn()
+		if quicConn == nil {
+			log.Println("[proxy] 隧道未就绪，拒绝TCP连接")
+			tcpConn.Close()
+			continue
+		}
+
+		go p.handleConn(tcpConn, quicConn)
+	}
+}
+
+func (p *ProxyClient) handleConn(tcpConn net.Conn, quicConn *quic.Conn) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	stream, err := quicConn.OpenStreamSync(ctx)
+	if err != nil {
+		log.Println("[proxy] 打开QUIC流失败:", err)
+		tcpConn.Close()
+		return
+	}
+
+	ioBuf := go2pool.Malloc(HEAD_LEN)
+
+	ioBuf[0] = 0x00 // TCP协议标识
+	ipv4Bytes := tcpConn.LocalAddr().(*net.TCPAddr).IP.To4()
+	copy(ioBuf[1:5], ipv4Bytes[:])
+	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], uint16(PROXY_PORT))
+
+	if _, err := stream.Write(ioBuf[:HEAD_LEN]); err != nil {
+		go2pool.Free(ioBuf)
+		log.Println("[proxy] 写入头部失败:", err)
+		tcpConn.Close()
+		stream.CancelRead(0)
+		stream.Close()
+		return
+	}
+	go2pool.Free(ioBuf)
+
+	go ForwardT2Q(tcpConn, stream)
+	go ForwardQ2T(stream, tcpConn)
+}
+
+func (p *ProxyClient) Close() {
+	if p.listener != nil {
+		p.listener.Close()
+		log.Println("[proxy] TCP代理监听已关闭")
 	}
 }
