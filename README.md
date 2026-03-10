@@ -151,6 +151,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
     通过 --proxy 参数指定本地TCP监听地址，即可启动该模式。
     仅支持TCP代理
 
+    注：MacOS端暂时只支持该模式
+
 #### 使用方式
 
 ##### windows, 命令行
