@@ -9,6 +9,7 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
+// Local端
 func ProcessProxyClient(listener net.Listener, stun_quic_conn *quic.Conn) {
 	log.Println("您已可以访问remote端的主机, 请勿关闭本程序")
 

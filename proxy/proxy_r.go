@@ -92,6 +92,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 	}
 }
 
+// Remote端
 func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 	proxy_handle.Init()
 	log.Info("开启代理模式")
