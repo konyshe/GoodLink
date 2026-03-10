@@ -145,7 +145,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     举例: 在Local端配置socket5代理: socks5://192.17.19.1:1080, 即可利用Remote端做跳板, 访问所有的网络资源
 
-### 本地代理监听模式（该模式和其他模式互斥，TUN直连模式、TUN代理模式不会启动）
+### 本地代理模式（该模式下，TUN直连模式、TUN代理模式不会启动）
 
     适用于无法创建虚拟网卡的环境（如Docker容器、无管理员权限等）。
     通过 --proxy 参数指定本地TCP监听地址，隧道建立后流量直接转发到Remote端，无需安装虚拟网卡。
