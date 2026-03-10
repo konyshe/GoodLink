@@ -131,6 +131,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ### TUN直连模式
 
     Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP (192.17.19.1)
+    支持TCP和UDP连接
 
     访问192.17.19.1，就等于内网直接访问Remote端
 
@@ -140,6 +141,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     socket5代理地址端口: socket5://192.17.19.1:1080
     http代理地址端口: http://192.17.19.1:1080
+    仅支持TCP代理
 
     举例: 在Local端配置socket5代理: socks5://192.17.19.1:1080, 即可利用Remote端做跳板, 访问所有的网络资源
 
@@ -147,6 +149,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     适用于无法创建虚拟网卡的环境（如Docker容器、无管理员权限等）。
     通过 --proxy 参数指定本地TCP监听地址，隧道建立后流量直接转发到Remote端，无需安装虚拟网卡。
+    仅支持TCP代理
 
 #### 使用方式
 
