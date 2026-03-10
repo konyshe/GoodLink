@@ -100,7 +100,7 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 	response := go2pool.Malloc(1024)
 	defer go2pool.Free(response)
 
-	conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+	conn.SetReadDeadline(time.Now().Add(3000 * time.Millisecond))
 	n, err := conn.Read(response)
 	defer conn.SetReadDeadline(time.Time{})
 

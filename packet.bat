@@ -9,6 +9,7 @@ cp -r bin goodlink-windows-amd64
 
 make clean
 make linux
+make macos
 cd bin
 
 zip goodlink-linux-amd64-cmd.zip goodlink-linux-amd64-cmd
@@ -22,3 +23,6 @@ zip goodlink-linux-mipsle-cmd.zip goodlink-linux-mipsle-cmd
 zip goodlink-linux-mips64-cmd.zip goodlink-linux-mips64-cmd
 zip goodlink-linux-mips64le-cmd.zip goodlink-linux-mips64le-cmd
 zip goodlink-linux-riscv64-cmd.zip goodlink-linux-riscv64-cmd
+
+zip goodlink-macos-amd64-cmd.zip goodlink-macos-amd64-cmd
+zip goodlink-macos-arm64-cmd.zip goodlink-macos-arm64-cmd

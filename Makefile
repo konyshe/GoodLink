@@ -40,6 +40,8 @@ WINDOWS_PLATFORM2_LIST = \
 
 debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64-cmd
 
+macos: $(DARWIN_PLATFORM_LIST) strip
+
 windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac strip
 
 linux: $(LINUX_PLATFORM_LIST) strip
