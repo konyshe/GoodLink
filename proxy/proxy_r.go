@@ -13,17 +13,18 @@ import (
 )
 
 const (
-	head_len = 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
+	HEAD_LEN   = 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
+	PROXY_PORT = 1080
 )
 
 func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 
 	// 复用头部缓冲区，减少内存分配开销
-	headerBuf := go2pool.Malloc(head_len)
+	headerBuf := go2pool.Malloc(HEAD_LEN)
 	defer go2pool.Free(headerBuf)
 
 	// 读取头部数据
-	_, err := io.ReadFull(new_quic_stream, headerBuf[:head_len])
+	_, err := io.ReadFull(new_quic_stream, headerBuf[:HEAD_LEN])
 	if err != nil {
 		// 区分连接关闭和其他错误
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -38,12 +39,12 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 
 	// 在释放缓冲区前提取所有需要的数据
 	protocolType := headerBuf[0]
-	remotePort := binary.BigEndian.Uint16(headerBuf[head_len-2 : head_len])
+	remotePort := binary.BigEndian.Uint16(headerBuf[HEAD_LEN-2 : HEAD_LEN])
 
 	switch protocolType {
 	case 0x00: // TCP
 		switch remotePort {
-		case 1080:
+		case PROXY_PORT:
 			proxy_handle.Serve(new_quic_stream, remoteAddrStr)
 			new_quic_stream.CancelRead(0)
 			new_quic_stream.Close()
