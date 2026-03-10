@@ -124,7 +124,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | `--proxy` | Local端TCP代理监听地址（可选） | `--proxy=0.0.0.0:1080` |
 | `-v` | 查看版本信息（命令行版本） | `-v` |
 
-# 工作模式
+#  Local端工作模式
 
 注：TUN直连模式和TUN代理模式默认同时存在
 
@@ -150,9 +150,13 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 #### 使用方式
 
+##### windows, 命令行
+
 ```
 .\goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
 ```
+
+##### linux, 命令行
 
 ```
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
