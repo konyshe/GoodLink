@@ -121,13 +121,14 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | `--key` | 连接密钥（必须） | `--key=AIabJpEIYHMDIA6NBgOBboYJ` |
 | `--remote` | 运行为Remote端（必须） | `--remote` |
 | `--local` | 运行为Local端（必须） | `--local` |
+| `--proxy` | Local端TCP代理监听地址（可选） | `--proxy=0.0.0.0:1080` |
 | `-v` | 查看版本信息（命令行版本） | `-v` |
 
 # 工作模式
 
-注：以下两个模式同时存在, 无需选择
+注：TUN直连模式和TUN代理模式默认同时存在
 
-### TUN模式
+### TUN直连模式
 
     Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP (192.17.19.1)
 
@@ -135,12 +136,36 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     举例: 在Local端打开 windows 远程桌面, 填写: 192.17.19.1:13389, 即可访问Remote端的远程桌面
     
-### 代理模式
+### TUN代理模式
 
     socket5代理地址端口: socket5://192.17.19.1:1080
     http代理地址端口: http://192.17.19.1:1080
 
     举例: 在Local端配置socket5代理: socks5://192.17.19.1:1080, 即可利用Remote端做跳板, 访问所有的网络资源
+
+### 本地代理监听模式（该模式和其他模式互斥，TUN直连模式、TUN代理模式不会启动）
+
+    适用于无法创建虚拟网卡的环境（如Docker容器、无管理员权限等）。
+    通过 --proxy 参数指定本地TCP监听地址，隧道建立后流量直接转发到Remote端，无需安装虚拟网卡。
+
+#### 使用方式
+
+```
+.\goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
+```
+
+```
+./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
+```
+
+#### linux, Docker
+
+```
+docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
+```
+
+    启动后，在本机或局域网中配置代理即可使用:
+    socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
 
 **Linux平台如何使用代理**
 ```bash
