@@ -121,7 +121,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | `--key` | 连接密钥（必须） | `--key=AIabJpEIYHMDIA6NBgOBboYJ` |
 | `--remote` | 运行为Remote端（必须） | `--remote` |
 | `--local` | 运行为Local端（必须） | `--local` |
-| `--proxy` | Local端TCP代理监听地址（可选） | `--proxy=0.0.0.0:1080` |
+| `--proxy` | Local端本地代理转发地址（可选） | `--proxy=0.0.0.0:1080` |
+| `--forward` | Local端本地端口转发地址，多个用逗号间隔（可选） | `--forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80` |
 | `-v` | 查看版本信息（命令行版本） | `-v` |
 
 #  Local端工作模式
@@ -148,33 +149,55 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ### 本地代理模式（该模式下，TUN直连模式、TUN代理模式不会启动）
 
     适用于无法创建虚拟网卡的环境（如Docker容器、无管理员权限等），以及需要运行多个Local端的场景（虚拟网卡不能创建多个）
-    该模式目前只支持通过命令行启动，通过 --proxy 参数指定本地TCP监听地址，即可启动该模式。
+    该模式目前只支持通过命令行启动，使用 --proxy 选项，即可启动该模式。
+    --proxy 和 --forward 可以同时使用，也可以单独使用，只要指定了其中任意一个，就会启用本地代理模式。
     仅支持TCP代理
 
     注：MacOS端暂时只支持该模式
 
 #### 使用方式
 
-##### windows, 命令行
-
-```
-.\goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
-```
-
-##### linux, 命令行
+##### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
 
 ```
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
 ```
 
-#### linux, Docker
-
-```
-docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
-```
-
     启动后，在本机或局域网中配置代理即可使用:
     socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
+
+### 本地端口模式（该模式下，TUN直连模式、TUN代理模式不会启动）
+
+    在本地代理模式的基础上，适用于不支持代理方式访问的场景
+    该模式目前只支持通过命令行启动，使用 --forward 选项，即可启动该模式。访问Local端本地端口等同于在Remote端访问指定地址和端口。
+    格式: --forward=本地监听地址:本地端口:Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔。
+
+#### 使用方式
+
+##### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
+
+###### 单个端口转发
+
+```
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22
+```
+
+###### 多个端口转发
+
+```
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
+```
+
+##### 同时使用代理和端口转发
+
+```
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
+```
+
+    以上示例启动后:
+    - 本地1080端口提供socks5/http代理服务
+    - 访问本地22端口等同于在Remote端访问127.0.0.1:22（SSH）
+    - 访问本地80端口等同于在Remote端访问127.0.0.1:80（WEB）
 
 **Linux平台如何使用代理**
 ```bash
