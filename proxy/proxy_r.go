@@ -39,7 +39,8 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 
 	// 在释放缓冲区前提取所有需要的数据
 	protocolType := headerBuf[0]
-	remotePort := binary.BigEndian.Uint16(headerBuf[HEAD_LEN-2 : HEAD_LEN])
+	remoteIP := headerBuf[1:5]
+	remotePort := binary.BigEndian.Uint16(headerBuf[5:HEAD_LEN])
 
 	switch protocolType {
 	case 0x00: // TCP
@@ -55,7 +56,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 				remotePort = 3389
 			}
 			new_conn, err := net.DialTCP("tcp4", nil, &net.TCPAddr{
-				IP:   net.IPv4(127, 0, 0, 1),
+				IP:   remoteIP,
 				Port: int(remotePort),
 			})
 			if err == nil {
@@ -74,7 +75,7 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 		}
 	case 0x01: // UDP
 		new_conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{
-			IP:   net.IPv4(127, 0, 0, 1),
+			IP:   remoteIP,
 			Port: int(remotePort),
 		})
 		if err == nil {

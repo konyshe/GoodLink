@@ -36,9 +36,8 @@ func ForwardUdpConn(originConn *udpConn, stun_quic_conn *quic.Conn) {
 
 	ioBuf[0] = 0x01 // UDP协议标识
 
-	// 写入IPv4地址
-	ipv4Bytes := originConn.ID().LocalAddress.As4()
-	copy(ioBuf[1:5], ipv4Bytes[:])
+	// 写入回环地址 127.0.0.1
+	copy(ioBuf[1:5], LoopBackAddr[:])
 
 	// 写入端口（大端序）
 	binary.BigEndian.PutUint16(ioBuf[5:7], originConn.ID().LocalPort)
