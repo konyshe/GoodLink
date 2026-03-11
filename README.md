@@ -127,7 +127,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 #  Local端工作模式
 
-注：以上操作说明，均是启动TUN直连模式和TUN代理模式。
+注：以上操作说明，均是启动TUN直连模式和TUN代理模式
 
 ### TUN直连模式
 
@@ -168,8 +168,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     在本地代理模式的基础上，适用于不支持代理方式访问的场景
     如果Local端是NAT4，使用本地转发模式，可利用NAT1-3环境的主机做中转，穿透NAT4环境的Remote端
-    该模式目前只支持通过命令行启动，使用 --forward 选项，即可启动该模式。访问Local端本地端口等同于在Remote端访问指定地址和端口。
-    格式: --forward=本地监听地址:本地端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔。
+    该模式目前只支持通过命令行启动，使用 --forward 选项，即可启动该模式。访问Local端本地端口等同于在Remote端访问指定地址和端口
+    格式: --forward=本地监听地址:本地端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
 
     注：MacOS端支持该模式
 
