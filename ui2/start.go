@@ -168,7 +168,10 @@ func updateConnectionStatus(status string) {
 		case pro.TagStatusConnecting:
 			fyne.Do(func() { updateButtonState(buttonStateConnecting) })
 		case pro.TagStatusConnected:
-			fyne.Do(func() { updateButtonState(buttonStateConnected) })
+			fyne.Do(func() {
+				updateButtonState(buttonStateConnected)
+				UpdateTrayIcon(true)
+			})
 		case pro.TagStatusConnectingNAT4:
 			fyne.Do(func() { updateButtonState(buttonStateConnectingNAT4) })
 		case pro.TagStatusVersionMismatch:
@@ -184,7 +187,10 @@ func updateConnectionStatus(status string) {
 	case workTypeRemote:
 		switch status {
 		case pro.TagStatusRunning:
-			fyne.Do(func() { updateButtonState(buttonStateRunning) })
+			fyne.Do(func() {
+				updateButtonState(buttonStateRunning)
+				UpdateTrayIcon(true)
+			})
 		}
 	}
 }
@@ -313,6 +319,7 @@ func start_button_click() {
 				m_stats_start_button = 0
 				enable_other()
 				updateButtonState(buttonStateIdle)
+				UpdateTrayIcon(false)
 				m_button_start.Enable()
 			})
 		}()
@@ -366,6 +373,7 @@ func waitForProcessAndHandleExit(isRestart bool) {
 		fyne.Do(func() {
 			m_stats_start_button = 0
 			updateButtonState(buttonStateIdle)
+			UpdateTrayIcon(false)
 			m_button_start.Enable()
 			enable_other()
 		})
@@ -393,6 +401,7 @@ func autoRestartProcess() {
 		fyne.Do(func() {
 			m_stats_start_button = 0
 			updateButtonState(buttonStateIdle)
+			UpdateTrayIcon(false)
 			m_button_start.Enable()
 			enable_other()
 		})

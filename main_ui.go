@@ -18,6 +18,9 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 )
 
+//go:embed assert/favicon.png
+var faviconPNG []byte
+
 const (
 	M_APP_TITLE = "Goodlink"
 )
@@ -53,7 +56,11 @@ func main() {
 		}
 	}()
 
+	ui2.InitTrayIcons(faviconPNG)
+
 	if desk, ok := myApp.(desktop.App); ok {
+		ui2.SetTrayApp(desk)
+
 		// 创建菜单项
 		openItem := fyne.NewMenuItem("打开主程序", func() {
 			// 系统托盘菜单回调已经在主线程中执行，可以直接调用Show()
