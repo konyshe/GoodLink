@@ -122,7 +122,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 | `--remote` | 运行为Remote端（必须） | `--remote` |
 | `--local` | 运行为Local端（必须） | `--local` |
 | `--proxy` | Local端本地代理转发地址（可选） | `--proxy=0.0.0.0:1080` |
-| `--forward` | Local端本地端口转发地址，多个用逗号间隔（可选） | `--forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80` |
+| `--forward` | Local端本地端口转发地址，多个用逗号间隔（可选） | `--forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80` |
 | `-v` | 查看版本信息（命令行版本） | `-v` |
 
 #  Local端工作模式
@@ -168,26 +168,26 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     在本地代理模式的基础上，适用于不支持代理方式访问的场景
     该模式目前只支持通过命令行启动，使用 --forward 选项，即可启动该模式。访问Local端本地端口等同于在Remote端访问指定地址和端口。
-    格式: --forward=本地监听地址:本地端口:Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔。
+    格式: --forward=本地监听地址:本地端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔。
 
     注：MacOS端支持该模式
 
 #### linux, 命令行，单个端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
 
 ```
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22
 ```
 
 #### linux, 命令行，多个端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
 
 ```
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
 #### linux, 命令行，同时使用代理和端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
 
 ```
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
     以上示例启动后:

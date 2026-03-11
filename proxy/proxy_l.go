@@ -41,23 +41,35 @@ func CheckForwardArgs() bool {
 			if entry == "" {
 				continue
 			}
-			// 格式: listenHost:listenPort:remoteHost:remotePort
-			parts := strings.Split(entry, ":")
-			if len(parts) != 4 {
-				log.Printf("[proxy] 转发地址格式错误(需要 listenHost:listenPort:remoteHost:remotePort): %s", entry)
+			// 格式: listenHost:listenPort@remoteHost:remotePort
+			parts := strings.SplitN(entry, "@", 2)
+			if len(parts) != 2 {
+				log.Printf("[proxy] 转发地址格式错误(需要 listenHost:listenPort@remoteHost:remotePort): %s", entry)
 				ForwardRules = nil
 				return false
 			}
-			listenAddr := net.JoinHostPort(parts[0], parts[1])
-			remoteIP := net.ParseIP(parts[2])
+			listenHost, listenPort, err := net.SplitHostPort(parts[0])
+			if err != nil {
+				log.Printf("[proxy] 转发监听地址解析失败: %s, %v", parts[0], err)
+				ForwardRules = nil
+				return false
+			}
+			listenAddr := net.JoinHostPort(listenHost, listenPort)
+			remoteHost, remotePortStr, err := net.SplitHostPort(parts[1])
+			if err != nil {
+				log.Printf("[proxy] 转发目标地址解析失败: %s, %v", parts[1], err)
+				ForwardRules = nil
+				return false
+			}
+			remoteIP := net.ParseIP(remoteHost)
 			if remoteIP == nil {
-				log.Printf("[proxy] 转发目标IP解析失败: %s", parts[2])
+				log.Printf("[proxy] 转发目标IP解析失败: %s", remoteHost)
 				ForwardRules = nil
 				return false
 			}
-			remotePort, err := strconv.Atoi(parts[3])
+			remotePort, err := strconv.Atoi(remotePortStr)
 			if err != nil || remotePort <= 0 || remotePort > 65535 {
-				log.Printf("[proxy] 转发目标端口无效: %s", parts[3])
+				log.Printf("[proxy] 转发目标端口无效: %s", remotePortStr)
 				ForwardRules = nil
 				return false
 			}
