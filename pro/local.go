@@ -20,7 +20,7 @@ var (
 	m_tun_active       *tun.TunActive
 	m_tun_passive      *tun.TunPassive
 	g_netstack_started = false
-	m_proxy_client     *proxy.ProxyClient
+	m_forward_client   *proxy.ForwardClient
 )
 
 // handleState0_RegisterSession 处理 State 0: 注册会话并等待 Remote 端认领
@@ -224,15 +224,17 @@ func GetLocalStats() int {
 
 func StopLocal() error {
 	m_local_state = 0
-	if m_proxy_client != nil {
-		m_proxy_client.Close()
-		m_proxy_client = nil
+	if m_forward_client != nil {
+		m_forward_client.Close()
+		m_forward_client = nil
 	}
 	Release(m_tun_active, m_tun_passive, nil)
 	return nil
 }
 
 func RunLocal() error {
+	var err error
+
 	m_local_state = 1
 
 	count := 0
@@ -240,15 +242,14 @@ func RunLocal() error {
 	var udp_conn *net.UDPConn
 	var addr tun.AddrType
 
-	useProxy := config.Arg_local_proxy_listen_str != ""
+	useForward := config.Arg_local_proxy_addr != ""
 
-	if useProxy {
-		pc, err := proxy.NewProxyClient(config.Arg_local_proxy_listen_str)
+	if useForward {
+		m_forward_client, err = proxy.NewForwardClient(config.Arg_local_proxy_addr)
 		if err != nil {
 			return err
 		}
-		m_proxy_client = pc
-		go m_proxy_client.Serve()
+		go m_forward_client.Serve()
 	}
 
 	for m_local_state == 1 {
@@ -261,7 +262,7 @@ func RunLocal() error {
 		log.Printf("Local端地址: %v", addr)
 		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 
-		if !useProxy && !g_netstack_started {
+		if !useForward && !g_netstack_started {
 			if err := netstack.Start(); err != nil {
 				return err
 			}
@@ -283,9 +284,9 @@ func RunLocal() error {
 		m_tun_active = tun_active
 		m_tun_passive = tun_passive
 
-		if useProxy {
-			m_proxy_client.SetQuicConn(quic_conn)
-			log.Printf("已启用代理地址: %s", config.Arg_local_proxy_listen_str)
+		if useForward {
+			m_forward_client.SetQuicConn(quic_conn)
+			log.Printf("已启用代理地址: %s", config.Arg_local_proxy_addr)
 		} else {
 			netstack.SetForWarder(quic_conn)
 			log.Printf("Remote端IP: %s", netstack.GetRemoteIP())
@@ -300,8 +301,8 @@ func RunLocal() error {
 		log.Printf("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive, nil)
 
-		if useProxy {
-			m_proxy_client.ClearQuicConn()
+		if useForward {
+			m_forward_client.ClearQuicConn()
 		} else {
 			netstack.SetForWarder(nil)
 		}

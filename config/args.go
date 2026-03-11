@@ -26,7 +26,8 @@ var (
 	Arg_local_config           *bool
 	Arg_stun_svr_ip            string
 	Arg_stun_svr_port          int
-	Arg_local_proxy_listen_str string
+	Arg_local_proxy_addr       string
+	Arg_local_forward_addrs    string
 )
 
 func Help(ver string) {
@@ -47,7 +48,8 @@ func Help(ver string) {
 	Arg_tun_local = flag.Bool("local", false, "启动Local端")
 	Arg_tun_remote = flag.Bool("remote", false, "启动Remote端")
 
-	flag.StringVar(&Arg_local_proxy_listen_str, "proxy", "", "Local端代理转发监听地址, 例如: 0.0.0.0:1080")
+	flag.StringVar(&Arg_local_proxy_addr, "proxy", "", "Local端代理转发监听地址, 例如: 0.0.0.0:1080")
+	flag.StringVar(&Arg_local_forward_addrs, "forward", "", "Local端端口转发地址, 多个用逗号间隔, 例如: 0.0.0.0:22:22,0.0.0.0:25:25")
 
 	flag.StringVar(&Arg_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
 	flag.IntVar(&Arg_p2p_timeout, "time_out", 15, "最大连接超时, 单位: 秒")

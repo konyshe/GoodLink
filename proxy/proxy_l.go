@@ -14,46 +14,46 @@ import (
 
 // ProxyClient 管理 TCP 监听和 QUIC 隧道转发。
 // listener 只创建一次，隧道重连时通过 SetQuicConn/ClearQuicConn 热替换 QUIC 连接。
-type ProxyClient struct {
+type ForwardClient struct {
 	listener net.Listener
 	mu       sync.RWMutex
 	quicConn *quic.Conn
 }
 
-func NewProxyClient(listenAddr string) (*ProxyClient, error) {
+func NewForwardClient(listenAddr string) (*ForwardClient, error) {
 	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return nil, err
 	}
 	log.Printf("[proxy] TCP代理监听: %s", listenAddr)
-	return &ProxyClient{listener: ln}, nil
+	return &ForwardClient{listener: ln}, nil
 }
 
-func (p *ProxyClient) SetQuicConn(conn *quic.Conn) {
+func (p *ForwardClient) SetQuicConn(conn *quic.Conn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.quicConn = conn
 	log.Println("[proxy] QUIC连接已设置，开始转发")
 }
 
-func (p *ProxyClient) ClearQuicConn() {
+func (p *ForwardClient) ClearQuicConn() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.quicConn = nil
 	log.Println("[proxy] QUIC连接已清除，暂停转发")
 }
 
-func (p *ProxyClient) getQuicConn() *quic.Conn {
+func (p *ForwardClient) getQuicConn() *quic.Conn {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.quicConn
 }
 
-func (p *ProxyClient) Serve() {
+func (p *ForwardClient) Serve() {
 	for {
 		tcpConn, err := p.listener.Accept()
 		if err != nil {
-			log.Printf("[proxy] listener已关闭: %v", err)
+			log.Printf("[proxy] 监听转发端口异常: %v", err)
 			return
 		}
 
@@ -68,7 +68,7 @@ func (p *ProxyClient) Serve() {
 	}
 }
 
-func (p *ProxyClient) handleConn(tcpConn net.Conn, quicConn *quic.Conn) {
+func (p *ForwardClient) handleConn(tcpConn net.Conn, quicConn *quic.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -100,9 +100,9 @@ func (p *ProxyClient) handleConn(tcpConn net.Conn, quicConn *quic.Conn) {
 	go ForwardQ2T(stream, tcpConn)
 }
 
-func (p *ProxyClient) Close() {
+func (p *ForwardClient) Close() {
 	if p.listener != nil {
 		p.listener.Close()
-		log.Println("[proxy] TCP代理监听已关闭")
+		log.Println("[proxy] 已关闭监听转发端口")
 	}
 }
