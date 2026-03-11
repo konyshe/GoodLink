@@ -153,7 +153,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
     --proxy 和 --forward 可以同时使用，也可以单独使用，只要指定了其中任意一个，就会启用本地代理模式。
     仅支持TCP代理
 
-    注：MacOS端暂时只支持该模式
+    注：MacOS端支持该模式
 
 #### 使用方式
 
@@ -171,6 +171,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
     在本地代理模式的基础上，适用于不支持代理方式访问的场景
     该模式目前只支持通过命令行启动，使用 --forward 选项，即可启动该模式。访问Local端本地端口等同于在Remote端访问指定地址和端口。
     格式: --forward=本地监听地址:本地端口:Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔。
+
+    注：MacOS端支持该模式
 
 #### 使用方式
 
