@@ -155,9 +155,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     注：MacOS端支持该模式
 
-#### 使用方式
-
-##### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
+#### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
 
 ```
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
@@ -174,23 +172,21 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
     注：MacOS端支持该模式
 
-#### 使用方式
+#### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
 
-##### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
-
-###### 单个端口转发
+##### 单个端口转发
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22
 ```
 
-###### 多个端口转发
+##### 多个端口转发
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
 ```
 
-##### 同时使用代理和端口转发
+#### 同时使用代理和端口转发
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
