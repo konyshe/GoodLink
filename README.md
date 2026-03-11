@@ -127,7 +127,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 #  Local端工作模式
 
-注：TUN直连模式和TUN代理模式默认同时启动
+注：以上操作说明，均是启动TUN直连模式和TUN代理模式。
 
 ### TUN直连模式
 
