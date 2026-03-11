@@ -20,7 +20,7 @@ var (
 	m_tun_active       *tun.TunActive
 	m_tun_passive      *tun.TunPassive
 	g_netstack_started = false
-	m_forward_client   *proxy.ForwardClient
+	m_forward_clients []*proxy.ForwardClient
 )
 
 // handleState0_RegisterSession 处理 State 0: 注册会话并等待 Remote 端认领
@@ -224,10 +224,10 @@ func GetLocalStats() int {
 
 func StopLocal() error {
 	m_local_state = 0
-	if m_forward_client != nil {
-		m_forward_client.Close()
-		m_forward_client = nil
+	for _, c := range m_forward_clients {
+		c.Close()
 	}
+	m_forward_clients = nil
 	Release(m_tun_active, m_tun_passive, nil)
 	return nil
 }
@@ -242,14 +242,16 @@ func RunLocal() error {
 	var udp_conn *net.UDPConn
 	var addr tun.AddrType
 
-	useForward := config.Arg_local_proxy_addr != ""
+	useForward := proxy.CheckForwardArgs()
 
 	if useForward {
-		m_forward_client, err = proxy.NewForwardClient(config.Arg_local_proxy_addr)
+		m_forward_clients, err = proxy.NewForwardClients()
 		if err != nil {
 			return err
 		}
-		go m_forward_client.Serve()
+		for _, c := range m_forward_clients {
+			go c.Serve()
+		}
 	}
 
 	for m_local_state == 1 {
@@ -285,8 +287,10 @@ func RunLocal() error {
 		m_tun_passive = tun_passive
 
 		if useForward {
-			m_forward_client.SetQuicConn(quic_conn)
-			log.Printf("已启用代理地址: %s", config.Arg_local_proxy_addr)
+			for _, c := range m_forward_clients {
+				c.SetQuicConn(quic_conn)
+			}
+			log.Println("[proxy] QUIC连接已设置，开始转发")
 		} else {
 			netstack.SetForWarder(quic_conn)
 			log.Printf("Remote端IP: %s", netstack.GetRemoteIP())
@@ -302,7 +306,9 @@ func RunLocal() error {
 		Release(tun_active, tun_passive, nil)
 
 		if useForward {
-			m_forward_client.ClearQuicConn()
+			for _, c := range m_forward_clients {
+				c.ClearQuicConn()
+			}
 		} else {
 			netstack.SetForWarder(nil)
 		}
