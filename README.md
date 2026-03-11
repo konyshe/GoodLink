@@ -148,7 +148,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ### 本地代理模式（该模式下，TUN直连模式、TUN代理模式不会启动）
 
     适用于无法创建虚拟网卡的环境（如Docker容器、无管理员权限等）。
-    通过 --proxy 参数指定本地TCP监听地址，即可启动该模式。
+    该模式目前只支持通过命令行启动，通过 --proxy 参数指定本地TCP监听地址，即可启动该模式。
     仅支持TCP代理
 
     注：MacOS端暂时只支持该模式
