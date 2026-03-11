@@ -178,13 +178,13 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22
 ```
 
-#### linux, 命令行多个端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
+#### linux, 命令行，多个端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
 ```
 
-#### linux, 命令行同时使用代理和端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
+#### linux, 命令行，同时使用代理和端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22:127.0.0.1:22,0.0.0.0:80:127.0.0.1:80
