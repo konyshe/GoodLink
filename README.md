@@ -195,7 +195,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
     - 访问本地22端口等同于在Remote端访问127.0.0.1:22（SSH）
     - 访问本地80端口等同于在Remote端访问127.0.0.1:80（WEB）
 
-**Linux平台如何使用代理**
+## Linux平台如何使用代理
 ```bash
 # 配置全局系统代理
 export all_proxy="http://192.17.19.1:1080"
@@ -210,7 +210,7 @@ git config --global https.proxy http://192.17.19.1:1080
 ssh -o ProxyCommand='nc -X 5 -x 192.17.19.1:1080 %h %p' user@target_host
 ```
 
-**浏览器如何使用代理**
+## 浏览器如何使用代理
 - Chrome/Edge：推荐使用 [SwitchyOmega](https://microsoftedge.microsoft.com/addons/detail/proxy-switchyomega-3-zer/dmaldhchmoafliphkijbfhaomcgglmgd) 插件
 - Firefox：内置代理设置支持
 
