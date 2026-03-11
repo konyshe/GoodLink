@@ -24,5 +24,5 @@ zip goodlink-linux-mips64-cmd.zip goodlink-linux-mips64-cmd
 zip goodlink-linux-mips64le-cmd.zip goodlink-linux-mips64le-cmd
 zip goodlink-linux-riscv64-cmd.zip goodlink-linux-riscv64-cmd
 
-zip goodlink-macos-amd64-cmd.zip goodlink-macos-amd64-cmd
-zip goodlink-macos-arm64-cmd.zip goodlink-macos-arm64-cmd
+zip goodlink-darwin-amd64-cmd.zip goodlink-darwin-amd64-cmd
+zip goodlink-darwin-arm64-cmd.zip goodlink-darwin-arm64-cmd
