@@ -15,25 +15,29 @@ import (
 )
 
 var (
-	trayApp       desktop.App
-	defaultIcon   fyne.Resource
-	connectedIcon fyne.Resource
-	trayConnected bool
+	trayApp      desktop.App
+	baseImage    image.Image
+	currentDotColor color.NRGBA
 )
 
 func InitTrayIcons(iconPNG []byte) {
-	defaultIcon = fyne.NewStaticResource("tray_default.png", iconPNG)
-
 	img, _, err := image.Decode(bytes.NewReader(iconPNG))
 	if err != nil {
 		return
 	}
+	baseImage = img
+}
 
-	bounds := img.Bounds()
+func buildIconWithDot(dotColor color.NRGBA) fyne.Resource {
+	if baseImage == nil {
+		return nil
+	}
+
+	bounds := baseImage.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()
 
 	dst := image.NewRGBA(bounds)
-	draw.Draw(dst, bounds, img, bounds.Min, draw.Src)
+	draw.Draw(dst, bounds, baseImage, bounds.Min, draw.Src)
 
 	dotRadius := float64(w) / 4
 	borderWidth := math.Max(3, dotRadius/3)
@@ -47,8 +51,14 @@ func InitTrayIcons(iconPNG []byte) {
 
 	shadowColor := color.NRGBA{R: 0, G: 0, B: 0, A: 100}
 	borderColor := color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-	fillCenter := color.NRGBA{R: 50, G: 220, B: 80, A: 255}
-	fillEdge := color.NRGBA{R: 20, G: 170, B: 50, A: 255}
+
+	fillCenter := dotColor
+	fillEdge := color.NRGBA{
+		R: uint8(math.Max(0, float64(dotColor.R)*0.7)),
+		G: uint8(math.Max(0, float64(dotColor.G)*0.7)),
+		B: uint8(math.Max(0, float64(dotColor.B)*0.7)),
+		A: dotColor.A,
+	}
 
 	scan := int(shadowR + 2)
 	for py := int(cy) - scan; py <= int(cy)+scan; py++ {
@@ -104,7 +114,7 @@ func InitTrayIcons(iconPNG []byte) {
 
 	var buf bytes.Buffer
 	png.Encode(&buf, dst)
-	connectedIcon = fyne.NewStaticResource("tray_connected.png", buf.Bytes())
+	return fyne.NewStaticResource("tray_icon.png", buf.Bytes())
 }
 
 func lerpColor(a, b color.NRGBA, t float64) color.NRGBA {
@@ -130,22 +140,25 @@ func blendOver(bg color.RGBA, fg color.NRGBA, fgAlpha float64) color.RGBA {
 
 func SetTrayApp(desk desktop.App) {
 	trayApp = desk
-	if defaultIcon != nil {
-		trayApp.SetSystemTrayIcon(defaultIcon)
+	if baseImage != nil {
+		icon := buildIconWithDot(DotColorIdle)
+		if icon != nil {
+			trayApp.SetSystemTrayIcon(icon)
+			currentDotColor = DotColorIdle
+		}
 	}
 }
 
-func UpdateTrayIcon(connected bool) {
-	if trayApp == nil || defaultIcon == nil || connectedIcon == nil {
+func UpdateTrayIcon(dotColor color.NRGBA) {
+	if trayApp == nil || baseImage == nil {
 		return
 	}
-	if connected == trayConnected {
+	if dotColor == currentDotColor {
 		return
 	}
-	trayConnected = connected
-	if connected {
-		trayApp.SetSystemTrayIcon(connectedIcon)
-	} else {
-		trayApp.SetSystemTrayIcon(defaultIcon)
+	currentDotColor = dotColor
+	icon := buildIconWithDot(dotColor)
+	if icon != nil {
+		trayApp.SetSystemTrayIcon(icon)
 	}
 }

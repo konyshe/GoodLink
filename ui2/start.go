@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go2"
+	"image/color"
 	"log"
 	"os"
 	"os/exec"
@@ -107,11 +108,20 @@ func parseStatusMessage(line string) (string, bool) {
 	return "", false
 }
 
+// 托盘小圆点颜色，与按钮 Importance 对应
+var (
+	DotColorIdle    = color.NRGBA{R: 50, G: 120, B: 240, A: 255}
+	DotColorWarning = color.NRGBA{R: 240, G: 180, B: 40, A: 255}
+	DotColorDanger  = color.NRGBA{R: 230, G: 60, B: 60, A: 255}
+	DotColorSuccess = color.NRGBA{R: 50, G: 220, B: 80, A: 255}
+)
+
 // 按钮状态类型
 type buttonState struct {
 	text       string
 	importance widget.Importance
 	icon       fyne.Resource
+	dotColor   color.NRGBA
 }
 
 // 预定义的按钮状态
@@ -120,35 +130,41 @@ var (
 		text:       "点击启动",
 		importance: widget.HighImportance,
 		icon:       theme.MediaPlayIcon(),
+		dotColor:   DotColorIdle,
 	}
 	buttonStateStarting = buttonState{
 		text:       "启动中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
+		dotColor:   DotColorWarning,
 	}
 	buttonStateConnecting = buttonState{
 		text:       "连接中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
+		dotColor:   DotColorWarning,
 	}
 	buttonStateConnectingNAT4 = buttonState{
 		text:       "两端都是NAT4, 连接中...",
 		importance: widget.DangerImportance,
 		icon:       theme.MediaStopIcon(),
+		dotColor:   DotColorDanger,
 	}
 	buttonStateConnected = buttonState{
 		text:       "连接成功, 点击停止",
 		importance: widget.SuccessImportance,
 		icon:       theme.MediaStopIcon(),
+		dotColor:   DotColorSuccess,
 	}
 	buttonStateRunning = buttonState{
 		text:       "启动成功, 点击停止",
 		importance: widget.SuccessImportance,
 		icon:       theme.MediaStopIcon(),
+		dotColor:   DotColorSuccess,
 	}
 )
 
-// updateButtonState 更新启动按钮的状态
+// updateButtonState 更新启动按钮的状态，同时同步托盘图标小圆点颜色
 func updateButtonState(state buttonState) {
 	if m_button_start == nil {
 		return
@@ -157,6 +173,7 @@ func updateButtonState(state buttonState) {
 	m_button_start.Importance = state.importance
 	m_button_start.SetIcon(state.icon)
 	m_button_start.Refresh()
+	UpdateTrayIcon(state.dotColor)
 }
 
 // updateConnectionStatus 根据连接状态更新按钮（Local端直接映射，Remote端在连接成功后才切换为运行状态）
@@ -168,10 +185,7 @@ func updateConnectionStatus(status string) {
 		case pro.TagStatusConnecting:
 			fyne.Do(func() { updateButtonState(buttonStateConnecting) })
 		case pro.TagStatusConnected:
-			fyne.Do(func() {
-				updateButtonState(buttonStateConnected)
-				UpdateTrayIcon(true)
-			})
+			fyne.Do(func() { updateButtonState(buttonStateConnected) })
 		case pro.TagStatusConnectingNAT4:
 			fyne.Do(func() { updateButtonState(buttonStateConnectingNAT4) })
 		case pro.TagStatusVersionMismatch:
@@ -187,10 +201,7 @@ func updateConnectionStatus(status string) {
 	case workTypeRemote:
 		switch status {
 		case pro.TagStatusRunning:
-			fyne.Do(func() {
-				updateButtonState(buttonStateRunning)
-				UpdateTrayIcon(true)
-			})
+			fyne.Do(func() { updateButtonState(buttonStateRunning) })
 		}
 	}
 }
@@ -319,7 +330,6 @@ func start_button_click() {
 				m_stats_start_button = 0
 				enable_other()
 				updateButtonState(buttonStateIdle)
-				UpdateTrayIcon(false)
 				m_button_start.Enable()
 			})
 		}()
@@ -373,7 +383,6 @@ func waitForProcessAndHandleExit(isRestart bool) {
 		fyne.Do(func() {
 			m_stats_start_button = 0
 			updateButtonState(buttonStateIdle)
-			UpdateTrayIcon(false)
 			m_button_start.Enable()
 			enable_other()
 		})
@@ -401,7 +410,6 @@ func autoRestartProcess() {
 		fyne.Do(func() {
 			m_stats_start_button = 0
 			updateButtonState(buttonStateIdle)
-			UpdateTrayIcon(false)
 			m_button_start.Enable()
 			enable_other()
 		})
