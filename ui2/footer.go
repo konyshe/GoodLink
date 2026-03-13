@@ -3,7 +3,15 @@
 package ui2
 
 import (
+	"crypto/tls"
+	"encoding/json"
+	"image/color"
+	"io"
+	"log"
+	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -13,36 +21,95 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+type giteeRelease struct {
+	TagName string `json:"tag_name"`
+}
+
+// checkLatestVersion 请求 Gitee API 获取最新版本号，与当前版本比较。
+// 返回 (需要升级, 最新版本号)。
+func checkLatestVersion(currentVersion string) (bool, string) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Get("https://gitee.com/api/v5/repos/konyshe/goodlink/releases/latest")
+	if err != nil {
+		log.Println("检查版本失败:", err)
+		return false, ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("检查版本失败, HTTP状态码:", resp.StatusCode)
+		return false, ""
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("读取版本响应失败:", err)
+		return false, ""
+	}
+
+	var release giteeRelease
+	if err := json.Unmarshal(body, &release); err != nil {
+		log.Println("解析版本JSON失败:", err)
+		return false, ""
+	}
+
+	latestVersion := strings.TrimPrefix(release.TagName, "v")
+	if latestVersion != "" && latestVersion != currentVersion {
+		return true, latestVersion
+	}
+	return false, latestVersion
+}
+
+var (
+	upgradeHintColor = color.NRGBA{R: 255, G: 80, B: 60, A: 255}
+)
+
 // NewFooter 创建底部归属信息和官网链接组件
-func NewFooter() fyne.CanvasObject {
-	// 分隔线
+func NewFooter(currentVersion string) fyne.CanvasObject {
 	separator := canvas.NewRectangle(separatorColor)
 	separator.SetMinSize(fyne.NewSize(0, 1))
 
-	// 富文本标签
 	versionLabel := widget.NewRichTextFromMarkdown("**@2026 GoodLink**")
 
-	// 超链接
 	updateURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/releases")
 	updateLink := widget.NewHyperlink("升级版本", updateURL)
-	// 添加图标
 	updateIcon := widget.NewIcon(theme.DownloadIcon())
 
-	// 反馈问题链接
 	feedbackURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/issues")
 	feedbackLink := widget.NewHyperlink("反馈问题", feedbackURL)
-	// 添加图标
 	feedbackIcon := widget.NewIcon(theme.InfoIcon())
 
-	// 组合内容
+	// 新版本提示标签，初始隐藏
+	newBadge := canvas.NewText("", upgradeHintColor)
+	newBadge.TextSize = 12
+	newBadge.TextStyle = fyne.TextStyle{Bold: true}
+	newBadge.Hide()
+
 	footerContent := container.NewHBox(
 		versionLabel,
 		layout.NewSpacer(),
-		container.NewHBox(updateIcon, updateLink),
+		container.NewHBox(updateIcon, updateLink, newBadge),
 		container.NewHBox(feedbackIcon, feedbackLink),
 	)
 
-	// 最终布局：分隔线 + 内容
+	go func() {
+		needUpgrade, latestVer := checkLatestVersion(currentVersion)
+		if needUpgrade {
+			fyne.Do(func() {
+				updateLink.SetText("升级版本 (v" + latestVer + ")")
+				newBadge.Text = " New!"
+				newBadge.Show()
+				newBadge.Refresh()
+			})
+		}
+	}()
+
 	return container.NewVBox(
 		separator,
 		footerContent,

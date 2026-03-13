@@ -9,6 +9,7 @@ import (
 	"log"
 
 	"goodlink/config"
+	"goodlink/pro"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -272,7 +273,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	// 创建底部内容（启动按钮和页脚）
 	bottomContent := container.NewVBox(
 		startButtonContainer,
-		NewFooter(),
+		NewFooter(pro.GetVersion()),
 	)
 
 	// 使用 Border 布局，让日志区域自适应占用剩余空间
