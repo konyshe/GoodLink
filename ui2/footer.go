@@ -86,10 +86,10 @@ func NewFooter(currentVersion string) fyne.CanvasObject {
 	feedbackIcon := widget.NewIcon(theme.InfoIcon())
 
 	newBadge := canvas.NewText("", upgradeHintColor)
-	newBadge.TextSize = 12
+	newBadge.TextSize = 14
 	newBadge.TextStyle = fyne.TextStyle{Bold: true}
 
-	upgradeBox := container.NewHBox(updateIcon, updateLink, newBadge)
+	upgradeBox := container.NewHBox(updateIcon, newBadge, updateLink)
 	upgradeBox.Hide()
 
 	footerContent := container.NewHBox(
@@ -103,8 +103,8 @@ func NewFooter(currentVersion string) fyne.CanvasObject {
 		needUpgrade, latestVer := checkLatestVersion(currentVersion)
 		if needUpgrade {
 			fyne.Do(func() {
-				updateLink.SetText("升级版本 (v" + latestVer + ")")
-				newBadge.Text = " New!"
+				updateLink.SetText("v" + latestVer)
+				newBadge.Text = "有新版本!"
 				newBadge.Refresh()
 				upgradeBox.Show()
 			})
