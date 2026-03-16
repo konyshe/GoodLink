@@ -146,7 +146,7 @@ Docker暂不支持虚拟网卡（TUN模式）
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
 ```
 
-    启动后，在本机或局域网中配置代理即可使用:
+    启动后，在本机配置代理即可使用:
     socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
 
 ### 本地端口模式（该模式下，TUN直连模式、TUN代理模式不会启动）
