@@ -56,50 +56,48 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 ###  **启动 remote端(以下方式任选)**
 
-#### windows, UI
+#### UI版本（仅Windows）
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
 
-#### windows, 命令行
+#### 命令行版本
 
 ```
+# windows
 .\goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
-#### linux, Docker
-
 ```
-docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
-```
-
-#### linux, 命令行
-
-```
+# linux
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+```
+
+```
+# linux, Docker
+docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
 ###  **启动 local端(以下方式任选)**
 
-#### windows, UI
+#### UI版本（仅Windows）
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
 
-#### windows, 命令行
+#### 命令行版本
 
 ```
+# windows
 .\goodlink-windows-amd64-cmd.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
-#### linux, Docker
-
 ```
-Docker暂不支持虚拟网卡（TUN模式）
-```
-
-#### linux, 命令行
-
-```
+# linux
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+```
+
+```
+# linux, Docker
+Docker暂不支持虚拟网卡（TUN模式）
 ```
 
 #  Local端工作模式
@@ -129,9 +127,8 @@ Docker暂不支持虚拟网卡（TUN模式）
     该模式目前只支持命令行版本，使用 --proxy 选项，即可启动该模式
     注：仅支持TCP代理
 
-#### linux, 命令行（其他环境以此类推）
-
 ```
+# linux, 命令行（其他环境以此类推）
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
 ```
 
@@ -147,21 +144,18 @@ Docker暂不支持虚拟网卡（TUN模式）
 
     注：--proxy 和 --forward 可以同时使用
 
-#### linux, 命令行，单个端口转发（其他环境以此类推）
-
 ```
+# linux, 命令行，单个端口转发（其他环境以此类推）
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22
 ```
 
-#### linux, 命令行，多个端口转发（其他环境以此类推）
-
 ```
+# linux, 命令行，多个端口转发（其他环境以此类推）
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
-#### linux, 命令行，同时使用代理和端口转发（其他环境以此类推）
-
 ```
+# linux, 命令行，同时使用代理和端口转发（其他环境以此类推）
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
