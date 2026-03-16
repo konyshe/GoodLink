@@ -75,7 +75,7 @@ func NewFooter(currentVersion string) fyne.CanvasObject {
 	separator := canvas.NewRectangle(separatorColor)
 	separator.SetMinSize(fyne.NewSize(0, 1))
 
-	versionLabel := widget.NewRichTextFromMarkdown("**@2026 GoodLink**")
+	versionLabel := widget.NewRichTextFromMarkdown("**@2026 Goodlink**")
 
 	updateURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/releases")
 	updateLink := widget.NewHyperlink("升级版本", updateURL)
