@@ -140,7 +140,7 @@ Docker暂不支持虚拟网卡（TUN模式）
     该模式目前只支持命令行版本，使用 --proxy 选项，即可启动该模式
     仅支持TCP代理
 
-#### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
+#### linux, 命令行（其他环境以此类推）
 
 ```
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
