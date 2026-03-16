@@ -170,24 +170,6 @@ Docker暂不支持虚拟网卡（TUN模式）
     - 访问本地22端口等同于在Remote端访问127.0.0.1:22（SSH）
     - 访问本地80端口等同于在Remote端访问127.0.0.1:80（WEB）
 
-## Linux平台如何使用代理
-```bash
-# 配置全局系统代理
-export all_proxy="http://192.17.19.1:1080"
-export http_proxy="http://192.17.19.1:1080"
-export https_proxy="http://192.17.19.1:1080"
-
-# Git通过代理访问
-git config --global http.proxy http://192.17.19.1:1080
-git config --global https.proxy http://192.17.19.1:1080
-
-# SSH通过代理访问（通过ProxyCommand）
-ssh -o ProxyCommand='nc -X 5 -x 192.17.19.1:1080 %h %p' user@target_host
-```
-
-## 浏览器如何使用代理
-- 推荐使用插件 [SwitchyOmega](https://microsoftedge.microsoft.com/addons/detail/proxy-switchyomega-3-zer/dmaldhchmoafliphkijbfhaomcgglmgd) 
-
 ## 🙏 致谢
 
 - 所有点了⭐ Star的同学
