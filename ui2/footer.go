@@ -68,14 +68,24 @@ func checkLatestVersion(currentVersion string) (bool, string) {
 
 var (
 	upgradeHintColor = color.NRGBA{R: 255, G: 80, B: 60, A: 255}
+	nat4WarnColor    = color.NRGBA{R: 240, G: 180, B: 40, A: 255}
 )
+
+var m_nat4_warn_box *fyne.Container
+
+// ShowNAT4Warning 显示 NAT4 对称型 NAT 警告提示
+func ShowNAT4Warning() {
+	if m_nat4_warn_box != nil {
+		m_nat4_warn_box.Show()
+	}
+}
 
 // NewFooter 创建底部归属信息和官网链接组件
 func NewFooter(currentVersion string) fyne.CanvasObject {
 	separator := canvas.NewRectangle(separatorColor)
 	separator.SetMinSize(fyne.NewSize(0, 1))
 
-	versionLabel := widget.NewRichTextFromMarkdown("**@2026 Goodlink**")
+	//versionLabel := widget.NewRichTextFromMarkdown("**@2026 Goodlink**")
 
 	updateURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/releases")
 	updateLink := widget.NewHyperlink("升级版本", updateURL)
@@ -92,8 +102,16 @@ func NewFooter(currentVersion string) fyne.CanvasObject {
 	upgradeBox := container.NewHBox(updateIcon, newBadge, updateLink)
 	upgradeBox.Hide()
 
+	nat4WarnIcon := widget.NewIcon(theme.WarningIcon())
+	nat4WarnText := canvas.NewText("当前网络为NAT4", nat4WarnColor)
+	nat4WarnText.TextSize = 14
+	nat4WarnText.TextStyle = fyne.TextStyle{Bold: true}
+	m_nat4_warn_box = container.NewHBox(nat4WarnIcon, nat4WarnText)
+	m_nat4_warn_box.Hide()
+
 	footerContent := container.NewHBox(
-		versionLabel,
+		//versionLabel,
+		m_nat4_warn_box,
 		layout.NewSpacer(),
 		upgradeBox,
 		container.NewHBox(feedbackIcon, feedbackLink),

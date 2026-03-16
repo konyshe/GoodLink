@@ -7,9 +7,11 @@ import (
 	"go2"
 	"image/color"
 	"log"
+	"net"
 
 	"goodlink/config"
 	"goodlink/pro"
+	"goodlink/stun2"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -284,6 +286,23 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		nil,           // 右侧
 		NewLogList(),  // 中心（自适应区域）
 	)
+
+	go func() {
+		conn, err := net.ListenUDP("udp4", nil)
+		if err != nil {
+			log.Println("NAT4检测: UDP监听失败:", err)
+			return
+		}
+		defer conn.Close()
+
+		_, wanPort1, wanPort2, _ := stun2.GetStunIpPort(conn)
+		if wanPort1 != wanPort2 {
+			log.Printf("NAT4检测: WanPort1=%d, WanPort2=%d, 当前网络为NAT4(对称型NAT)", wanPort1, wanPort2)
+			fyne.Do(func() {
+				ShowNAT4Warning()
+			})
+		}
+	}()
 
 	// 添加最小外层padding，确保整体有合适的边距
 	return container.NewPadded(mainContent)
