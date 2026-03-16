@@ -93,7 +93,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 #### linux, Docker
 
 ```
-由于Local端需要创建虚拟网卡，Docker中并不支持
+Docker暂不支持虚拟网卡（TUN模式）
 ```
 
 #### linux, 命令行
