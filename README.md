@@ -136,8 +136,8 @@ Docker暂不支持虚拟网卡（TUN模式）
 
 ### 本地代理模式（该模式下，TUN直连模式、TUN代理模式不会启动）
 
-    适用于无法创建虚拟网卡的环境（如Docker容器、无管理员权限等），以及需要运行多个Local端的场景（虚拟网卡不能创建多个）
-    该模式目前只支持通过命令行版本，使用 --proxy 选项，即可启动该模式
+    适用于无法创建虚拟网卡的环境（如MacOS、Docker、无管理员权限等），或同一主机有多个Local端的场景（虚拟网卡不能创建多个）
+    该模式目前只支持命令行版本，使用 --proxy 选项，即可启动该模式
     仅支持TCP代理
 
 #### linux, 命令行（其他环境如windows、docker，使用相同选项和参数以此类推）
@@ -153,24 +153,24 @@ Docker暂不支持虚拟网卡（TUN模式）
 
     在本地代理模式的基础上，适用于不支持代理方式访问的场景
     如果Local端是NAT4，使用本地转发模式，可利用NAT1-3环境的主机做中转，穿透NAT4环境的Remote端
-    该模式目前只支持通过命令行版本，使用 --forward 选项，即可启动该模式。访问Local端本地端口等同于在Remote端访问指定地址和端口
+    该模式目前只支持命令行版本，使用 --forward 选项，即可启动该模式。访问Local端本地端口等同于在Remote端访问指定地址和端口
     格式: --forward=本地监听地址:本地端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
 
     注：--proxy 和 --forward 可以同时使用
 
-#### linux, 命令行，单个端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
+#### linux, 命令行，单个端口转发（其他环境以此类推）
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22
 ```
 
-#### linux, 命令行，多个端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
+#### linux, 命令行，多个端口转发（其他环境以此类推）
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
-#### linux, 命令行，同时使用代理和端口转发（其他环境如windows、docker，使用相同选项和参数以此类推）
+#### linux, 命令行，同时使用代理和端口转发（其他环境以此类推）
 
 ```
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
