@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"log"
 	"net"
+	"time"
 
 	"goodlink/config"
 	"goodlink/pro"
@@ -288,19 +289,27 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	)
 
 	go func() {
-		conn, err := net.ListenUDP("udp4", nil)
-		if err != nil {
-			log.Println("NAT4检测: UDP监听失败:", err)
-			return
-		}
-		defer conn.Close()
+		for {
+			conn, err := net.ListenUDP("udp4", nil)
+			if err != nil {
+				log.Println("NAT检测: UDP监听失败:", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
 
-		_, wanPort1, wanPort2, _ := stun2.GetStunIpPort(conn)
-		if wanPort1 != wanPort2 {
-			log.Printf("NAT4检测: WanPort1=%d, WanPort2=%d, 当前网络为NAT4(对称型NAT)", wanPort1, wanPort2)
+			_, wanPort1, wanPort2, _ := stun2.GetStunIpPort(conn)
+			conn.Close()
+
+			isNAT4 := wanPort1 != wanPort2
+			if isNAT4 {
+				log.Printf("NAT检测: WanPort1=%d, WanPort2=%d, 当前网络为NAT4(对称型NAT)", wanPort1, wanPort2)
+			} else {
+				log.Printf("NAT检测: WanPort1=%d, WanPort2=%d, 当前网络为NAT1-NAT3", wanPort1, wanPort2)
+			}
 			fyne.Do(func() {
-				ShowNAT4Warning()
+				ShowNATHint(isNAT4)
 			})
+			return
 		}
 	}()
 

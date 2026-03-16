@@ -69,15 +69,31 @@ func checkLatestVersion(currentVersion string) (bool, string) {
 var (
 	upgradeHintColor = color.NRGBA{R: 255, G: 80, B: 60, A: 255}
 	nat4WarnColor    = color.NRGBA{R: 240, G: 180, B: 40, A: 255}
+	natOkColor       = color.NRGBA{R: 50, G: 220, B: 80, A: 255}
 )
 
-var m_nat4_warn_box *fyne.Container
+var (
+	m_nat_hint_box  *fyne.Container
+	m_nat_hint_icon *widget.Icon
+	m_nat_hint_text *canvas.Text
+)
 
-// ShowNAT4Warning 显示 NAT4 对称型 NAT 警告提示
-func ShowNAT4Warning() {
-	if m_nat4_warn_box != nil {
-		m_nat4_warn_box.Show()
+// ShowNATHint 根据 STUN 检测结果显示 NAT 类型提示
+func ShowNATHint(isNAT4 bool) {
+	if m_nat_hint_box == nil {
+		return
 	}
+	if isNAT4 {
+		m_nat_hint_icon.SetResource(theme.WarningIcon())
+		m_nat_hint_text.Text = "当前网络为NAT4"
+		m_nat_hint_text.Color = nat4WarnColor
+	} else {
+		m_nat_hint_icon.SetResource(theme.ConfirmIcon())
+		m_nat_hint_text.Text = "当前网络为NAT1-NAT3"
+		m_nat_hint_text.Color = natOkColor
+	}
+	m_nat_hint_text.Refresh()
+	m_nat_hint_box.Show()
 }
 
 // NewFooter 创建底部归属信息和官网链接组件
@@ -102,16 +118,15 @@ func NewFooter(currentVersion string) fyne.CanvasObject {
 	upgradeBox := container.NewHBox(updateIcon, newBadge, updateLink)
 	upgradeBox.Hide()
 
-	nat4WarnIcon := widget.NewIcon(theme.WarningIcon())
-	nat4WarnText := canvas.NewText("当前网络为NAT4", nat4WarnColor)
-	nat4WarnText.TextSize = 14
-	nat4WarnText.TextStyle = fyne.TextStyle{Bold: true}
-	m_nat4_warn_box = container.NewHBox(nat4WarnIcon, nat4WarnText)
-	m_nat4_warn_box.Hide()
+	m_nat_hint_icon = widget.NewIcon(theme.WarningIcon())
+	m_nat_hint_text = canvas.NewText("", nat4WarnColor)
+	m_nat_hint_text.TextSize = 14
+	m_nat_hint_text.TextStyle = fyne.TextStyle{Bold: true}
+	m_nat_hint_box = container.NewHBox(m_nat_hint_icon, m_nat_hint_text)
+	m_nat_hint_box.Hide()
 
 	footerContent := container.NewHBox(
-		//versionLabel,
-		m_nat4_warn_box,
+		m_nat_hint_box,
 		layout.NewSpacer(),
 		upgradeBox,
 		container.NewHBox(feedbackIcon, feedbackLink),
