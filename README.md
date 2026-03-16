@@ -29,10 +29,6 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 # 特点
 
-1. 两台主机之间直连！直连！直连！不经过第三方服务器, 不用担心数据泄露
-
-2. 一条命令搞定, 无需安装、无需注册, 无需公网 IP, 无需配置文件
-
 ![原理图](https://gitee.com/konyshe/goodlink/raw/master/assert/prototype_cn.gif "原理图")
 
 # 一定要看
