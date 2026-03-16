@@ -197,8 +197,7 @@ ssh -o ProxyCommand='nc -X 5 -x 192.17.19.1:1080 %h %p' user@target_host
 ```
 
 ## 浏览器如何使用代理
-- Chrome/Edge：推荐使用 [SwitchyOmega](https://microsoftedge.microsoft.com/addons/detail/proxy-switchyomega-3-zer/dmaldhchmoafliphkijbfhaomcgglmgd) 插件
-- Firefox：内置代理设置支持
+- 推荐使用插件 [SwitchyOmega](https://microsoftedge.microsoft.com/addons/detail/proxy-switchyomega-3-zer/dmaldhchmoafliphkijbfhaomcgglmgd) 插件
 
 ## 🙏 致谢
 
