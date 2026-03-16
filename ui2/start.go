@@ -144,8 +144,14 @@ var (
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorWarning,
 	}
-	buttonStateConnectingNAT4 = buttonState{
-		text:       "两端都是NAT4, 连接中...",
+	buttonStateConnectingNat4 = buttonState{
+		text:       "当前网络是NAT4, 连接中...",
+		importance: widget.WarningImportance,
+		icon:       theme.MediaStopIcon(),
+		dotColor:   DotColorWarning,
+	}
+	buttonStateConnectingNat4ToNat4 = buttonState{
+		text:       "两端网络都是NAT4, 连接中...",
 		importance: widget.DangerImportance,
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorDanger,
@@ -187,7 +193,7 @@ func updateConnectionStatus(status string) {
 		case pro.TagStatusConnected:
 			fyne.Do(func() { updateButtonState(buttonStateConnected) })
 		case pro.TagStatusConnectingNAT4:
-			fyne.Do(func() { updateButtonState(buttonStateConnectingNAT4) })
+			fyne.Do(func() { updateButtonState(buttonStateConnectingNat4ToNat4) })
 		case pro.TagStatusVersionMismatch:
 			// 版本不一致，禁用自动重启并停止进程
 			m_lock_start.Lock()
