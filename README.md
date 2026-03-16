@@ -128,7 +128,7 @@ Docker暂不支持虚拟网卡（TUN模式）
     注：仅支持TCP代理
 
 ```
-# linux, 命令行（其他环境以此类推）
+# linux其他环境以此类推）
 ./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
 ```
 
@@ -145,17 +145,17 @@ Docker暂不支持虚拟网卡（TUN模式）
     注：--proxy 和 --forward 可以同时使用
 
 ```
-# linux, 命令行，单个端口转发（其他环境以此类推）
+# linux, 单个端口转发（其他环境以此类推）
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22
 ```
 
 ```
-# linux, 命令行，多个端口转发（其他环境以此类推）
+# linux, 多个端口转发（其他环境以此类推）
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
 ```
-# linux, 命令行，同时使用代理和端口转发（其他环境以此类推）
+# linux, 同时使用代理和端口转发（其他环境以此类推）
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
