@@ -290,6 +290,13 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 
 	m_button_start.Disable()
 	go func() {
+		// 等窗口/driver 就绪后再更新 UI，避免启动阶段闪退
+		fyne.Do(func() {
+			if m_button_start != nil {
+				m_button_start.Disable()
+			}
+		})
+
 		for {
 			conn, err := net.ListenUDP("udp4", nil)
 			if err != nil {
@@ -309,7 +316,9 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 			}
 			fyne.Do(func() {
 				ShowNATHint(isNAT4)
-				m_button_start.Enable()
+				if m_button_start != nil {
+					m_button_start.Enable()
+				}
 			})
 			return
 		}
