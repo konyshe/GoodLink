@@ -70,6 +70,7 @@ var (
 	upgradeHintColor = color.NRGBA{R: 255, G: 80, B: 60, A: 255}
 	nat4WarnColor    = color.NRGBA{R: 240, G: 180, B: 40, A: 255}
 	natOkColor       = color.NRGBA{R: 50, G: 220, B: 80, A: 255}
+	natDetectColor   = color.NRGBA{R: 180, G: 180, B: 180, A: 255}
 )
 
 var (
@@ -118,12 +119,11 @@ func NewFooter(currentVersion string) fyne.CanvasObject {
 	upgradeBox := container.NewHBox(updateIcon, newBadge, updateLink)
 	upgradeBox.Hide()
 
-	m_nat_hint_icon = widget.NewIcon(theme.WarningIcon())
-	m_nat_hint_text = canvas.NewText("", nat4WarnColor)
+	m_nat_hint_icon = widget.NewIcon(theme.SearchIcon())
+	m_nat_hint_text = canvas.NewText("正在检测当前网络环境...", natDetectColor)
 	m_nat_hint_text.TextSize = 14
 	m_nat_hint_text.TextStyle = fyne.TextStyle{Bold: true}
 	m_nat_hint_box = container.NewHBox(m_nat_hint_icon, m_nat_hint_text)
-	m_nat_hint_box.Hide()
 
 	footerContent := container.NewHBox(
 		m_nat_hint_box,

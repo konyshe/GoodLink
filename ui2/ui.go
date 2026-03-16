@@ -288,6 +288,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		NewLogList(),  // 中心（自适应区域）
 	)
 
+	m_button_start.Disable()
 	go func() {
 		for {
 			conn, err := net.ListenUDP("udp4", nil)
@@ -308,6 +309,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 			}
 			fyne.Do(func() {
 				ShowNATHint(isNAT4)
+				m_button_start.Enable()
 			})
 			return
 		}
