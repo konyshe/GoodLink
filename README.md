@@ -169,7 +169,7 @@ Docker暂不支持虚拟网卡（TUN模式）
 
 ## 💬 交流方式
 
-- **GitHub Issues**：[提交问题和建议](https://github.com/konyshe/GoodLink/issues)
+- **GitHub Issues**：[提交问题和建议](https://github.com/konyshe/Goodlink/issues)
 - **Gitee Issues**：[国内用户交流](https://gitee.com/konyshe/goodlink/issues)
 
 ## 🎯 贡献指南
@@ -187,5 +187,5 @@ Docker暂不支持虚拟网卡（TUN模式）
 
 <div align="center">
   <p><strong>让内网访问变得简单安全！</strong></p>
-  <p>Made with ❤️ by GoodLink Team</p>
+  <p>Made with ❤️ by Goodlink Team</p>
 </div>

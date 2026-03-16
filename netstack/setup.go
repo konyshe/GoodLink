@@ -168,5 +168,5 @@ func GetRemoteIP() string {
 }
 
 func GetName() string {
-	return "GoodLink"
+	return "Goodlink"
 }

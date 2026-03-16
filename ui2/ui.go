@@ -58,7 +58,7 @@ var (
 )
 
 const (
-	M_APP_TITLE    = "GoodLink"
+	M_APP_TITLE    = "Goodlink"
 	workTypeLocal  = "Local"
 	workTypeRemote = "Remote"
 )
