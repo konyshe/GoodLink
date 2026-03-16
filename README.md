@@ -142,8 +142,6 @@ Docker暂不支持虚拟网卡（TUN模式）
     连接成功后，在Local端访问本地指定端口等于在Remote端访问指定地址和端口
     格式: --forward=本地监听地址:本地端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
 
-    注：--proxy 和 --forward 可以同时使用
-
 ```
 # linux, 单个端口转发（其他环境以此类推）
 ./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22
