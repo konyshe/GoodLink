@@ -240,7 +240,7 @@ func StopRemote() error {
 		return true
 	})
 	// 重置活跃连接数
-	log.Println("[连接统计] Remote端已停止，所有连接已清理")
+	log.Println("已释放所有连接")
 	return nil
 }
 
