@@ -210,7 +210,7 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 	buf.Write(transactionID)
 
 	for _, ip := range ips {
-		stunLogf("stun_svr: %s => %s", stun_svr, ip.String())
+		//stunLogf("stun_svr: %s => %s", stun_svr, ip.String())
 
 		wan_ip, wan_port1, change_ip, change_port = getStunIpPort2(conn, ip.String()+":3478", &buf, magicCookie, transactionID)
 		if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 {
