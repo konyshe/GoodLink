@@ -75,6 +75,7 @@ var (
 
 var (
 	m_nat_hint_box  *fyne.Container
+	m_nat_hint_icon *widget.Icon
 	m_nat_hint_text *canvas.Text
 )
 
@@ -84,12 +85,15 @@ func ShowNATHint(isNAT4 bool) {
 		return
 	}
 	if isNAT4 {
+		m_nat_hint_icon.SetResource(theme.WarningIcon())
 		m_nat_hint_text.Text = "当前网络为NAT4"
 		m_nat_hint_text.Color = nat4WarnColor
 	} else {
+		m_nat_hint_icon.SetResource(theme.ConfirmIcon())
 		m_nat_hint_text.Text = "当前网络为NAT1-NAT3"
 		m_nat_hint_text.Color = natOkColor
 	}
+	m_nat_hint_icon.Refresh()
 	m_nat_hint_text.Refresh()
 	m_nat_hint_box.Show()
 }
@@ -116,10 +120,11 @@ func NewFooter(currentVersion string) fyne.CanvasObject {
 	upgradeBox := container.NewHBox(updateIcon, newBadge, updateLink)
 	upgradeBox.Hide()
 
+	m_nat_hint_icon = widget.NewIcon(theme.InfoIcon())
 	m_nat_hint_text = canvas.NewText("正在检测当前网络环境...", natDetectColor)
 	m_nat_hint_text.TextSize = 14
 	m_nat_hint_text.TextStyle = fyne.TextStyle{Bold: true}
-	m_nat_hint_box = container.NewHBox(m_nat_hint_text)
+	m_nat_hint_box = container.NewHBox(m_nat_hint_icon, m_nat_hint_text)
 
 	footerContent := container.NewHBox(
 		m_nat_hint_box,
