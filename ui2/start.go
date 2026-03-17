@@ -219,8 +219,7 @@ func startCmdProcess() error {
 
 	// 检查 cmd 程序是否存在
 	if _, err := os.Stat(cmdPath); os.IsNotExist(err) {
-		UILogPrintF("未找到: %s", filepath.Base(cmdPath))
-		return fmt.Errorf("cmd程序不存在: %s", cmdPath)
+		return fmt.Errorf("文件不存在: %s", filepath.Base(cmdPath))
 	}
 
 	// 构建命令行参数
@@ -313,6 +312,7 @@ func start_button_click() {
 
 		// 启动进程
 		if err := startCmdProcess(); err != nil {
+			UILogPrintF("启动失败: %v", err)
 			enable_other()
 			m_button_start.Enable()
 			m_stats_start_button = 0
@@ -412,7 +412,7 @@ func autoRestartProcess() {
 
 	// 重启进程
 	if err := startCmdProcess(); err != nil {
-		UILogPrintF("自动重启失败: %v", err)
+		UILogPrintF("启动失败: %v", err)
 		fyne.Do(func() {
 			m_stats_start_button = 0
 			updateButtonState(buttonStateIdle)
