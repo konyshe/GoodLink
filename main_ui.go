@@ -60,7 +60,6 @@ func main() {
 	warning, _ := trayIcons.ReadFile("assert/tray_warning.ico")
 	danger, _ := trayIcons.ReadFile("assert/tray_danger.ico")
 	success, _ := trayIcons.ReadFile("assert/tray_success.ico")
-	ui2.InitTrayIcons(idle, warning, danger, success)
 
 	if desk, ok := myApp.(desktop.App); ok {
 		// 创建菜单项
@@ -80,6 +79,8 @@ func main() {
 			fyne.NewMenuItemSeparator(),
 			quitItem)
 		desk.SetSystemTrayMenu(m)
+
+		ui2.InitTrayIcons(desk, idle, warning, danger, success)
 	}
 
 	myWindow.SetContent(ui2.GetMainUI(&myWindow))

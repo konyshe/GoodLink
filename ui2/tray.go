@@ -18,7 +18,8 @@ var (
 
 // InitTrayIcons sets the 4 pre-generated tray icon bytes (ICO format).
 // Icons should be from assert/tray_idle.ico, tray_warning.ico, tray_danger.ico, tray_success.ico.
-func InitTrayIcons(idle, warning, danger, success []byte) {
+func InitTrayIcons(desk desktop.App, idle, warning, danger, success []byte) {
+	trayApp = desk
 	trayIconIdle = idle
 	trayIconWarning = warning
 	trayIconDanger = danger
