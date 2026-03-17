@@ -13,6 +13,20 @@ import (
 	go2pool "go2/pool"
 )
 
+// extraLogSink 可选：由 UI 设置后，STUN 相关日志会同时输出到该回调（如运行日志列表），cmd 不设置则为 nil
+var extraLogSink func(string)
+
+// SetExtraLogSink 设置额外日志回调，仅 GUI 在调用 GetStunIpPort 前设置；cmd 不调用则保持默认仅标准 log
+func SetExtraLogSink(f func(string)) { extraLogSink = f }
+
+func stunLogf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Printf(format, args...)
+	if extraLogSink != nil {
+		extraLogSink(msg)
+	}
+}
+
 func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magicCookie []byte, transactionID []byte) (string, int, error) {
 	// https://www.rfc-editor.org/rfc/rfc5389.html#section-15.1
 	// MAPPED-ADDRESS
@@ -140,7 +154,7 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 
 	response, n, err := getStunResponse(conn, addr, buf)
 	if err != nil {
-		log.Printf("getStunResponse error: %v", err)
+		stunLogf("getStunResponse error: %v", err)
 		return "", 0, "", 0
 	}
 
@@ -159,13 +173,13 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 		wan_ip1, wan_port1, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
 	}
 	if err != nil {
-		log.Printf("getStunIpPort4 error: %v", err)
+		stunLogf("getStunIpPort4 error: %v", err)
 		return "", 0, "", 0
 	}
 
 	change_ip, change_port, err := getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
 	if err != nil {
-		log.Printf("getStunIpPort4 error: %v", err)
+		stunLogf("getStunIpPort4 error: %v", err)
 	}
 
 	return wan_ip1, wan_port1, change_ip, change_port
@@ -196,7 +210,7 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 	buf.Write(transactionID)
 
 	for _, ip := range ips {
-		log.Printf("stun_svr: %s => %s", stun_svr, ip.String())
+		stunLogf("stun_svr: %s => %s", stun_svr, ip.String())
 
 		wan_ip, wan_port1, change_ip, change_port = getStunIpPort2(conn, ip.String()+":3478", &buf, magicCookie, transactionID)
 		if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 {
@@ -230,7 +244,7 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 		for _, stun_svr := range stun_svr_list {
 			wan_ip, wan_port1, wan_port2, wan_port3, err = GetStunIpPort2(stun_svr, conn)
 			if err != nil {
-				log.Printf("%v", err)
+				stunLogf("%v", err)
 				continue
 			}
 			return wan_ip, wan_port1, wan_port2, wan_port3

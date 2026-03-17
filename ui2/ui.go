@@ -289,6 +289,8 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	)
 
 	m_button_start.Disable()
+	// 让 GetStunIpPort 内部的 STUN 日志也输出到运行日志列表（仅 GUI 设置，cmd 不调用此处）
+	stun2.SetExtraLogSink(func(s string) { UILogPrintF(s) })
 	go func() {
 		// 等窗口/driver 就绪后再更新 UI，避免启动阶段闪退
 		fyne.Do(func() {
@@ -300,7 +302,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		for {
 			conn, err := net.ListenUDP("udp4", nil)
 			if err != nil {
-				log.Println("NAT检测: UDP监听失败:", err)
+				UILogPrintF("NAT检测: UDP监听失败: " + err.Error())
 				time.Sleep(5 * time.Second)
 				continue
 			}
@@ -309,11 +311,6 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 			conn.Close()
 
 			isNAT4 := wanPort1 != wanPort2
-			if isNAT4 {
-				log.Printf("NAT检测: WanPort1=%d, WanPort2=%d, 当前网络为NAT4(对称型NAT)", wanPort1, wanPort2)
-			} else {
-				log.Printf("NAT检测: WanPort1=%d, WanPort2=%d, 当前网络为NAT1-NAT3", wanPort1, wanPort2)
-			}
 			fyne.Do(func() {
 				ShowNATHint(isNAT4)
 				if m_button_start != nil {
