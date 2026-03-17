@@ -122,6 +122,7 @@ type buttonState struct {
 	importance widget.Importance
 	icon       fyne.Resource
 	dotColor   color.NRGBA
+	enabled    bool
 }
 
 // 预定义的按钮状态
@@ -131,42 +132,49 @@ var (
 		importance: widget.HighImportance,
 		icon:       theme.MediaPlayIcon(),
 		dotColor:   DotColorIdle,
+		enabled:    true,
 	}
 	buttonStateStarting = buttonState{
 		text:       "启动中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorWarning,
+		enabled:    true,
 	}
 	buttonStateConnecting = buttonState{
 		text:       "连接中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorWarning,
+		enabled:    true,
 	}
 	buttonStateConnectingNat4 = buttonState{
 		text:       "当前网络是NAT4, 连接中...",
 		importance: widget.WarningImportance,
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorWarning,
+		enabled:    true,
 	}
 	buttonStateConnectingNat4ToNat4 = buttonState{
 		text:       "两端网络都是NAT4, 连接中...",
 		importance: widget.DangerImportance,
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorDanger,
+		enabled:    true,
 	}
 	buttonStateConnected = buttonState{
 		text:       "连接成功, 点击停止",
 		importance: widget.SuccessImportance,
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorSuccess,
+		enabled:    true,
 	}
 	buttonStateRunning = buttonState{
 		text:       "启动成功, 点击停止",
 		importance: widget.SuccessImportance,
 		icon:       theme.MediaStopIcon(),
 		dotColor:   DotColorSuccess,
+		enabled:    true,
 	}
 )
 
@@ -174,6 +182,11 @@ var (
 func updateButtonState(state buttonState) {
 	if m_button_start == nil {
 		return
+	}
+	if state.enabled {
+		m_button_start.Enable()
+	} else {
+		m_button_start.Disable()
 	}
 	m_button_start.SetText(state.text)
 	m_button_start.Importance = state.importance
@@ -354,19 +367,20 @@ func waitForProcessAndHandleExit(isRestart bool) {
 		}
 		return
 	}
-	fyne.Do(func() {
-		m_button_start.Enable()
-		if GetWorkType() == workTypeLocal {
-			updateButtonState(buttonStateConnecting)
-		} else {
-			updateButtonState(buttonStateStarting)
-		}
-		if !isRestart {
-			m_activity_start_button.Stop()
-			m_activity_start_button.Hide()
-		}
-	})
-
+	/*
+		fyne.Do(func() {
+			m_button_start.Enable()
+			if GetWorkType() == workTypeLocal {
+				updateButtonState(buttonStateConnecting)
+			} else {
+				updateButtonState(buttonStateStarting)
+			}
+			if !isRestart {
+				m_activity_start_button.Stop()
+				m_activity_start_button.Hide()
+			}
+		})
+	*/
 	// 等待子进程结束
 	m_cmd_mutex.Lock()
 	proc := m_cmd_process
@@ -421,15 +435,15 @@ func autoRestartProcess() {
 		})
 		return
 	}
-
-	fyne.Do(func() {
-		if GetWorkType() == workTypeLocal {
-			updateButtonState(buttonStateConnecting)
-		} else {
-			updateButtonState(buttonStateStarting)
-		}
-	})
-
+	/*
+		fyne.Do(func() {
+			if GetWorkType() == workTypeLocal {
+				updateButtonState(buttonStateConnecting)
+			} else {
+				updateButtonState(buttonStateStarting)
+			}
+		})
+	*/
 	// 启动新的等待goroutine
 	go waitForProcessAndHandleExit(true)
 }

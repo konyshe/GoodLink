@@ -20,7 +20,7 @@ var (
 	m_tun_active       *tun.TunActive
 	m_tun_passive      *tun.TunPassive
 	g_netstack_started = false
-	m_forward_clients []*proxy.ForwardClient
+	m_forward_clients  []*proxy.ForwardClient
 )
 
 // handleState0_RegisterSession 处理 State 0: 注册会话并等待 Remote 端认领
@@ -31,11 +31,9 @@ func handleState0_RegisterSession(sessionID string, redisJson *RedisJsonType, co
 	switch conn_type {
 	case 0:
 		log.Println("请求连接Remote端")
-		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 	default:
 		redisJson.LocalAddr = *addr
 		log.Printf("发送Local端地址: %v", redisJson.LocalAddr)
-		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 	}
 
 	// 将SessionID注册到Hash中，等待Remote端认领
@@ -262,7 +260,6 @@ func RunLocal() error {
 		udp_conn, addr = GetUDPAddr()
 
 		log.Printf("Local端地址: %v", addr)
-		log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
 
 		if !useForward && !g_netstack_started {
 			if err := netstack.Start(); err != nil {
