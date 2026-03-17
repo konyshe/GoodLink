@@ -208,21 +208,18 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 
 		wan_ip, wan_port1, change_ip, change_port, err = getStunIpPort2(conn, stun_svr, ip.String()+":3478", &buf, magicCookie, transactionID)
 		if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 || err != nil {
-			stunLogf("%s", err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		_, wan_port2, _, _, err = getStunIpPort2(conn, stun_svr, ip.String()+":3479", &buf, magicCookie, transactionID)
 		if wan_port2 == 0 || err != nil {
-			stunLogf("%s", err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		_, wan_port3, _, _, err = getStunIpPort2(conn, stun_svr, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
 		if wan_port3 == 0 || err != nil {
-			stunLogf("%s", err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -230,7 +227,7 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 		return wan_ip, wan_port1, wan_port2, wan_port3, nil
 	}
 
-	return "", 0, 0, 0, fmt.Errorf("connect %s failed", stun_svr)
+	return "", 0, 0, 0, err
 }
 
 func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
