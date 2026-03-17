@@ -136,7 +136,7 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 	return response, n, nil
 }
 
-func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCookie []byte, transactionID []byte) (string, int, string, int) {
+func getStunIpPort2(conn *net.UDPConn, stun_svr, addr string, buf *bytes.Buffer, magicCookie []byte, transactionID []byte) (string, int, string, int, error) {
 
 	// https://www.rfc-editor.org/rfc/rfc5389.html#section-6
 	// STUN Message Structure
@@ -154,8 +154,7 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 
 	response, n, err := getStunResponse(conn, addr, buf)
 	if err != nil {
-		stunLogf("getStunResponse: %s", err.Error())
-		return "", 0, "", 0
+		return "", 0, "", 0, fmt.Errorf("%s(%s): %s", stun_svr, addr, err.Error())
 	}
 
 	// https://www.rfc-editor.org/rfc/rfc5389.html#section-15
@@ -173,16 +172,15 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 		wan_ip1, wan_port1, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
 	}
 	if err != nil {
-		stunLogf("getStunIpPort4: %s", err.Error())
-		return "", 0, "", 0
+		return "", 0, "", 0, fmt.Errorf("mapped %s(%s): %s", stun_svr, addr, err.Error())
 	}
 
 	change_ip, change_port, err := getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
 	if err != nil {
-		stunLogf("getStunIpPort4: %s", err.Error())
+		return "", 0, "", 0, fmt.Errorf("changed %s(%s): %s", stun_svr, addr, err.Error())
 	}
 
-	return wan_ip1, wan_port1, change_ip, change_port
+	return wan_ip1, wan_port1, change_ip, change_port, nil
 }
 
 func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int, err error) {
@@ -192,10 +190,7 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 
 	ips, err = net.LookupIP(stun_svr)
 	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("lookup stun ip: %s, %v", stun_svr, err)
-	}
-	if len(ips) == 0 {
-		return "", 0, 0, 0, fmt.Errorf("stun ip not found: %s", stun_svr)
+		return "", 0, 0, 0, fmt.Errorf("lookup %s: %s", stun_svr, err.Error())
 	}
 
 	// STUN message header
@@ -210,22 +205,24 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 	buf.Write(transactionID)
 
 	for _, ip := range ips {
-		//stunLogf("stun_svr: %s => %s", stun_svr, ip.String())
 
-		wan_ip, wan_port1, change_ip, change_port = getStunIpPort2(conn, ip.String()+":3478", &buf, magicCookie, transactionID)
-		if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 {
+		wan_ip, wan_port1, change_ip, change_port, err = getStunIpPort2(conn, stun_svr, ip.String()+":3478", &buf, magicCookie, transactionID)
+		if wan_ip == "" || wan_port1 == 0 || change_ip == "" || change_port == 0 || err != nil {
+			stunLogf("%s", err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
-		_, wan_port2, _, _ = getStunIpPort2(conn, ip.String()+":3479", &buf, magicCookie, transactionID)
-		if wan_port2 == 0 {
+		_, wan_port2, _, _, err = getStunIpPort2(conn, stun_svr, ip.String()+":3479", &buf, magicCookie, transactionID)
+		if wan_port2 == 0 || err != nil {
+			stunLogf("%s", err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
-		_, wan_port3, _, _ = getStunIpPort2(conn, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
-		if wan_port3 == 0 {
+		_, wan_port3, _, _, err = getStunIpPort2(conn, stun_svr, fmt.Sprintf("%s:%d", change_ip, change_port), &buf, magicCookie, transactionID)
+		if wan_port3 == 0 || err != nil {
+			stunLogf("%s", err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -233,7 +230,7 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 		return wan_ip, wan_port1, wan_port2, wan_port3, nil
 	}
 
-	return "", 0, 0, 0, fmt.Errorf("stun ip found failed")
+	return "", 0, 0, 0, fmt.Errorf("connect %s failed", stun_svr)
 }
 
 func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
@@ -244,7 +241,7 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 		for _, stun_svr := range stun_svr_list {
 			wan_ip, wan_port1, wan_port2, wan_port3, err = GetStunIpPort2(stun_svr, conn)
 			if err != nil {
-				stunLogf("%v", err)
+				stunLogf("%s", err.Error())
 				continue
 			}
 			return wan_ip, wan_port1, wan_port2, wan_port3
