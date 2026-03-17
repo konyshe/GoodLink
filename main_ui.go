@@ -3,6 +3,7 @@
 package main
 
 import (
+	"embed"
 	"goodlink/config"
 	"goodlink/pro"
 	_ "goodlink/pro"
@@ -16,6 +17,9 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/driver/desktop"
 )
+
+//go:embed assert/tray_idle.ico assert/tray_warning.ico assert/tray_danger.ico assert/tray_success.ico
+var trayIcons embed.FS
 
 const (
 	M_APP_TITLE = "Goodlink"
@@ -52,7 +56,11 @@ func main() {
 		}
 	}()
 
-	ui2.InitTrayIcons()
+	idle, _ := trayIcons.ReadFile("assert/tray_idle.ico")
+	warning, _ := trayIcons.ReadFile("assert/tray_warning.ico")
+	danger, _ := trayIcons.ReadFile("assert/tray_danger.ico")
+	success, _ := trayIcons.ReadFile("assert/tray_success.ico")
+	ui2.InitTrayIcons(idle, warning, danger, success)
 
 	if desk, ok := myApp.(desktop.App); ok {
 		ui2.SetTrayApp(desk)

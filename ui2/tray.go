@@ -3,46 +3,47 @@
 package ui2
 
 import (
-	"embed"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/driver/desktop"
 	"image/color"
 )
 
-//go:embed tray_idle.png tray_warning.png tray_danger.png tray_success.png
-var trayIconFS embed.FS
-
 var (
 	trayApp         desktop.App
 	currentDotColor color.NRGBA
+	// Pre-generated tray icon data (ICO bytes), set by InitTrayIcons.
+	trayIconIdle    []byte
+	trayIconWarning []byte
+	trayIconDanger  []byte
+	trayIconSuccess []byte
 )
 
-func InitTrayIcons() {
-	// No-op: icons are embedded and selected by UpdateTrayIcon.
+// InitTrayIcons sets the 4 pre-generated tray icon bytes (ICO format).
+// Icons should be from assert/tray_idle.ico, tray_warning.ico, tray_danger.ico, tray_success.ico.
+func InitTrayIcons(idle, warning, danger, success []byte) {
+	trayIconIdle = idle
+	trayIconWarning = warning
+	trayIconDanger = danger
+	trayIconSuccess = success
 }
 
 func iconForDotColor(c color.NRGBA) fyne.Resource {
-	data, _ := trayIconFS.ReadFile(iconNameForDotColor(c))
+	var data []byte
+	if c.R == DotColorIdle.R && c.G == DotColorIdle.G && c.B == DotColorIdle.B {
+		data = trayIconIdle
+	} else if c.R == DotColorWarning.R && c.G == DotColorWarning.G && c.B == DotColorWarning.B {
+		data = trayIconWarning
+	} else if c.R == DotColorDanger.R && c.G == DotColorDanger.G && c.B == DotColorDanger.B {
+		data = trayIconDanger
+	} else if c.R == DotColorSuccess.R && c.G == DotColorSuccess.G && c.B == DotColorSuccess.B {
+		data = trayIconSuccess
+	} else {
+		data = trayIconIdle
+	}
 	if len(data) == 0 {
 		return nil
 	}
-	return fyne.NewStaticResource("tray_icon.png", data)
-}
-
-func iconNameForDotColor(c color.NRGBA) string {
-	if c.R == DotColorIdle.R && c.G == DotColorIdle.G && c.B == DotColorIdle.B {
-		return "tray_idle.png"
-	}
-	if c.R == DotColorWarning.R && c.G == DotColorWarning.G && c.B == DotColorWarning.B {
-		return "tray_warning.png"
-	}
-	if c.R == DotColorDanger.R && c.G == DotColorDanger.G && c.B == DotColorDanger.B {
-		return "tray_danger.png"
-	}
-	if c.R == DotColorSuccess.R && c.G == DotColorSuccess.G && c.B == DotColorSuccess.B {
-		return "tray_success.png"
-	}
-	return "tray_idle.png"
+	return fyne.NewStaticResource("tray_icon.ico", data)
 }
 
 func SetTrayApp(desk desktop.App) {

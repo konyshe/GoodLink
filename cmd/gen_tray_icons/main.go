@@ -1,5 +1,5 @@
-// gen_tray_icons reads assert/favicon.png and generates 4 tray state PNGs
-// into ui2/ using the same dot-drawing logic as ui2/tray.go.
+// gen_tray_icons reads assert/favicon.png and generates 4 tray state .ico files
+// into assert/ using the same dot-drawing logic as ui2/tray.go.
 // Run from project root: go run ./cmd/gen_tray_icons
 package main
 
@@ -7,10 +7,12 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/png"
 	"math"
 	"os"
 	"path/filepath"
+
+	"github.com/antoinefink/golang-ico"
+	"github.com/nfnt/resize"
 )
 
 var (
@@ -25,7 +27,7 @@ func main() {
 	if len(os.Args) > 1 {
 		basePath = os.Args[1]
 	}
-	outDir := "ui2"
+	outDir := "assert"
 	if len(os.Args) > 2 {
 		outDir = os.Args[2]
 	}
@@ -39,15 +41,18 @@ func main() {
 	if err != nil {
 		panic("decode base image: " + err.Error())
 	}
+	// Resize to 32x32 for tray icon (ICO max 256x256; small size suits system tray)
+	const traySize = 32
+	baseImage = resize.Resize(traySize, traySize, baseImage, resize.Lanczos3)
 
 	states := []struct {
 		name string
 		c    color.NRGBA
 	}{
-		{"tray_idle.png", dotColorIdle},
-		{"tray_warning.png", dotColorWarning},
-		{"tray_danger.png", dotColorDanger},
-		{"tray_success.png", dotColorSuccess},
+		{"tray_idle.ico", dotColorIdle},
+		{"tray_warning.ico", dotColorWarning},
+		{"tray_danger.ico", dotColorDanger},
+		{"tray_success.ico", dotColorSuccess},
 	}
 
 	for _, s := range states {
@@ -57,7 +62,7 @@ func main() {
 		if err != nil {
 			panic("create " + outPath + ": " + err.Error())
 		}
-		if err := png.Encode(out, dst); err != nil {
+		if err := ico.Encode(out, dst); err != nil {
 			_ = out.Close()
 			panic("encode " + outPath + ": " + err.Error())
 		}

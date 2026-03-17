@@ -22,6 +22,7 @@ require (
 
 require (
 	fyne.io/systray v1.12.0 // indirect
+	github.com/antoinefink/golang-ico v0.0.0-20251207114801-fa953cf78f26 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
