@@ -104,6 +104,14 @@ type buttonState struct {
 
 // 预定义的按钮状态
 var (
+	buttonStateInitializing = buttonState{
+		text:          "检测网络中...",
+		importance:    widget.HighImportance,
+		icon:          theme.MediaPlayIcon(),
+		enabled:       false,
+		activity:      false,
+		other_enabled: true,
+	}
 	buttonStateIdle = buttonState{
 		text:          "点击启动",
 		importance:    widget.HighImportance,
@@ -167,14 +175,6 @@ var (
 		enabled:       false,
 		activity:      false,
 		other_enabled: false,
-	}
-	buttonStateInitializing = buttonState{
-		text:          "检测网络中...",
-		importance:    widget.HighImportance,
-		icon:          theme.MediaPlayIcon(),
-		enabled:       false,
-		activity:      false,
-		other_enabled: true,
 	}
 )
 
