@@ -91,14 +91,6 @@ func parseStatusMessage(line string) (string, bool) {
 	return "", false
 }
 
-// 托盘小圆点颜色，与按钮 Importance 对应
-var (
-	DotColorIdle    = color.NRGBA{R: 50, G: 120, B: 240, A: 255}
-	DotColorWarning = color.NRGBA{R: 240, G: 180, B: 40, A: 255}
-	DotColorDanger  = color.NRGBA{R: 230, G: 60, B: 60, A: 255}
-	DotColorSuccess = color.NRGBA{R: 50, G: 220, B: 80, A: 255}
-)
-
 // 按钮状态类型
 type buttonState struct {
 	text          string
@@ -116,7 +108,6 @@ var (
 		text:          "点击启动",
 		importance:    widget.HighImportance,
 		icon:          theme.MediaPlayIcon(),
-		dotColor:      DotColorIdle,
 		enabled:       true,
 		activity:      false,
 		other_enabled: true,
@@ -125,7 +116,6 @@ var (
 		text:          "启动中...",
 		importance:    widget.WarningImportance,
 		icon:          theme.MediaStopIcon(),
-		dotColor:      DotColorWarning,
 		enabled:       true,
 		activity:      true,
 		other_enabled: false,
@@ -134,7 +124,6 @@ var (
 		text:          "连接中...",
 		importance:    widget.WarningImportance,
 		icon:          theme.MediaStopIcon(),
-		dotColor:      DotColorWarning,
 		enabled:       true,
 		activity:      true,
 		other_enabled: false,
@@ -143,7 +132,6 @@ var (
 		text:          "当前网络是NAT4, 连接中...",
 		importance:    widget.WarningImportance,
 		icon:          theme.MediaStopIcon(),
-		dotColor:      DotColorWarning,
 		enabled:       true,
 		activity:      true,
 		other_enabled: false,
@@ -152,7 +140,6 @@ var (
 		text:          "两端网络都是NAT4, 连接中...",
 		importance:    widget.DangerImportance,
 		icon:          theme.MediaStopIcon(),
-		dotColor:      DotColorDanger,
 		enabled:       true,
 		activity:      true,
 		other_enabled: false,
@@ -161,7 +148,6 @@ var (
 		text:          "连接成功, 点击停止",
 		importance:    widget.SuccessImportance,
 		icon:          theme.MediaStopIcon(),
-		dotColor:      DotColorSuccess,
 		enabled:       true,
 		activity:      false,
 		other_enabled: false,
@@ -170,7 +156,6 @@ var (
 		text:          "启动成功, 点击停止",
 		importance:    widget.SuccessImportance,
 		icon:          theme.MediaStopIcon(),
-		dotColor:      DotColorSuccess,
 		enabled:       true,
 		activity:      false,
 		other_enabled: false,
@@ -179,7 +164,6 @@ var (
 		text:          "停止中...",
 		importance:    widget.WarningImportance,
 		icon:          theme.MediaStopIcon(),
-		dotColor:      DotColorWarning,
 		enabled:       false,
 		activity:      false,
 		other_enabled: false,
@@ -188,12 +172,14 @@ var (
 		text:          "检测网络中...",
 		importance:    widget.HighImportance,
 		icon:          theme.MediaPlayIcon(),
-		dotColor:      DotColorIdle,
 		enabled:       false,
 		activity:      false,
 		other_enabled: true,
 	}
 )
+
+// ButtonStateIdle is the idle state for the tray; exported for main to pass to SetTrayApp.
+var ButtonStateIdle = buttonStateIdle
 
 // updateButtonState 更新启动按钮的状态，同时同步托盘图标小圆点颜色
 func updateButtonState(state buttonState) {
@@ -230,7 +216,7 @@ func updateButtonState(state buttonState) {
 	m_button_start.SetIcon(state.icon)
 	m_button_start.Refresh()
 
-	UpdateTrayIcon(state.dotColor)
+	UpdateTrayIcon(state)
 }
 
 // updateConnectionStatus 根据连接状态更新按钮（Local端直接映射，Remote端在连接成功后才切换为运行状态）

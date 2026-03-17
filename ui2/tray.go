@@ -5,12 +5,10 @@ package ui2
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/driver/desktop"
-	"image/color"
 )
 
 var (
-	trayApp         desktop.App
-	currentDotColor color.NRGBA
+	trayApp desktop.App
 	// Pre-generated tray icon data (ICO bytes), set by InitTrayIcons.
 	trayIconIdle    []byte
 	trayIconWarning []byte
@@ -27,17 +25,19 @@ func InitTrayIcons(idle, warning, danger, success []byte) {
 	trayIconSuccess = success
 }
 
-func iconForDotColor(c color.NRGBA) fyne.Resource {
+// iconForState returns the tray icon resource for the given button state.
+func iconForState(state buttonState) fyne.Resource {
 	var data []byte
-	if c.R == DotColorIdle.R && c.G == DotColorIdle.G && c.B == DotColorIdle.B {
+	switch {
+	case state == buttonStateIdle, state == buttonStateInitializing:
 		data = trayIconIdle
-	} else if c.R == DotColorWarning.R && c.G == DotColorWarning.G && c.B == DotColorWarning.B {
+	case state == buttonStateStarting, state == buttonStateConnecting, state == buttonStateConnectingNat4, state == buttonStateStopping:
 		data = trayIconWarning
-	} else if c.R == DotColorDanger.R && c.G == DotColorDanger.G && c.B == DotColorDanger.B {
+	case state == buttonStateConnectingNat4ToNat4:
 		data = trayIconDanger
-	} else if c.R == DotColorSuccess.R && c.G == DotColorSuccess.G && c.B == DotColorSuccess.B {
+	case state == buttonStateConnected, state == buttonStateRunning:
 		data = trayIconSuccess
-	} else {
+	default:
 		data = trayIconIdle
 	}
 	if len(data) == 0 {
@@ -46,24 +46,18 @@ func iconForDotColor(c color.NRGBA) fyne.Resource {
 	return fyne.NewStaticResource("tray_icon.ico", data)
 }
 
-func SetTrayApp(desk desktop.App) {
-	trayApp = desk
-	icon := iconForDotColor(DotColorIdle)
+func SetTrayApp(state buttonState) {
+	icon := iconForState(state)
 	if icon != nil {
 		trayApp.SetSystemTrayIcon(icon)
-		currentDotColor = DotColorIdle
 	}
 }
 
-func UpdateTrayIcon(dotColor color.NRGBA) {
+func UpdateTrayIcon(state buttonState) {
 	if trayApp == nil {
 		return
 	}
-	if dotColor == currentDotColor {
-		return
-	}
-	currentDotColor = dotColor
-	icon := iconForDotColor(dotColor)
+	icon := iconForState(state)
 	if icon != nil {
 		trayApp.SetSystemTrayIcon(icon)
 	}

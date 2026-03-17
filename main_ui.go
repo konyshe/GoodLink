@@ -63,7 +63,7 @@ func main() {
 	ui2.InitTrayIcons(idle, warning, danger, success)
 
 	if desk, ok := myApp.(desktop.App); ok {
-		ui2.SetTrayApp(desk)
+		ui2.SetTrayApp(ui2.ButtonStateIdle)
 
 		// 创建菜单项
 		openItem := fyne.NewMenuItem("打开主程序", func() {
