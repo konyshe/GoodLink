@@ -288,7 +288,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		NewLogList(),  // 中心（自适应区域）
 	)
 
-	m_button_start.Disable()
+	updateButtonState(buttonStateInitializing)
 	// 让 GetStunIpPort 内部的 STUN 日志也输出到运行日志列表（仅 GUI 设置，cmd 不调用此处）
 	stun2.SetExtraLogSink(func(s string) {
 		ts := time.Now().Format("2006/01/02 15:04:05")
@@ -301,7 +301,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 
 		// 等窗口/driver 就绪后再更新 UI，避免启动阶段闪退
 		fyne.Do(func() {
-			m_button_start.Disable()
+			updateButtonState(buttonStateInitializing)
 		})
 
 		for {
@@ -318,7 +318,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 			isNAT4 := wanPort1 != wanPort2
 			fyne.Do(func() {
 				ShowNATHint(isNAT4)
-				m_button_start.Enable()
+				updateButtonState(buttonStateIdle)
 			})
 			return
 		}

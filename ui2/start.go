@@ -61,23 +61,6 @@ func setUIComponents(components []uiComponent) {
 	uiComponents = components
 }
 
-func disable_other(content string) {
-	for _, comp := range uiComponents {
-		comp.Disable()
-	}
-	m_activity_start_button.Start()
-	m_activity_start_button.Show()
-	m_stats_start_button = 1
-}
-
-func enable_other() {
-	for _, comp := range uiComponents {
-		comp.Enable()
-	}
-	m_activity_start_button.Stop()
-	m_activity_start_button.Hide()
-}
-
 // StopCmdProcess 停止子进程（供外部调用，如窗口关闭时）
 func StopCmdProcess() {
 	m_cmd_mutex.Lock()
@@ -118,63 +101,97 @@ var (
 
 // 按钮状态类型
 type buttonState struct {
-	text       string
-	importance widget.Importance
-	icon       fyne.Resource
-	dotColor   color.NRGBA
-	enabled    bool
+	text          string
+	importance    widget.Importance
+	icon          fyne.Resource
+	dotColor      color.NRGBA
+	enabled       bool
+	activity      bool
+	other_enabled bool
 }
 
 // 预定义的按钮状态
 var (
 	buttonStateIdle = buttonState{
-		text:       "点击启动",
-		importance: widget.HighImportance,
-		icon:       theme.MediaPlayIcon(),
-		dotColor:   DotColorIdle,
-		enabled:    true,
+		text:          "点击启动",
+		importance:    widget.HighImportance,
+		icon:          theme.MediaPlayIcon(),
+		dotColor:      DotColorIdle,
+		enabled:       true,
+		activity:      false,
+		other_enabled: true,
 	}
 	buttonStateStarting = buttonState{
-		text:       "启动中...",
-		importance: widget.WarningImportance,
-		icon:       theme.MediaStopIcon(),
-		dotColor:   DotColorWarning,
-		enabled:    true,
+		text:          "启动中...",
+		importance:    widget.WarningImportance,
+		icon:          theme.MediaStopIcon(),
+		dotColor:      DotColorWarning,
+		enabled:       true,
+		activity:      true,
+		other_enabled: false,
 	}
 	buttonStateConnecting = buttonState{
-		text:       "连接中...",
-		importance: widget.WarningImportance,
-		icon:       theme.MediaStopIcon(),
-		dotColor:   DotColorWarning,
-		enabled:    true,
+		text:          "连接中...",
+		importance:    widget.WarningImportance,
+		icon:          theme.MediaStopIcon(),
+		dotColor:      DotColorWarning,
+		enabled:       true,
+		activity:      true,
+		other_enabled: false,
 	}
 	buttonStateConnectingNat4 = buttonState{
-		text:       "当前网络是NAT4, 连接中...",
-		importance: widget.WarningImportance,
-		icon:       theme.MediaStopIcon(),
-		dotColor:   DotColorWarning,
-		enabled:    true,
+		text:          "当前网络是NAT4, 连接中...",
+		importance:    widget.WarningImportance,
+		icon:          theme.MediaStopIcon(),
+		dotColor:      DotColorWarning,
+		enabled:       true,
+		activity:      true,
+		other_enabled: false,
 	}
 	buttonStateConnectingNat4ToNat4 = buttonState{
-		text:       "两端网络都是NAT4, 连接中...",
-		importance: widget.DangerImportance,
-		icon:       theme.MediaStopIcon(),
-		dotColor:   DotColorDanger,
-		enabled:    true,
+		text:          "两端网络都是NAT4, 连接中...",
+		importance:    widget.DangerImportance,
+		icon:          theme.MediaStopIcon(),
+		dotColor:      DotColorDanger,
+		enabled:       true,
+		activity:      true,
+		other_enabled: false,
 	}
 	buttonStateConnected = buttonState{
-		text:       "连接成功, 点击停止",
-		importance: widget.SuccessImportance,
-		icon:       theme.MediaStopIcon(),
-		dotColor:   DotColorSuccess,
-		enabled:    true,
+		text:          "连接成功, 点击停止",
+		importance:    widget.SuccessImportance,
+		icon:          theme.MediaStopIcon(),
+		dotColor:      DotColorSuccess,
+		enabled:       true,
+		activity:      false,
+		other_enabled: false,
 	}
 	buttonStateRunning = buttonState{
-		text:       "启动成功, 点击停止",
-		importance: widget.SuccessImportance,
-		icon:       theme.MediaStopIcon(),
-		dotColor:   DotColorSuccess,
-		enabled:    true,
+		text:          "启动成功, 点击停止",
+		importance:    widget.SuccessImportance,
+		icon:          theme.MediaStopIcon(),
+		dotColor:      DotColorSuccess,
+		enabled:       true,
+		activity:      false,
+		other_enabled: false,
+	}
+	buttonStateStopping = buttonState{
+		text:          "停止中...",
+		importance:    widget.WarningImportance,
+		icon:          theme.MediaStopIcon(),
+		dotColor:      DotColorWarning,
+		enabled:       false,
+		activity:      false,
+		other_enabled: false,
+	}
+	buttonStateInitializing = buttonState{
+		text:          "检测网络中...",
+		importance:    widget.HighImportance,
+		icon:          theme.MediaPlayIcon(),
+		dotColor:      DotColorIdle,
+		enabled:       false,
+		activity:      false,
+		other_enabled: true,
 	}
 )
 
@@ -183,15 +200,36 @@ func updateButtonState(state buttonState) {
 	if m_button_start == nil {
 		return
 	}
+
 	if state.enabled {
 		m_button_start.Enable()
 	} else {
 		m_button_start.Disable()
 	}
-	m_button_start.SetText(state.text)
+
+	if state.activity {
+		m_activity_start_button.Start()
+		m_activity_start_button.Show()
+	} else {
+		m_activity_start_button.Stop()
+		m_activity_start_button.Hide()
+	}
+
+	if state.other_enabled {
+		for _, comp := range uiComponents {
+			comp.Enable()
+		}
+	} else {
+		for _, comp := range uiComponents {
+			comp.Disable()
+		}
+	}
+
 	m_button_start.Importance = state.importance
+	m_button_start.SetText(state.text)
 	m_button_start.SetIcon(state.icon)
 	m_button_start.Refresh()
+
 	UpdateTrayIcon(state.dotColor)
 }
 
@@ -298,11 +336,6 @@ func start_button_click() {
 	//先对需要填写的数据进行校验
 	switch m_stats_start_button {
 	case 0:
-		switch GetWorkType() {
-		case workTypeLocal:
-		case workTypeRemote:
-		}
-
 		// 保存配置文件, 下次启动加载
 		configByte, _ := json.Marshal(&config.ConfigInfo{
 			WorkType: GetWorkType(),
@@ -315,10 +348,10 @@ func start_button_click() {
 
 	switch m_stats_start_button {
 	case 0:
-		m_button_start.Disable()
+		updateButtonState(buttonStateStarting)
 		// 强制刷新工作端侧按钮高亮，确保选中项明显显示
 		updateWorkTypeButtons(GetWorkType())
-		disable_other("正在启动...")
+		m_stats_start_button = 1
 
 		// 设置自动重启标志
 		m_auto_restart_enabled = true
@@ -326,10 +359,9 @@ func start_button_click() {
 		// 启动进程
 		if err := startCmdProcess(); err != nil {
 			UILogPrintF("启动失败: %v", err)
-			enable_other()
-			m_button_start.Enable()
 			m_stats_start_button = 0
 			m_auto_restart_enabled = false
+			updateButtonState(buttonStateIdle)
 			return
 		}
 
@@ -337,7 +369,7 @@ func start_button_click() {
 		go waitForProcessAndHandleExit(false)
 
 	case 1:
-		m_button_start.Disable()
+		updateButtonState(buttonStateStopping)
 
 		// 停止子进程（在 goroutine 中执行，避免阻塞 UI）
 		go func() {
@@ -347,9 +379,7 @@ func start_button_click() {
 
 			fyne.Do(func() {
 				m_stats_start_button = 0
-				enable_other()
 				updateButtonState(buttonStateIdle)
-				m_button_start.Enable()
 			})
 		}()
 	}
@@ -359,28 +389,9 @@ func start_button_click() {
 func waitForProcessAndHandleExit(isRestart bool) {
 	time.Sleep(time.Second * 1)
 	if m_stats_start_button != 1 {
-		if !isRestart {
-			fyne.Do(func() {
-				m_activity_start_button.Stop()
-				m_activity_start_button.Hide()
-			})
-		}
 		return
 	}
-	/*
-		fyne.Do(func() {
-			m_button_start.Enable()
-			if GetWorkType() == workTypeLocal {
-				updateButtonState(buttonStateConnecting)
-			} else {
-				updateButtonState(buttonStateStarting)
-			}
-			if !isRestart {
-				m_activity_start_button.Stop()
-				m_activity_start_button.Hide()
-			}
-		})
-	*/
+
 	// 等待子进程结束
 	m_cmd_mutex.Lock()
 	proc := m_cmd_process
@@ -403,8 +414,6 @@ func waitForProcessAndHandleExit(isRestart bool) {
 		fyne.Do(func() {
 			m_stats_start_button = 0
 			updateButtonState(buttonStateIdle)
-			m_button_start.Enable()
-			enable_other()
 		})
 	}
 }
@@ -430,20 +439,10 @@ func autoRestartProcess() {
 		fyne.Do(func() {
 			m_stats_start_button = 0
 			updateButtonState(buttonStateIdle)
-			m_button_start.Enable()
-			enable_other()
 		})
 		return
 	}
-	/*
-		fyne.Do(func() {
-			if GetWorkType() == workTypeLocal {
-				updateButtonState(buttonStateConnecting)
-			} else {
-				updateButtonState(buttonStateStarting)
-			}
-		})
-	*/
+
 	// 启动新的等待goroutine
 	go waitForProcessAndHandleExit(true)
 }
