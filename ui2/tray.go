@@ -46,13 +46,6 @@ func iconForState(state buttonState) fyne.Resource {
 	return fyne.NewStaticResource("tray_icon.ico", data)
 }
 
-func SetTrayApp(state buttonState) {
-	icon := iconForState(state)
-	if icon != nil {
-		trayApp.SetSystemTrayIcon(icon)
-	}
-}
-
 func UpdateTrayIcon(state buttonState) {
 	if trayApp == nil {
 		return

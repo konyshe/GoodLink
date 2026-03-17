@@ -178,9 +178,6 @@ var (
 	}
 )
 
-// ButtonStateIdle is the idle state for the tray; exported for main to pass to SetTrayApp.
-var ButtonStateIdle = buttonStateIdle
-
 // updateButtonState 更新启动按钮的状态，同时同步托盘图标小圆点颜色
 func updateButtonState(state buttonState) {
 	if m_button_start == nil {

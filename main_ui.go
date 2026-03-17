@@ -63,8 +63,6 @@ func main() {
 	ui2.InitTrayIcons(idle, warning, danger, success)
 
 	if desk, ok := myApp.(desktop.App); ok {
-		ui2.SetTrayApp(ui2.ButtonStateIdle)
-
 		// 创建菜单项
 		openItem := fyne.NewMenuItem("打开主程序", func() {
 			// 系统托盘菜单回调已经在主线程中执行，可以直接调用Show()
