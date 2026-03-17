@@ -154,7 +154,7 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 
 	response, n, err := getStunResponse(conn, addr, buf)
 	if err != nil {
-		stunLogf("getStunResponse error: %v", err)
+		stunLogf("getStunResponse: %s", err.Error())
 		return "", 0, "", 0
 	}
 
@@ -173,13 +173,13 @@ func getStunIpPort2(conn *net.UDPConn, addr string, buf *bytes.Buffer, magicCook
 		wan_ip1, wan_port1, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
 	}
 	if err != nil {
-		stunLogf("getStunIpPort4 error: %v", err)
+		stunLogf("getStunIpPort4: %s", err.Error())
 		return "", 0, "", 0
 	}
 
 	change_ip, change_port, err := getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
 	if err != nil {
-		stunLogf("getStunIpPort4 error: %v", err)
+		stunLogf("getStunIpPort4: %s", err.Error())
 	}
 
 	return wan_ip1, wan_port1, change_ip, change_port
