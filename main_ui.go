@@ -10,16 +10,12 @@ import (
 	"goodlink/ui2"
 	"goodlink/utils"
 
-	_ "embed"
 	_ "net/http/pprof"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/driver/desktop"
 )
-
-//go:embed assert/favicon.ico
-var faviconICO []byte
 
 const (
 	M_APP_TITLE = "Goodlink"
@@ -56,7 +52,7 @@ func main() {
 		}
 	}()
 
-	ui2.InitTrayIcons(faviconICO)
+	ui2.InitTrayIcons()
 
 	if desk, ok := myApp.(desktop.App); ok {
 		ui2.SetTrayApp(desk)
