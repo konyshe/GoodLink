@@ -73,14 +73,14 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 	// 版本兼容性检查
 	if redisJson.RemoteVersion != GetVersion() {
 		log.Printf("两端版本不兼容: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
-		log.Printf("%s%s", TagStatusPrefix, TagStatusVersionMismatch)
+		LogStatus(TagStatusVersionMismatch)
 		RedisSessionDel(sessionID)
 		return errors.New("两端版本不兼容")
 	}
 
 	if (addr.WanPort1 != addr.WanPort2) && (redisJson.RemoteAddr.WanPort1 != redisJson.RemoteAddr.WanPort2) {
 		log.Println("*** local端和remote端都是NAT4 ***")
-		log.Printf("%s%s", TagStatusPrefix, TagStatusConnectingNAT4)
+		LogStatus(TagStatusConnectingNAT4)
 	}
 
 	// 根据连接类型创建 TUN 连接
@@ -124,11 +124,11 @@ func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive 
 	log.Printf("State 3: 连接成功")
 
 	if tun_passive != nil && tun_passive.TunQuicConn != nil {
-		log.Printf("%s%s", TagStatusPrefix, TagStatusConnected)
+		LogStatus(TagStatusConnected)
 		return tun_passive.TunQuicConn, tun_passive.TunHealthStream, true
 	}
 	if tun_active != nil && tun_active.TunQuicConn != nil {
-		log.Printf("%s%s", TagStatusPrefix, TagStatusConnected)
+		LogStatus(TagStatusConnected)
 		return tun_active.TunQuicConn, tun_active.TunHealthStream, true
 	}
 
@@ -185,7 +185,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		// 根据状态进行处理
 		switch redisJson.State {
 		case -1: // Remote端检测到版本不一致
-			log.Printf("%s%s", TagStatusPrefix, TagStatusVersionMismatch)
+			LogStatus(TagStatusVersionMismatch)
 			RedisSessionDel(SessionID)
 			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
 
@@ -297,7 +297,7 @@ func RunLocal() error {
 		tun.ProcessHealth(health, sessionID)
 		if m_local_state != 0 {
 			m_local_state = 1
-			log.Printf("%s%s", TagStatusPrefix, TagStatusConnecting)
+			LogStatus(TagStatusConnecting)
 		}
 		log.Printf("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive, nil)

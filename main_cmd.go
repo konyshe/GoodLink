@@ -24,9 +24,9 @@ import (
 
 func main2() {
 	if *config.Arg_tun_local {
-		log.Printf("%s%s", pro.TagStatusPrefix, pro.TagStatusConnecting)
+		pro.LogStatus(pro.TagStatusConnecting)
 	} else {
-		//log.Printf("%s%s", pro.TagStatusPrefix, pro.TagStatusStarting)
+		//pro.LogStatus(pro.TagStatusStarting)
 	}
 
 	log.Println("官方网址: https://gitee.com/konyshe/goodlink")
