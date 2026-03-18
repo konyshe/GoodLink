@@ -235,7 +235,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 		&buttonWrapper{btn: m_btn_remote},
 	})
 
-	m_stats_start_button = 0
+	m_start_button_state = 0
 	m_activity_start_button = widget.NewActivity()
 	m_button_start = widget.NewButtonWithIcon("点击启动", theme.MediaPlayIcon(), start_button_click)
 	m_button_start.Importance = widget.HighImportance

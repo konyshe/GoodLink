@@ -30,10 +30,10 @@ import (
 )
 
 var (
-	m_lock_start            sync.Mutex
+	m_start_button_lock     sync.Mutex
 	m_button_start          *widget.Button
 	m_activity_start_button *widget.Activity
-	m_stats_start_button    int
+	m_start_button_state    int
 
 	// 子进程管理
 	m_cmd_process *exec.Cmd
@@ -230,9 +230,9 @@ func updateConnectionStatus(status string) {
 			fyne.Do(func() { updateButtonState(buttonStateConnectingNat4ToNat4) })
 		case pro.TagStatusVersionMismatch:
 			// 版本不一致，禁用自动重启并停止进程
-			m_lock_start.Lock()
+			m_start_button_lock.Lock()
 			m_auto_restart_enabled = false
-			m_lock_start.Unlock()
+			m_start_button_lock.Unlock()
 			go func() {
 				time.Sleep(500 * time.Millisecond) // 短暂延迟，确保日志已输出
 				StopCmdProcess()
@@ -312,29 +312,36 @@ func startCmdProcess() error {
 	return nil
 }
 
-func start_button_click() {
-	m_lock_start.Lock()
-	defer m_lock_start.Unlock()
-
+// 保存配置文件, 下次启动加载
+func saveConfig() {
 	//先对需要填写的数据进行校验
-	switch m_stats_start_button {
-	case 0:
-		// 保存配置文件, 下次启动加载
-		configByte, _ := json.Marshal(&config.ConfigInfo{
-			WorkType: GetWorkType(),
-			TunKey:   m_validated_key.Text,
-		})
-		log.Println(string(configByte))
-		os.Remove(goodlinkFileName)
-		go2.FileAppend(goodlinkFileName, configByte)
-	}
+	configByte, _ := json.Marshal(&config.ConfigInfo{
+		WorkType: GetWorkType(),
+		TunKey:   m_validated_key.Text,
+	})
+	log.Println(string(configByte))
+	os.Remove(goodlinkFileName)
+	go2.FileAppend(goodlinkFileName, configByte)
+}
 
-	switch m_stats_start_button {
+func start_button_click() {
+	m_start_button_lock.Lock()
+	defer m_start_button_lock.Unlock()
+
+	switch m_start_button_state {
 	case 0:
-		updateButtonState(buttonStateStarting)
+		if GetWorkType() == workTypeLocal {
+			updateButtonState(buttonStateConnecting)
+		} else {
+			updateButtonState(buttonStateStarting)
+		}
+
+		saveConfig()
+
 		// 强制刷新工作端侧按钮高亮，确保选中项明显显示
 		updateWorkTypeButtons(GetWorkType())
-		m_stats_start_button = 1
+
+		m_start_button_state = 1
 
 		// 设置自动重启标志
 		m_auto_restart_enabled = true
@@ -342,7 +349,7 @@ func start_button_click() {
 		// 启动进程
 		if err := startCmdProcess(); err != nil {
 			UILogPrintF("启动失败: %v", err)
-			m_stats_start_button = 0
+			m_start_button_state = 0
 			m_auto_restart_enabled = false
 			updateButtonState(buttonStateIdle)
 			return
@@ -361,7 +368,7 @@ func start_button_click() {
 			StopCmdProcess()
 
 			fyne.Do(func() {
-				m_stats_start_button = 0
+				m_start_button_state = 0
 				updateButtonState(buttonStateIdle)
 			})
 		}()
@@ -371,7 +378,7 @@ func start_button_click() {
 // waitForProcessAndHandleExit 等待进程结束并处理退出逻辑（在 goroutine 中运行，UI 更新通过 fyne.Do 调度到主线程）
 func waitForProcessAndHandleExit(isRestart bool) {
 	time.Sleep(time.Second * 1)
-	if m_stats_start_button != 1 {
+	if m_start_button_state != 1 {
 		return
 	}
 
@@ -385,9 +392,9 @@ func waitForProcessAndHandleExit(isRestart bool) {
 	}
 
 	// 检查是否为异常退出（需要自动重启）
-	m_lock_start.Lock()
-	isAbnormalExit := m_stats_start_button == 1 && m_auto_restart_enabled
-	m_lock_start.Unlock()
+	m_start_button_lock.Lock()
+	isAbnormalExit := m_start_button_state == 1 && m_auto_restart_enabled
+	m_start_button_lock.Unlock()
 
 	if isAbnormalExit {
 		// 异常退出，自动重启
@@ -395,7 +402,7 @@ func waitForProcessAndHandleExit(isRestart bool) {
 	} else {
 		// 正常停止，恢复 UI
 		fyne.Do(func() {
-			m_stats_start_button = 0
+			m_start_button_state = 0
 			updateButtonState(buttonStateIdle)
 		})
 	}
@@ -407,12 +414,12 @@ func autoRestartProcess() {
 	time.Sleep(500 * time.Millisecond)
 
 	// 检查是否仍然需要重启（用户可能在此期间手动停止了）
-	m_lock_start.Lock()
-	if m_stats_start_button != 1 || !m_auto_restart_enabled {
-		m_lock_start.Unlock()
+	m_start_button_lock.Lock()
+	if m_start_button_state != 1 || !m_auto_restart_enabled {
+		m_start_button_lock.Unlock()
 		return
 	}
-	m_lock_start.Unlock()
+	m_start_button_lock.Unlock()
 
 	UILogPrintF("检测到进程异常退出，正在自动重启...")
 
@@ -420,7 +427,7 @@ func autoRestartProcess() {
 	if err := startCmdProcess(); err != nil {
 		UILogPrintF("启动失败: %v", err)
 		fyne.Do(func() {
-			m_stats_start_button = 0
+			m_start_button_state = 0
 			updateButtonState(buttonStateIdle)
 		})
 		return

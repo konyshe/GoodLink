@@ -23,12 +23,6 @@ import (
 )
 
 func main2() {
-	if *config.Arg_tun_local {
-		pro.LogStatus(pro.TagStatusConnecting)
-	} else {
-		//pro.LogStatus(pro.TagStatusStarting)
-	}
-
 	log.Println("官方网址: https://gitee.com/konyshe/goodlink")
 
 	go func() {
