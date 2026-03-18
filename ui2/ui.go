@@ -289,21 +289,14 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 	)
 
 	updateButtonState(buttonStateInitializing)
+
 	// 让 GetStunIpPort 内部的 STUN 日志也输出到运行日志列表（仅 GUI 设置，cmd 不调用此处）
 	stun2.SetExtraLogSink(func(s string) {
 		ts := time.Now().Format("2006/01/02 15:04:05")
 		UILogPrintF(ts + " " + s)
 	})
+
 	go func() {
-		for m_button_start == nil {
-			time.Sleep(1 * time.Second)
-		}
-
-		// 等窗口/driver 就绪后再更新 UI，避免启动阶段闪退
-		fyne.Do(func() {
-			updateButtonState(buttonStateInitializing)
-		})
-
 		for {
 			conn, err := net.ListenUDP("udp4", nil)
 			if err != nil {
