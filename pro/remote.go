@@ -5,6 +5,7 @@ import (
 	"goodlink/config"
 	"goodlink/proxy"
 	"goodlink/tun"
+	"goodlink/ui2"
 	"log"
 	"net"
 	"sync"
@@ -247,7 +248,7 @@ func StopRemote() error {
 func RunRemote() error {
 	m_remote_stats = 1
 
-	LogStatus(TagStatusRunning)
+	ui2.UpdateStartButtonStatue(ui2.TagStatusRunning)
 	log.Printf("Remote端已启动，等待Local端连接...")
 
 	// 主循环扫描待处理的会话

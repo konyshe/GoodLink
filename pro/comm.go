@@ -27,20 +27,6 @@ var (
 	m_upnp_bind   upnp.Upnp
 )
 
-const (
-	TagStatusPrefix          = "[GOODLINK_STATUS]"
-	TagStatusConnecting      = "connecting"
-	TagStatusConnectingNAT4  = "connecting_nat4"
-	TagStatusConnected       = "connected"
-	TagStatusRunning         = "running"
-	TagStatusVersionMismatch = "version_mismatch"
-)
-
-// LogStatus 输出带 TagStatusPrefix 的状态行，供 UI 等解析
-func LogStatus(status string) {
-	log.Printf("%s%s", TagStatusPrefix, status)
-}
-
 func SetVersion(v string) {
 	m_version = v
 }
