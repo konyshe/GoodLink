@@ -4,6 +4,7 @@ package ui2
 
 import (
 	"encoding/json"
+	"fmt"
 	"go2"
 	"image/color"
 	"log"
@@ -286,10 +287,9 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 
 	updateButtonState(buttonStateInitializing)
 
-	// 让 GetStunIpPort 内部的 STUN 日志也输出到运行日志列表（仅 GUI 设置，cmd 不调用此处）
+	// UI客户端自身的日志输出
 	stun2.SetExtraLogSink(func(s string) {
-		ts := time.Now().Format("2006/01/02 15:04:05")
-		UILogPrintF(ts + " " + s)
+		UILogPrintF(fmt.Sprintf("%s %s", time.Now().Format("2006/01/02 15:04:05"), s))
 	})
 
 	go func() {
