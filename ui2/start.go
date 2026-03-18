@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"goodlink/config"
+	"goodlink/pro"
 	"goodlink/utils"
 
 	_ "embed"
@@ -41,20 +42,6 @@ var (
 	// 自动重启控制
 	m_auto_restart_enabled bool
 )
-
-const (
-	TagStatusPrefix          = "[GOODLINK_STATUS]"
-	TagStatusConnecting      = "connecting"
-	TagStatusConnectingNAT4  = "connecting_nat4"
-	TagStatusConnected       = "connected"
-	TagStatusRunning         = "running"
-	TagStatusVersionMismatch = "version_mismatch"
-)
-
-// LogStatus 输出带 TagStatusPrefix 的状态行，供 UI 等解析
-func UpdateStartButtonStatue(status string) {
-	log.Printf("%s%s", TagStatusPrefix, status)
-}
 
 // UI组件接口，用于统一管理启用/禁用
 type uiComponent interface {
@@ -92,13 +79,13 @@ func StopCmdProcess() {
 // 支持带时间戳前缀的日志格式，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]connected"
 func parseStatusMessage(line string) (string, bool) {
 	// 查找前缀在行中的位置（可能不在行首，因为有时间戳）
-	idx := strings.Index(line, TagStatusPrefix)
+	idx := strings.Index(line, pro.TagStatusPrefix)
 	if idx == -1 {
 		return "", false
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
-	status := strings.TrimSpace(line[idx+len(TagStatusPrefix):])
-	if status == TagStatusConnecting || status == TagStatusConnected || status == TagStatusRunning || status == TagStatusConnectingNAT4 || status == TagStatusVersionMismatch {
+	status := strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):])
+	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning || status == pro.TagStatusConnectingNAT4 || status == pro.TagStatusVersionMismatch {
 		return status, true
 	}
 	return "", false
@@ -235,13 +222,13 @@ func updateConnectionStatus(status string) {
 	switch GetWorkType() {
 	case workTypeLocal:
 		switch status {
-		case TagStatusConnecting:
+		case pro.TagStatusConnecting:
 			fyne.Do(func() { updateButtonState(buttonStateConnecting) })
-		case TagStatusConnected:
+		case pro.TagStatusConnected:
 			fyne.Do(func() { updateButtonState(buttonStateConnected) })
-		case TagStatusConnectingNAT4:
+		case pro.TagStatusConnectingNAT4:
 			fyne.Do(func() { updateButtonState(buttonStateConnectingNat4ToNat4) })
-		case TagStatusVersionMismatch:
+		case pro.TagStatusVersionMismatch:
 			// 版本不一致，禁用自动重启并停止进程
 			m_start_button_lock.Lock()
 			m_auto_restart_enabled = false
@@ -253,7 +240,7 @@ func updateConnectionStatus(status string) {
 		}
 	case workTypeRemote:
 		switch status {
-		case TagStatusRunning:
+		case pro.TagStatusRunning:
 			fyne.Do(func() { updateButtonState(buttonStateRunning) })
 		}
 	}
