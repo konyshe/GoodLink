@@ -66,9 +66,6 @@ const (
 // UI样式常量
 var (
 	// 统一的背景颜色
-	bgColorPrimary       = color.NRGBA{R: 45, G: 45, B: 55, A: 255}   // 主要背景
-	bgColorSecondary     = color.NRGBA{R: 40, G: 40, B: 50, A: 255}   // 次要背景
-	bgColorCard          = color.NRGBA{R: 50, G: 50, B: 60, A: 255}   // 卡片背景
 	separatorColor       = color.NRGBA{R: 100, G: 100, B: 100, A: 80} // 分隔线颜色
 	highlightColor       = color.NRGBA{R: 0, G: 120, B: 255, A: 255}  // 选中按钮高亮颜色（完全不透明，更亮）
 	highlightBorderColor = color.NRGBA{R: 0, G: 180, B: 255, A: 255}  // 高亮边框颜色
