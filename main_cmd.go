@@ -46,7 +46,7 @@ func main2() {
 		}
 	}()
 
-	pro.SetVersion(GetVersion())
+	config.SetVersion(GetVersionFromAppConfig())
 
 	go2pool.Init()
 
@@ -79,7 +79,8 @@ func main2() {
 }
 
 func main() {
-	config.Help(GetVersion())
+	config.SetVersion(GetVersionFromAppConfig())
+	config.Help()
 
 	if config.Arg_stun_svr_ip != "" && config.Arg_stun_svr_port > 0 {
 		stun2.StartSvr(config.Arg_stun_svr_ip, config.Arg_stun_svr_port)

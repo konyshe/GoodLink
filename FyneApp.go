@@ -21,7 +21,7 @@ type FyneAppConfig struct {
 	} `toml:"Details"`
 }
 
-func GetVersion() string {
+func GetVersionFromAppConfig() string {
 	var config FyneAppConfig
 	if _, err := toml.Decode(FyneAppToml, &config); err != nil {
 		log.Fatal(err)

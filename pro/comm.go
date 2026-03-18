@@ -23,17 +23,8 @@ var (
 	m_redis_db    *redis.Client
 	m_tun_key     string
 	m_md5_tun_key string
-	m_version     string
 	m_upnp_bind   upnp.Upnp
 )
-
-func SetVersion(v string) {
-	m_version = v
-}
-
-func GetVersion() string {
-	return m_version
-}
 
 func Init(tun_key string) error {
 	var redis_addr string

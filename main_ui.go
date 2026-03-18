@@ -5,7 +5,6 @@ package main
 import (
 	"embed"
 	"goodlink/config"
-	"goodlink/pro"
 	_ "goodlink/pro"
 	"goodlink/theme"
 	"goodlink/ui2"
@@ -38,13 +37,13 @@ func main() {
 
 	config.DeleteLocalConfig()
 
-	config.Help(GetVersion())
+	config.SetVersion(GetVersionFromAppConfig())
 
-	pro.SetVersion(GetVersion())
+	config.Help()
 
 	myApp := app.New()
 	myApp.Settings().SetTheme(&theme.MyTheme{})
-	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + GetVersion()) //myApp.Metadata().Version)
+	myWindow := myApp.NewWindow(M_APP_TITLE + "  v" + config.GetVersion())
 
 	// 监听显示窗口请求
 	// Fyne的Show()方法会自动处理线程安全，可以直接在goroutine中调用

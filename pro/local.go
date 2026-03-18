@@ -72,8 +72,8 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 	log.Printf("State 1: 收到Remote端地址: %v", redisJson.RemoteAddr)
 
 	// 版本兼容性检查
-	if redisJson.RemoteVersion != GetVersion() {
-		log.Printf("两端版本不兼容: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
+	if redisJson.RemoteVersion != config.GetVersion() {
+		log.Printf("两端版本不兼容: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
 		ui2.UpdateStartButtonStatue(ui2.TagStatusVersionMismatch)
 		RedisSessionDel(sessionID)
 		return errors.New("两端版本不兼容")
@@ -151,7 +151,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	log.Printf("会话ID: %s", SessionID)
 
 	redisJson := RedisJsonType{
-		LocalVersion: GetVersion(),
+		LocalVersion: config.GetVersion(),
 		State:        0,
 		SessionID:    SessionID,
 		ConnectCount: count,
@@ -188,7 +188,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case -1: // Remote端检测到版本不一致
 			ui2.UpdateStartButtonStatue(ui2.TagStatusVersionMismatch)
 			RedisSessionDel(SessionID)
-			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", GetVersion(), redisJson.RemoteVersion)
+			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
 
 		case 1:
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {

@@ -23,14 +23,14 @@ var (
 func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun_active **tun.TunActive, tun_passive **tun.TunPassive, udp_conn **net.UDPConn, conn_type *int, tun_active_chain *chan *quic.Conn, tun_passive_chain *chan *quic.Conn) error {
 	log.Printf("会话 %s State 1: 发送Remote端地址", sessionID)
 
-	redisJson.RemoteVersion = GetVersion()
+	redisJson.RemoteVersion = config.GetVersion()
 	redisJson.State = 1
 	redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
 	redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 
 	// 版本兼容性检查
-	if redisJson.LocalVersion != GetVersion() {
-		log.Printf("会话 %s 两端版本不兼容: Local: %s => Remote: %s", sessionID, redisJson.LocalVersion, GetVersion())
+	if redisJson.LocalVersion != config.GetVersion() {
+		log.Printf("会话 %s 两端版本不兼容: Local: %s => Remote: %s", sessionID, redisJson.LocalVersion, config.GetVersion())
 		redisJson.State = -1 // 设置版本不一致状态，告知Local端
 		RedisSessionSet(sessionID, redisJson.SocketTimeOut*3, redisJson)
 		return errors.New("两端版本不兼容")
@@ -168,7 +168,7 @@ func processSession(redisJson *RedisJsonType) {
 			goto Release
 		}
 
-		redisJson.RemoteVersion = GetVersion()
+		redisJson.RemoteVersion = config.GetVersion()
 		redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
 		redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 

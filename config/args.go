@@ -30,7 +30,7 @@ var (
 	Arg_local_forward_addrs    string
 )
 
-func Help(ver string) {
+func Help() {
 	v := flag.Bool("v", false, "查看版本信息")
 
 	Arg_local_config = flag.Bool("local_config", false, "优先加载本地配置")
@@ -65,7 +65,7 @@ func Help(ver string) {
 	flag.Parse()
 
 	if *v {
-		fmt.Printf("Version: %s\n", ver)
+		fmt.Printf("Version: %s\n", GetVersion())
 		fmt.Print(go2.BuildVersion())
 		os.Exit(0)
 	}
