@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	go2 v0.0.0
 	proxy v0.0.0
-	goodlink_config v0.0.0
+	goodlink3 v0.0.0
 	fyne.io/fyne v1.4.3
 	fyne.io/fyne/v2 v2.7.2
 	github.com/BurntSushi/toml v1.6.0
@@ -72,4 +72,4 @@ replace proxy => ../proxy
 
 replace goroutine-pool => ../goroutine-pool
 
-replace goodlink_config => ../goodlink3
+replace goodlink3 => ../goodlink3

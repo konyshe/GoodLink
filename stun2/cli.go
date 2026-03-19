@@ -10,7 +10,7 @@ import (
 	"time"
 
 	go2pool "go2/pool"
-	goodlink_config "goodlink_config/config"
+	goodlink_config "goodlink3/config"
 )
 
 // extraLogSink 可选：由 UI 设置后，STUN 相关日志会同时输出到该回调（如运行日志列表），cmd 不设置则为 nil

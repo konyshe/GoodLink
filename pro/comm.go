@@ -12,7 +12,7 @@ import (
 	"goodlink/tun"
 	_ "goodlink/tun"
 	"goodlink/upnp"
-	goodlink_config "goodlink_config/config"
+	goodlink_config "goodlink3/config"
 	"log"
 	"net"
 	"time"

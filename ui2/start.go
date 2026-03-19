@@ -19,7 +19,7 @@ import (
 
 	"goodlink/pro"
 	"goodlink/utils"
-	goodlink_config "goodlink_config/config"
+	goodlink_config "goodlink3/config"
 
 	_ "embed"
 	_ "net/http/pprof"

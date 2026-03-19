@@ -9,7 +9,7 @@ import (
 	"goodlink/theme"
 	"goodlink/ui2"
 	"goodlink/utils"
-	goodlink_config "goodlink_config/config"
+	goodlink_config "goodlink3/config"
 
 	_ "net/http/pprof"
 
