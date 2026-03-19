@@ -13,6 +13,7 @@ import (
 
 	"goodlink/config"
 	"goodlink/stun2"
+	goodlink_config "goodlink_config/config"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -121,7 +122,7 @@ func createButtonWithHighlight(btn *widget.Button, bg *canvas.Rectangle, border 
 }
 
 // 创建工作模式选择器
-func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
+func createWorkTypeSelector(configInfo *goodlink_config.ConfigInfo) fyne.CanvasObject {
 	// 创建本地端按钮
 	m_btn_local = widget.NewButtonWithIcon("  Local端  ", theme.ComputerIcon(), nil)
 
@@ -164,7 +165,7 @@ func createWorkTypeSelector(configInfo *config.ConfigInfo) fyne.CanvasObject {
 }
 
 // 创建连接密钥输入区域
-func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
+func createKeyInputSection(configInfo *goodlink_config.ConfigInfo) fyne.CanvasObject {
 	m_validated_key = widget.NewEntry()
 	m_validated_key.SetPlaceHolder("自定义16-24字节长度")
 	if len(configInfo.TunKey) > 0 {
@@ -204,7 +205,7 @@ func createKeyButtons() fyne.CanvasObject {
 }
 
 func GetMainUI(myWindow *fyne.Window) *fyne.Container {
-	var configInfo config.ConfigInfo
+	var configInfo goodlink_config.ConfigInfo
 	json.Unmarshal(go2.FileReadAll(goodlinkFileName), &configInfo)
 	log.Println(configInfo)
 

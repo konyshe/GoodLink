@@ -12,6 +12,7 @@ import (
 	"goodlink/tun"
 	_ "goodlink/tun"
 	"goodlink/upnp"
+	goodlink_config "goodlink_config/config"
 	"log"
 	"net"
 	"time"
@@ -41,9 +42,9 @@ func Init(tun_key string) error {
 	}
 
 	if config.Arg_redis_addr == "" && config.Arg_redis_tls_addr == "" {
-		redis_addr = config.GetAddr()
-		redis_pass = config.GetPasswd()
-		redis_id = config.GetID()
+		redis_addr = goodlink_config.GetAddr()
+		redis_pass = goodlink_config.GetPasswd()
+		redis_id = goodlink_config.GetID()
 
 	} else if config.Arg_redis_tls_addr != "" {
 		redis_addr = config.Arg_redis_tls_addr

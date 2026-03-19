@@ -11,6 +11,7 @@ import (
 	_ "goodlink/pro"
 	"goodlink/stun2"
 	"goodlink/utils"
+	goodlink_config "goodlink_config/config"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -88,10 +89,10 @@ func main() {
 	}
 
 	if !*config.Arg_local_config {
-		config.DeleteLocalConfig()
+		goodlink_config.DeleteLocalConfig()
 	}
 
-	config.Init()
+	goodlink_config.Init()
 
 	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
 		stun2.TestStun()

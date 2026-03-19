@@ -9,6 +9,7 @@ import (
 	"goodlink/theme"
 	"goodlink/ui2"
 	"goodlink/utils"
+	goodlink_config "goodlink_config/config"
 
 	_ "net/http/pprof"
 
@@ -35,7 +36,7 @@ func main() {
 	// 启动前清理遗留的cmd进程
 	utils.CleanupOrphanedCmdProcesses()
 
-	config.DeleteLocalConfig()
+	goodlink_config.DeleteLocalConfig()
 
 	config.SetVersion(GetVersionFromAppConfig())
 

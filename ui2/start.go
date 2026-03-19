@@ -17,9 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"goodlink/config"
 	"goodlink/pro"
 	"goodlink/utils"
+	goodlink_config "goodlink_config/config"
 
 	_ "embed"
 	_ "net/http/pprof"
@@ -315,7 +315,7 @@ func startCmdProcess() error {
 // 保存配置文件, 下次启动加载
 func saveConfig() {
 	//先对需要填写的数据进行校验
-	configByte, _ := json.Marshal(&config.ConfigInfo{
+	configByte, _ := json.Marshal(&goodlink_config.ConfigInfo{
 		WorkType: GetWorkType(),
 		TunKey:   m_validated_key.Text,
 	})

@@ -3,6 +3,9 @@ module goodlink
 go 1.25.5
 
 require (
+	go2 v0.0.0
+	proxy v0.0.0
+	goodlink_config v0.0.0
 	fyne.io/fyne v1.4.3
 	fyne.io/fyne/v2 v2.7.2
 	github.com/BurntSushi/toml v1.6.0
@@ -12,12 +15,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/quic-go/quic-go v0.59.0
 	github.com/sirupsen/logrus v1.9.3
-	go2 v0.0.0
 	golang.org/x/sys v0.40.0
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb
 	gvisor.dev/gvisor v0.0.0-20260106215814-b2227fa9cfe0
-	proxy v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -70,3 +71,5 @@ replace go2 => ../go2
 replace proxy => ../proxy
 
 replace goroutine-pool => ../goroutine-pool
+
+replace goodlink_config => ../goodlink3
