@@ -175,9 +175,7 @@ func createKeyInputSection(configInfo *config.ConfigInfo) fyne.CanvasObject {
 	keyLabel := widget.NewRichTextFromMarkdown("**连接密钥**: ")
 
 	// 创建输入框容器，将标签和输入框放在同一行
-	keyInputContainer := container.NewBorder(nil, nil, keyLabel, nil, m_validated_key)
-
-	return keyInputContainer
+	return container.NewBorder(nil, nil, keyLabel, nil, m_validated_key)
 }
 
 // 创建密钥操作按钮组
@@ -202,9 +200,7 @@ func createKeyButtons() fyne.CanvasObject {
 	m_button_key_paste.Importance = widget.MediumImportance
 
 	// 创建按钮容器，使用网格布局
-	buttonGrid := container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste)
-
-	return buttonGrid
+	return container.NewGridWithColumns(3, m_button_key_create, key_copy_button, m_button_key_paste)
 }
 
 func GetMainUI(myWindow *fyne.Window) *fyne.Container {
