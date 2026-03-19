@@ -32,7 +32,7 @@ type ConfigInfo struct {
 }
 
 const (
-	configFileName = "config.json"
+	ConfigFileName = "config.json"
 )
 
 var (
@@ -41,17 +41,17 @@ var (
 
 func DeleteLocalConfig() {
 	log.Println("删除本地配置")
-	os.Remove(configFileName)
+	os.Remove(ConfigFileName)
 }
 
 func Init() error {
 	var res []byte
 	var err error
 
-	if res = go2.FileReadAll(configFileName); res == nil {
+	if res = go2.FileReadAll(ConfigFileName); res == nil {
 		DeleteLocalConfig()
-		go2http.DownloadSimple(fmt.Sprintf("https://gitee.com/konyshe/goodlink_conf/raw/master/%s", configFileName), configFileName)
-		res = go2.FileReadAll(configFileName)
+		go2http.DownloadSimple(fmt.Sprintf("https://gitee.com/konyshe/goodlink_conf/raw/master/%s", ConfigFileName), ConfigFileName)
+		res = go2.FileReadAll(ConfigFileName)
 	}
 
 	if err = json.Unmarshal(go2aes.Decrypt7(res, "goodlink"), &configInfo); err != nil {
@@ -59,14 +59,6 @@ func Init() error {
 		return err
 	}
 
-	/*
-		configInfo.StunList = []string{"stun.kony.vip", "stun.easyvoip.com"}
-		configInfo.Redis.TlsAddr = "goodlink.kony.vip:16378"
-		body, _ := json.Marshal(configInfo)
-		temp3 := go2aes.Encrypt7(body, "goodlink")
-		os.Remove(configFileName)
-		go2.FileAppend(configFileName, []byte(temp3))
-	*/
 	return nil
 }
 
