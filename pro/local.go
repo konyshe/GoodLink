@@ -290,7 +290,7 @@ func RunLocal() error {
 			log.Println("[proxy] QUIC连接已设置，开始转发")
 		} else {
 			netstack.SetForWarder(quic_conn)
-			log.Printf("Remote端IP: %s", netstack.GetRemoteIP())
+			log.Printf("Remote端IP: %s", netstack.NetStackIP)
 		}
 
 		m_local_state = 2

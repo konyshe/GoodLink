@@ -20,6 +20,8 @@ import (
 const (
 	healthCheckInterval = 30 * time.Second
 	nicID               = tcpip.NICID(1)
+	NetStackName        = "Goodlink"
+	NetStackIP          = "192.17.0.1"
 )
 
 func setNetStack(s *stack.Stack, id tcpip.NICID) error {
@@ -49,7 +51,7 @@ var (
 )
 
 func initStack() error {
-	CleanupOldAdapter(GetName())
+	CleanupOldAdapter(NetStackName)
 
 	netstack_stack = stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocolFactory{
@@ -62,19 +64,19 @@ func initStack() error {
 		},
 	})
 
-	dev, err := Open(GetName(), 0)
+	dev, err := Open(NetStackName, 0)
 	if err != nil {
 		return fmt.Errorf("请管理员权限运行")
 	}
 	currentDevice = dev
 
-	SetTunIP(&dev, GetRemoteIP(), 32)
+	SetTunIP(&dev, NetStackIP, 32)
 
 	if err := netstack_stack.CreateNIC(nicID, dev); err != nil {
 		return fmt.Errorf("设备注册: %v", err)
 	}
 
-	remoteIP := net.ParseIP(GetRemoteIP()).To4()
+	remoteIP := net.ParseIP(NetStackIP).To4()
 	protoAddr := tcpip.ProtocolAddress{
 		Protocol: ipv4.ProtocolNumber,
 		AddressWithPrefix: tcpip.AddressWithPrefix{
@@ -161,12 +163,4 @@ func SetForWarder(stun_quic_conn *quic.Conn) {
 	}
 	netstack_stack.SetTransportProtocolHandler(tcp.ProtocolNumber, NewTcpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
 	netstack_stack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUdpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
-}
-
-func GetRemoteIP() string {
-	return "192.17.19.1"
-}
-
-func GetName() string {
-	return "Goodlink"
 }
