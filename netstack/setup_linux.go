@@ -88,17 +88,17 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 	// ip route add 192.17.19.1 dev Goodlink
 
 	// 设置网卡eth0的IP地址为192.168.1.10/24
-	cmd := exec.Command("ip", "addr", "add", "192.17.0.1/32", "dev", GetName())
+	cmd := exec.Command("ip", "addr", "add", "192.17.0.1/32", "dev", NetStackName)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
 
-	cmd = exec.Command("ip", "link", "set", GetName(), "up")
+	cmd = exec.Command("ip", "link", "set", NetStackName, "up")
 	if err := cmd.Run(); err != nil {
 		return err
 	}
 
-	cmd = exec.Command("ip", "route", "add", GetRemoteIP(), "dev", GetName())
+	cmd = exec.Command("ip", "route", "add", NetStackIP, "dev", NetStackName)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
