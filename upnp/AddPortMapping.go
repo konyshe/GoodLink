@@ -47,22 +47,14 @@ func (this *AddPortMapping) buildRequest(localPort, remotePort int, protocol str
 	childTwo := Node{Name: `m:AddPortMapping`,
 		Attr: map[string]string{"xmlns:m": `"` + this.upnp.Gateway.ServiceType + `"`}}
 
-	childList1 := Node{Name: "NewExternalPort", Content: strconv.Itoa(remotePort)}
-	childList2 := Node{Name: "NewInternalPort", Content: strconv.Itoa(localPort)}
-	childList3 := Node{Name: "NewProtocol", Content: protocol}
-	childList4 := Node{Name: "NewEnabled", Content: "1"}
-	childList5 := Node{Name: "NewInternalClient", Content: this.upnp.LocalHost}
-	childList6 := Node{Name: "NewLeaseDuration", Content: "0"}
-	childList7 := Node{Name: "NewPortMappingDescription", Content: "goodlink"}
-	childList8 := Node{Name: "NewRemoteHost"}
-	childTwo.AddChild(childList1)
-	childTwo.AddChild(childList2)
-	childTwo.AddChild(childList3)
-	childTwo.AddChild(childList4)
-	childTwo.AddChild(childList5)
-	childTwo.AddChild(childList6)
-	childTwo.AddChild(childList7)
-	childTwo.AddChild(childList8)
+	childTwo.AddChild(Node{Name: "NewExternalPort", Content: strconv.Itoa(remotePort)})
+	childTwo.AddChild(Node{Name: "NewInternalPort", Content: strconv.Itoa(localPort)})
+	childTwo.AddChild(Node{Name: "NewProtocol", Content: protocol})
+	childTwo.AddChild(Node{Name: "NewEnabled", Content: "1"})
+	childTwo.AddChild(Node{Name: "NewInternalClient", Content: this.upnp.LocalHost})
+	childTwo.AddChild(Node{Name: "NewLeaseDuration", Content: "0"})
+	childTwo.AddChild(Node{Name: "NewPortMappingDescription", Content: "goodlink"})
+	childTwo.AddChild(Node{Name: "NewRemoteHost"})
 
 	childOne.AddChild(childTwo)
 	body.AddChild(childOne)
