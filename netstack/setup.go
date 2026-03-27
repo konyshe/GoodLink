@@ -21,7 +21,7 @@ const (
 	healthCheckInterval = 30 * time.Second
 	nicID               = tcpip.NICID(1)
 	NetStackName        = "Goodlink"
-	NetStackIP          = "192.17.0.1"
+	NetStackIP          = "192.17.19.1"
 )
 
 func setNetStack(s *stack.Stack, id tcpip.NICID) error {
