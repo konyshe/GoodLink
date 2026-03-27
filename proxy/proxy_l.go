@@ -34,8 +34,8 @@ func CheckForwardArgs() bool {
 		})
 	}
 
-	if config.Arg_local_forward_addrs != "" {
-		entries := strings.Split(config.Arg_local_forward_addrs, ",")
+	if config.Arg_local_forward_tcp_addrs != "" {
+		entries := strings.Split(config.Arg_local_forward_tcp_addrs, ",")
 		for _, entry := range entries {
 			entry = strings.TrimSpace(entry)
 			if entry == "" {
