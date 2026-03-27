@@ -11,7 +11,7 @@ import (
 	_ "goodlink/pro"
 	"goodlink/stun2"
 	"goodlink/utils"
-	goodlink_config "goodlink_config/config"
+	goodlink_config "goodlink3/config"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
