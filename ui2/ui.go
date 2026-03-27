@@ -167,7 +167,7 @@ func createWorkTypeSelector(configInfo *goodlink_config.ConfigInfo) fyne.CanvasO
 // 创建连接密钥输入区域
 func createKeyInputSection(configInfo *goodlink_config.ConfigInfo) fyne.CanvasObject {
 	m_validated_key = widget.NewEntry()
-	m_validated_key.SetPlaceHolder("自定义16-24字节长度")
+	m_validated_key.SetPlaceHolder("16-64字节长度")
 	if len(configInfo.TunKey) > 0 {
 		m_validated_key.SetText(configInfo.TunKey)
 	}
@@ -182,7 +182,7 @@ func createKeyInputSection(configInfo *goodlink_config.ConfigInfo) fyne.CanvasOb
 // 创建密钥操作按钮组
 func createKeyButtons() fyne.CanvasObject {
 	m_button_key_create = widget.NewButtonWithIcon("生成密钥", theme.ContentAddIcon(), func() {
-		m_validated_key.SetText(string(go2.RandomBytes(24)))
+		m_validated_key.SetText(string(go2.RandomBytes(config.TunKeyByteLen)))
 	})
 
 	key_copy_button := widget.NewButtonWithIcon("复制密钥", theme.ContentCopyIcon(), func() {
@@ -211,7 +211,7 @@ func GetMainUI(myWindow *fyne.Window) *fyne.Container {
 
 	// 如果密钥为空，自动生成密钥
 	if len(configInfo.TunKey) == 0 {
-		configInfo.TunKey = string(go2.RandomBytes(24))
+		configInfo.TunKey = string(go2.RandomBytes(config.TunKeyByteLen))
 		log.Println("自动生成密钥:", configInfo.TunKey)
 	}
 

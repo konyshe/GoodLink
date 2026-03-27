@@ -7,6 +7,9 @@ import (
 	"os"
 )
 
+// TunKeyByteLen 连接密钥固定字节长度（Local/Remote 必须一致）
+const TunKeyByteLen = 48
+
 var (
 	Arg_pprof_addr             string
 	Arg_tun_local              *bool

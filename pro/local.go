@@ -41,7 +41,7 @@ func handleState0_RegisterSession(sessionID string, redisJson *RedisJsonType, co
 		log.Printf("注册会话失败: %v", err)
 		return false, err
 	}
-	log.Printf("已注册会话到队列，等待Remote端认领: %s", sessionID)
+	log.Printf("已注册会话，待Remote端处理: %s", sessionID)
 
 	// 等待Remote端认领并写入独立的session key
 	sessionClaimed := false
@@ -145,7 +145,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
-	sessionIDBytes := go2.RandomBytes(24)
+	sessionIDBytes := go2.RandomBytes(config.TunKeyByteLen)
 	SessionID := string(sessionIDBytes)
 	log.Printf("会话ID: %s", SessionID)
 
