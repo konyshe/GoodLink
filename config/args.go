@@ -53,6 +53,7 @@ func Help() {
 	Arg_tun_remote = flag.Bool("remote", false, "启动Remote端")
 
 	flag.StringVar(&Arg_local_proxy_addr, "proxy", "", "Local端代理转发监听地址, 例如: 0.0.0.0:1080")
+	flag.StringVar(&Arg_local_forward_tcp_addrs, "forward", "", "同 forward_tcp, 为了兼容老版本, 不建议使用")
 	flag.StringVar(&Arg_local_forward_tcp_addrs, "forward_tcp", "", "Local端TCP转发地址, 多个用逗号间隔, 例如: 0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80")
 	flag.StringVar(&Arg_local_forward_udp_addrs, "forward_udp", "", "Local端UDP转发地址, 多个用逗号间隔, 例如: 0.0.0.0:5353@127.0.0.1:53")
 
