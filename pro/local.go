@@ -20,7 +20,7 @@ var (
 	m_tun_active       *tun.TunActive
 	m_tun_passive      *tun.TunPassive
 	g_netstack_started = false
-	m_forward_clients  []*proxy.ForwardClient
+	m_forward_clients  []proxy.ForwardRunner
 )
 
 // handleState0_RegisterSession 处理 State 0: 注册会话并等待 Remote 端认领
@@ -243,7 +243,7 @@ func RunLocal() error {
 	useForward := proxy.CheckForwardArgs()
 
 	if useForward {
-		m_forward_clients, err = proxy.NewForwardClients()
+		m_forward_clients, err = proxy.NewForwardRunners()
 		if err != nil {
 			return err
 		}
