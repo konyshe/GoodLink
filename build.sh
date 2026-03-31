@@ -4,10 +4,11 @@ go install github.com/akavel/rsrc@latest
 
 set -x
 
-rm -rf go2 proxy2 goroutine-pool
+rm -rf go2 proxy2 goroutine-pool goodlink3
 cp -r ../go2 .
 cp -r ../proxy proxy2
 cp -r ../goroutine-pool .
+cp -r ../goodlink3 .
 
 if [ -e "/usr/bin/upx" ]; then
     cp /usr/bin/upx .

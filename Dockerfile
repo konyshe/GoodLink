@@ -19,6 +19,7 @@ RUN echo 111111111111
 COPY go2 /go/src/go2
 COPY proxy2 /go/src/proxy
 COPY goroutine-pool /go/src/goroutine-pool
+COPY goodlink3 /go/src/goodlink3
 
 RUN --mount=target=. \
     --mount=type=cache,target=/root/.cache/go-build \
