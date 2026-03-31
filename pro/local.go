@@ -70,8 +70,8 @@ func handleState0_RegisterSession(sessionID string, redisJson *RedisJsonType, co
 func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, conn *net.UDPConn, addr *tun.AddrType, conn_type int, tun_active **tun.TunActive, tun_passive **tun.TunPassive) error {
 	log.Printf("State 1: 收到Remote端地址: %v", redisJson.RemoteAddr)
 
-	// 版本兼容性检查
-	if redisJson.RemoteVersion != config.GetVersion() {
+	// 版本兼容性检查（主版本.次版本一致即可）
+	if !config.VersionsCompatible(config.GetVersion(), redisJson.RemoteVersion) {
 		log.Printf("两端版本不兼容: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
 		UpdateStartButtonStatue(TagStatusVersionMismatch)
 		RedisSessionDel(sessionID)
