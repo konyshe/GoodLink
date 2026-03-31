@@ -137,23 +137,23 @@ Docker暂不支持虚拟网卡（TUN模式）
 ### 本地转发模式（可略过）（该模式下，TUN直连模式、TUN代理模式不会启动）
 
     在本地代理模式的基础上，适用于不支持代理方式访问的场景
-    该模式目前只支持命令行版本，使用 --forward 选项，即可启动该模式
+    该模式目前只支持命令行版本，使用 --forward_tcp 或 --forward_udp 选项，即可启动该模式
     连接成功后，在Local端访问本地指定端口等于在Remote端访问指定地址和端口
-    格式: --forward=Local端监听地址:Local端监听端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
+    格式: --forward_tcp=Local端监听地址:Local端监听端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
 
 ```
 # linux, 单个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
 ```
 
 ```
 # linux, 多个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
 ```
 # linux, 同时使用代理和端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
     连接成功后:
