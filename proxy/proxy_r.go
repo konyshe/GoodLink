@@ -106,8 +106,10 @@ func ProcessProxyServer(stun_quic_conn *quic.Conn) {
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
 		if err != nil {
-			// 连接关闭是正常情况，不需要记录错误日志
-			continue
+			// 连接已关闭，AcceptStream 会立即持续返回错误，
+			// 此时必须退出循环，否则会形成死循环占满 CPU 并泄漏 goroutine
+			log.Error("ProcessProxyServer AcceptStream error: ", err)
+			return
 		}
 
 		go process_stream(new_quic_stream, remoteAddrStr)

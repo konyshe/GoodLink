@@ -226,6 +226,8 @@ func handleConnection(sessionID string, quicConn *quic.Conn, healthStream *quic.
 	tun.ProcessHealth(healthStream, []byte(sessionID))
 
 	port := quicConn.LocalAddr().(*net.UDPAddr).Port
+	quicConn.CloseWithError(0, "health stopped")
+
 	m_upnp_bind.RemoveKeepPort(port)
 	m_upnp_bind.DelPortMapping(true, port, "udp")
 
