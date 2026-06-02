@@ -1,7 +1,6 @@
 <div align="center">
   <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
 
-
   <p><strong>全网最简单、零成本的内网穿透</strong></p>
 
   <p>
@@ -54,7 +53,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 # 快速使用
 
-###  **启动 remote端(以下方式任选)**
+### **启动 remote端(以下方式任选)**
 
 #### UI版本（仅Windows）
 
@@ -77,7 +76,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
-###  **启动 local端(以下方式任选)**
+### **启动 local端(以下方式任选)**
 
 #### UI版本（仅Windows）
 
@@ -100,7 +99,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 Docker暂不支持虚拟网卡（TUN模式）
 ```
 
-#  Local端工作模式
+# Local端工作模式
 
 注：以上操作步骤，会同时启动TUN直连模式和TUN代理模式
 
@@ -120,7 +119,7 @@ Docker暂不支持虚拟网卡（TUN模式）
     连接成功后，在本机配置代理即可使用(仅支持TCP代理):
     socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
 
-### 本地代理模式（可略过）（该模式下，TUN直连模式、TUN代理模式不会启动）
+### 本地代理模式（高阶使用）（该模式下，TUN直连模式、TUN代理模式不会启动）
 
     适用于无法创建虚拟网卡的环境（如MacOS、Docker、无管理员权限等），或同一主机有多个Local端的场景（虚拟网卡不能创建多个）
     该模式目前只支持命令行版本，使用 --proxy 选项，即可启动该模式
@@ -134,7 +133,7 @@ Docker暂不支持虚拟网卡（TUN模式）
     连接成功后，在本机配置代理即可使用(仅支持TCP代理):
     socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
 
-### 本地转发模式（可略过）（该模式下，TUN直连模式、TUN代理模式不会启动）
+### 本地转发模式（高阶使用）（该模式下，TUN直连模式、TUN代理模式不会启动）
 
     在本地代理模式的基础上，适用于不支持代理方式访问的场景
     该模式目前只支持命令行版本，使用 --forward_tcp 或 --forward_udp 选项，即可启动该模式
