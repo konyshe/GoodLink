@@ -160,12 +160,6 @@ Docker暂不支持虚拟网卡（TUN模式）
     - 访问本地22端口等同于在Remote端访问127.0.0.1:22（SSH）
     - 访问本地80端口等同于在Remote端访问127.0.0.1:80（WEB）
 
-## 🙏 致谢
-
-- 所有点了⭐ Star的同学
-- 所有帮助测试和推广的同学
-- 所有提交Issue和建议的同学
-
 ## 💬 交流方式
 
 - **GitHub Issues**：[提交问题和建议](https://github.com/konyshe/Goodlink/issues)
