@@ -15,7 +15,66 @@ import (
 	"golang.zx2c4.com/wintun"
 )
 
+const tunInterfaceIP = "192.17.0.1"
+
 func SetTunIP(wintunEP *Device, ip string, mask int) error {
+	tunDev := (*wintunEP).(*TUN)
+	link := winipcfg.LUID(tunDev.GetNt().LUID())
+	luid := uint64(link)
+
+	ifacePrefix, err := netip.ParsePrefix(fmt.Sprintf("%s/32", tunInterfaceIP))
+	if err != nil {
+		return err
+	}
+	destPrefix, err := netip.ParsePrefix(fmt.Sprintf("%s/%d", ip, mask))
+	if err != nil {
+		return err
+	}
+
+	// 1. 先设路由
+	routeData := &winipcfg.RouteData{
+		Destination: destPrefix,
+		NextHop:     netip.IPv4Unspecified(),
+		Metric:      0,
+	}
+	if err = link.SetRoutes([]*winipcfg.RouteData{routeData}); err != nil {
+		return fmt.Errorf("set route %s via Goodlink: %w", destPrefix, err)
+	}
+
+	// 2. 网卡主 IP
+	if err = link.SetIPAddresses([]netip.Prefix{ifacePrefix}); err != nil {
+		return fmt.Errorf("set interface IP %s: %w", ifacePrefix, err)
+	}
+
+	// 3. IP 接口属性
+	ipif, err := link.IPInterface(windows.AF_INET)
+	if err != nil {
+		return fmt.Errorf("get IP interface: %w", err)
+	}
+	ipif.RouterDiscoveryBehavior = winipcfg.RouterDiscoveryDisabled
+	ipif.DadTransmits = 0
+	ipif.ManagedAddressConfigurationSupported = false
+	ipif.OtherStatefulConfigurationSupported = false
+	ipif.UseAutomaticMetric = false
+	ipif.Metric = 0
+	ipif.WeakHostReceive = true
+	ipif.WeakHostSend = true
+	if tunDev.mtu > 0 {
+		ipif.NLMTU = tunDev.mtu
+	}
+	if err = ipif.Set(); err != nil {
+		return fmt.Errorf("set IP interface: %w", err)
+	}
+
+	if ifRow, err := link.Interface(); err == nil {
+		log.Printf("TUN 网卡状态: AdminStatus=%d OperStatus=%d", ifRow.AdminStatus, ifRow.OperStatus)
+	}
+
+	log.Printf("TUN 配置: LUID=%d, 网卡 IP=%s, 路由=%s on-link (NextHop=0.0.0.0)", luid, ifacePrefix, destPrefix)
+	return nil
+}
+
+func SetTunIP2(wintunEP *Device, ip string, mask int) error {
 	var ipf netip.Prefix
 	var err error
 
