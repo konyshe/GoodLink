@@ -15,14 +15,12 @@ import (
 	"golang.zx2c4.com/wintun"
 )
 
-const tunInterfaceIP = "192.17.0.1"
-
 func SetTunIP(wintunEP *Device, ip string, mask int) error {
 	tunDev := (*wintunEP).(*TUN)
 	link := winipcfg.LUID(tunDev.GetNt().LUID())
 	luid := uint64(link)
 
-	ifacePrefix, err := netip.ParsePrefix(fmt.Sprintf("%s/32", tunInterfaceIP))
+	ifacePrefix, err := tunInterfacePrefixFrom(ip)
 	if err != nil {
 		return err
 	}

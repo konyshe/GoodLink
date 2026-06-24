@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -23,6 +24,22 @@ const (
 	NetStackName        = "Goodlink"
 	NetStackIP          = "192.17.19.1"
 )
+
+func tunInterfacePrefixFrom(destIP string) (netip.Prefix, error) {
+	dest, err := netip.ParseAddr(destIP)
+	if err != nil {
+		return netip.Prefix{}, err
+	}
+	if !dest.Is4() {
+		return netip.Prefix{}, fmt.Errorf("tun interface IP requires IPv4, got %s", destIP)
+	}
+	b := dest.As4()
+	iface := netip.AddrFrom4([4]byte{b[0], b[1], 0, 1})
+	if iface == dest {
+		return netip.Prefix{}, fmt.Errorf("tun interface IP equals dest IP %s", destIP)
+	}
+	return netip.PrefixFrom(iface, 32), nil
+}
 
 func setNetStack(s *stack.Stack, id tcpip.NICID) error {
 	s.SetRouteTable([]tcpip.Route{
