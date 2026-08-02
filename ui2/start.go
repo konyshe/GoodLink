@@ -85,7 +85,7 @@ func parseStatusMessage(line string) (string, bool) {
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
 	status := strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):])
-	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning || status == pro.TagStatusConnectingNAT4 || status == pro.TagStatusVersionMismatch {
+	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning || status == pro.TagStatusConnectingNAT4 || status == pro.TagStatusVersionMismatch || status == pro.TagStatusNeedAdmin {
 		return status, true
 	}
 	return "", false
@@ -237,6 +237,11 @@ func updateConnectionStatus(status string) {
 				time.Sleep(500 * time.Millisecond) // 短暂延迟，确保日志已输出
 				StopCmdProcess()
 			}()
+		case pro.TagStatusNeedAdmin:
+			// 需要管理员权限，禁用自动重启（进程会自行退出）
+			m_start_button_lock.Lock()
+			m_auto_restart_enabled = false
+			m_start_button_lock.Unlock()
 		}
 	case workTypeRemote:
 		switch status {

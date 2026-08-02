@@ -9,6 +9,7 @@ const (
 	TagStatusConnected       = "connected"
 	TagStatusRunning         = "running"
 	TagStatusVersionMismatch = "version_mismatch"
+	TagStatusNeedAdmin       = "need_admin"
 )
 
 // LogStatus 输出带 TagStatusPrefix 的状态行，供 UI 等解析

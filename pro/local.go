@@ -10,6 +10,7 @@ import (
 	"goodlink/tun"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -263,6 +264,10 @@ func RunLocal() error {
 
 		if !useForward && !g_netstack_started {
 			if err := netstack.Start(); err != nil {
+				if strings.Contains(err.Error(), "请管理员权限运行") {
+					UpdateStartButtonStatue(TagStatusNeedAdmin)
+					time.Sleep(1 * time.Second) // 保证 UI 读到状态并关闭自动重启后再退出
+				}
 				return err
 			}
 			g_netstack_started = true

@@ -55,6 +55,8 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 ### **启动 remote端(以下方式任选)**
 
+Remote端不需要管理员权限。
+
 #### UI版本（仅Windows）
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
@@ -77,6 +79,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 ```
 
 ### **启动 local端(以下方式任选)**
+
+Local端创建虚拟网卡，需要管理员权限运行（Windows 请右键以管理员身份运行）。
 
 #### UI版本（仅Windows）
 
