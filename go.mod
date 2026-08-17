@@ -3,7 +3,6 @@ module goodlink
 go 1.25.5
 
 require (
-	github.com/BurntSushi/toml v1.6.0
 	github.com/getlantern/systray v1.2.2
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/quic-go/quic-go v0.59.0
