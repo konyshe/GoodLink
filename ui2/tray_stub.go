@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func InitTrayIcons(_, _, _, _ []byte) {}
+func applyTrayIcons(_, _, _, _ []byte) {}
 
 func UpdateTrayIcon(_ buttonState) {}
 

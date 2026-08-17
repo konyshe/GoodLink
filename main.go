@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"flag"
 	go2log "go2/log"
 	go2pool "go2/pool"
@@ -22,9 +21,6 @@ import (
 	"syscall"
 	"time"
 )
-
-//go:embed assert/tray_idle.ico assert/tray_warning.ico assert/tray_danger.ico assert/tray_success.ico
-var trayIcons embed.FS
 
 func main2() {
 	log.Println("官方网址: https://gitee.com/konyshe/goodlink")
@@ -100,11 +96,7 @@ func runUI() {
 
 	config.SetVersion(GetVersionFromAppConfig())
 
-	idle, _ := trayIcons.ReadFile("assert/tray_idle.ico")
-	warning, _ := trayIcons.ReadFile("assert/tray_warning.ico")
-	danger, _ := trayIcons.ReadFile("assert/tray_danger.ico")
-	success, _ := trayIcons.ReadFile("assert/tray_success.ico")
-	ui2.InitTrayIcons(idle, warning, danger, success)
+	ui2.InitTrayIcons()
 
 	ui2.Init()
 
