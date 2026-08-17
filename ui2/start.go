@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"go2"
-	"image/color"
 	"log"
 	"os"
 	"os/exec"
@@ -20,20 +19,11 @@ import (
 	"goodlink/pro"
 	"goodlink/utils"
 	goodlink_config "goodlink3/config"
-
-	_ "embed"
-	_ "net/http/pprof"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/widget"
 )
 
 var (
-	m_start_button_lock     sync.Mutex
-	m_button_start          *widget.Button
-	m_activity_start_button *widget.Activity
-	m_start_button_state    int
+	m_start_button_lock  sync.Mutex
+	m_start_button_state int
 
 	// 子进程管理
 	m_cmd_process *exec.Cmd
@@ -42,24 +32,6 @@ var (
 	// 自动重启控制
 	m_auto_restart_enabled bool
 )
-
-// UI组件接口，用于统一管理启用/禁用
-type uiComponent interface {
-	Enable()
-	Disable()
-}
-
-// 所有需要控制的UI组件列表
-var uiComponents = []uiComponent{}
-
-func init() {
-	// 延迟初始化，在 GetMainUI 中设置
-}
-
-// setUIComponents 设置需要控制的UI组件列表
-func setUIComponents(components []uiComponent) {
-	uiComponents = components
-}
 
 // StopCmdProcess 停止子进程（供外部调用，如窗口关闭时）
 func StopCmdProcess() {
@@ -91,143 +63,18 @@ func parseStatusMessage(line string) (string, bool) {
 	return "", false
 }
 
-// 按钮状态类型
-type buttonState struct {
-	text          string
-	importance    widget.Importance
-	icon          fyne.Resource
-	dotColor      color.NRGBA
-	enabled       bool
-	activity      bool
-	other_enabled bool
-}
-
-// 预定义的按钮状态
-var (
-	buttonStateInitializing = buttonState{
-		text:          "检测网络中...",
-		importance:    widget.HighImportance,
-		icon:          theme.MediaPlayIcon(),
-		enabled:       false,
-		activity:      false,
-		other_enabled: true,
-	}
-	buttonStateIdle = buttonState{
-		text:          "点击启动",
-		importance:    widget.HighImportance,
-		icon:          theme.MediaPlayIcon(),
-		enabled:       true,
-		activity:      false,
-		other_enabled: true,
-	}
-	buttonStateStarting = buttonState{
-		text:          "启动中...",
-		importance:    widget.WarningImportance,
-		icon:          theme.MediaStopIcon(),
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnecting = buttonState{
-		text:          "连接中...",
-		importance:    widget.WarningImportance,
-		icon:          theme.MediaStopIcon(),
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnectingNat4 = buttonState{
-		text:          "当前网络是NAT4, 连接中...",
-		importance:    widget.WarningImportance,
-		icon:          theme.MediaStopIcon(),
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnectingNat4ToNat4 = buttonState{
-		text:          "两端网络都是NAT4, 连接中...",
-		importance:    widget.DangerImportance,
-		icon:          theme.MediaStopIcon(),
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnected = buttonState{
-		text:          "连接成功, 点击停止",
-		importance:    widget.SuccessImportance,
-		icon:          theme.MediaStopIcon(),
-		enabled:       true,
-		activity:      false,
-		other_enabled: false,
-	}
-	buttonStateRunning = buttonState{
-		text:          "启动成功, 点击停止",
-		importance:    widget.SuccessImportance,
-		icon:          theme.MediaStopIcon(),
-		enabled:       true,
-		activity:      false,
-		other_enabled: false,
-	}
-	buttonStateStopping = buttonState{
-		text:          "停止中...",
-		importance:    widget.WarningImportance,
-		icon:          theme.MediaStopIcon(),
-		enabled:       false,
-		activity:      false,
-		other_enabled: false,
-	}
-)
-
-// updateButtonState 更新启动按钮的状态，同时同步托盘图标小圆点颜色
-func updateButtonState(state buttonState) {
-	if m_button_start == nil {
-		return
-	}
-
-	if state.enabled {
-		m_button_start.Enable()
-	} else {
-		m_button_start.Disable()
-	}
-
-	if state.activity {
-		m_activity_start_button.Start()
-		m_activity_start_button.Show()
-	} else {
-		m_activity_start_button.Stop()
-		m_activity_start_button.Hide()
-	}
-
-	if state.other_enabled {
-		for _, comp := range uiComponents {
-			comp.Enable()
-		}
-	} else {
-		for _, comp := range uiComponents {
-			comp.Disable()
-		}
-	}
-
-	m_button_start.Importance = state.importance
-	m_button_start.SetText(state.text)
-	m_button_start.SetIcon(state.icon)
-	m_button_start.Refresh()
-
-	UpdateTrayIcon(state)
-}
-
 // updateConnectionStatus 根据连接状态更新按钮（Local端直接映射，Remote端在连接成功后才切换为运行状态）
-// 由 handleProcessOutput goroutine 调用，UI 更新通过 fyne.Do 调度到主线程
+// 由 handleProcessOutput goroutine 调用，状态通过 SSE 推送到浏览器
 func updateConnectionStatus(status string) {
 	switch GetWorkType() {
 	case workTypeLocal:
 		switch status {
 		case pro.TagStatusConnecting:
-			fyne.Do(func() { updateButtonState(buttonStateConnecting) })
+			updateButtonState(buttonStateConnecting)
 		case pro.TagStatusConnected:
-			fyne.Do(func() { updateButtonState(buttonStateConnected) })
+			updateButtonState(buttonStateConnected)
 		case pro.TagStatusConnectingNAT4:
-			fyne.Do(func() { updateButtonState(buttonStateConnectingNat4ToNat4) })
+			updateButtonState(buttonStateConnectingNat4ToNat4)
 		case pro.TagStatusVersionMismatch:
 			// 版本不一致，禁用自动重启并停止进程
 			m_start_button_lock.Lock()
@@ -246,7 +93,7 @@ func updateConnectionStatus(status string) {
 	case workTypeRemote:
 		switch status {
 		case pro.TagStatusRunning:
-			fyne.Do(func() { updateButtonState(buttonStateRunning) })
+			updateButtonState(buttonStateRunning)
 		}
 	}
 }
@@ -263,7 +110,7 @@ func startCmdProcess() error {
 
 	// 构建命令行参数
 	workType := GetWorkType()
-	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + m_validated_key.Text, "--local_config"}
+	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + getTunKey(), "--local_config"}
 
 	// 创建子进程
 	m_cmd_mutex.Lock()
@@ -322,66 +169,80 @@ func saveConfig() {
 	//先对需要填写的数据进行校验
 	configByte, _ := json.Marshal(&goodlink_config.ConfigInfo{
 		WorkType: GetWorkType(),
-		TunKey:   m_validated_key.Text,
+		TunKey:   getTunKey(),
 	})
 	log.Println(string(configByte))
 	os.Remove(goodlinkFileName)
 	go2.FileAppend(goodlinkFileName, configByte)
 }
 
-func start_button_click() {
+func HandleStart(workType, tunKey string) error {
 	m_start_button_lock.Lock()
 	defer m_start_button_lock.Unlock()
 
-	switch m_start_button_state {
-	case 0:
-		if GetWorkType() == workTypeLocal {
-			updateButtonState(buttonStateConnecting)
-		} else {
-			updateButtonState(buttonStateStarting)
-		}
-
-		saveConfig()
-
-		// 强制刷新工作端侧按钮高亮，确保选中项明显显示
-		updateWorkTypeButtons(GetWorkType())
-
-		m_start_button_state = 1
-
-		// 设置自动重启标志
-		m_auto_restart_enabled = true
-
-		// 启动进程
-		if err := startCmdProcess(); err != nil {
-			UILogPrintF("启动失败: %v", err)
-			m_start_button_state = 0
-			m_auto_restart_enabled = false
-			updateButtonState(buttonStateIdle)
-			return
-		}
-
-		// 更新按钮状态并等待进程结束
-		go waitForProcessAndHandleExit(false)
-
-	case 1:
-		updateButtonState(buttonStateStopping)
-
-		// 停止子进程（在 goroutine 中执行，避免阻塞 UI）
-		go func() {
-			// 设置自动重启标志为false，防止误触发重启
-			m_auto_restart_enabled = false
-			StopCmdProcess()
-
-			fyne.Do(func() {
-				m_start_button_state = 0
-				updateButtonState(buttonStateIdle)
-			})
-		}()
+	if m_start_button_state != 0 {
+		return fmt.Errorf("already started")
 	}
+
+	stateMu.RLock()
+	busy := currentButton.kind == kindInitializing || currentButton.kind == kindStopping
+	stateMu.RUnlock()
+	if busy {
+		return fmt.Errorf("busy")
+	}
+
+	setWorkTypeAndKey(workType, tunKey)
+
+	if GetWorkType() == workTypeLocal {
+		updateButtonState(buttonStateConnecting)
+	} else {
+		updateButtonState(buttonStateStarting)
+	}
+
+	saveConfig()
+
+	m_start_button_state = 1
+
+	// 设置自动重启标志
+	m_auto_restart_enabled = true
+
+	// 启动进程
+	if err := startCmdProcess(); err != nil {
+		UILogPrintF("启动失败: %v", err)
+		m_start_button_state = 0
+		m_auto_restart_enabled = false
+		updateButtonState(buttonStateIdle)
+		return err
+	}
+
+	// 更新按钮状态并等待进程结束
+	go waitForProcessAndHandleExit()
+	return nil
 }
 
-// waitForProcessAndHandleExit 等待进程结束并处理退出逻辑（在 goroutine 中运行，UI 更新通过 fyne.Do 调度到主线程）
-func waitForProcessAndHandleExit(isRestart bool) {
+func HandleStop() {
+	m_start_button_lock.Lock()
+	defer m_start_button_lock.Unlock()
+
+	if m_start_button_state != 1 {
+		return
+	}
+
+	updateButtonState(buttonStateStopping)
+
+	// 设置自动重启标志为false，防止误触发重启
+	m_auto_restart_enabled = false
+
+	// 停止子进程（在 goroutine 中执行，避免阻塞 UI）
+	go func() {
+		StopCmdProcess()
+		m_start_button_state = 0
+		updateButtonState(buttonStateIdle)
+	}()
+}
+
+// waitForProcessAndHandleExit 等待进程结束并处理退出逻辑（在 goroutine 中运行，状态通过 SSE 推送到浏览器）
+func waitForProcessAndHandleExit() {
 	time.Sleep(time.Second * 1)
 	if m_start_button_state != 1 {
 		return
@@ -406,10 +267,8 @@ func waitForProcessAndHandleExit(isRestart bool) {
 		autoRestartProcess()
 	} else {
 		// 正常停止，恢复 UI
-		fyne.Do(func() {
-			m_start_button_state = 0
-			updateButtonState(buttonStateIdle)
-		})
+		m_start_button_state = 0
+		updateButtonState(buttonStateIdle)
 	}
 }
 
@@ -431,13 +290,11 @@ func autoRestartProcess() {
 	// 重启进程
 	if err := startCmdProcess(); err != nil {
 		UILogPrintF("启动失败: %v", err)
-		fyne.Do(func() {
-			m_start_button_state = 0
-			updateButtonState(buttonStateIdle)
-		})
+		m_start_button_state = 0
+		updateButtonState(buttonStateIdle)
 		return
 	}
 
 	// 启动新的等待goroutine
-	go waitForProcessAndHandleExit(true)
+	go waitForProcessAndHandleExit()
 }

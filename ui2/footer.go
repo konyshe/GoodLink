@@ -5,20 +5,13 @@ package ui2
 import (
 	"crypto/tls"
 	"encoding/json"
-	"image/color"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/widget"
+	"goodlink/config"
 )
 
 type giteeRelease struct {
@@ -66,87 +59,11 @@ func checkLatestVersion(currentVersion string) (bool, string) {
 	return false, latestVersion
 }
 
-var (
-	upgradeHintColor = color.NRGBA{R: 255, G: 80, B: 60, A: 255}
-	nat4WarnColor    = color.NRGBA{R: 240, G: 180, B: 40, A: 255}
-	natOkColor       = color.NRGBA{R: 50, G: 220, B: 80, A: 255}
-	natDetectColor   = color.NRGBA{R: 180, G: 180, B: 180, A: 255}
-)
-
-var (
-	m_nat_hint_box  *fyne.Container
-	m_nat_hint_icon *widget.Icon
-	m_nat_hint_text *canvas.Text
-)
-
-// ShowNATHint 根据 STUN 检测结果显示 NAT 类型提示
-func ShowNATHint(isNAT4 bool) {
-	if m_nat_hint_box == nil {
-		return
-	}
-	if isNAT4 {
-		m_nat_hint_icon.SetResource(theme.WarningIcon())
-		m_nat_hint_text.Text = "当前网络为NAT4"
-		m_nat_hint_text.Color = nat4WarnColor
-	} else {
-		m_nat_hint_icon.SetResource(theme.ConfirmIcon())
-		m_nat_hint_text.Text = "当前网络为NAT1-NAT3"
-		m_nat_hint_text.Color = natOkColor
-	}
-	m_nat_hint_icon.Refresh()
-	m_nat_hint_text.Refresh()
-	m_nat_hint_box.Show()
-}
-
-// NewFooter 创建底部归属信息和官网链接组件
-func NewFooter(currentVersion string) fyne.CanvasObject {
-	separator := canvas.NewRectangle(separatorColor)
-	separator.SetMinSize(fyne.NewSize(0, 1))
-
-	//versionLabel := widget.NewRichTextFromMarkdown("**@2026 Goodlink**")
-
-	updateURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/releases")
-	updateLink := widget.NewHyperlink("升级版本", updateURL)
-	updateIcon := widget.NewIcon(theme.DownloadIcon())
-
-	feedbackURL, _ := url.Parse("https://gitee.com/konyshe/goodlink/issues")
-	feedbackLink := widget.NewHyperlink("反馈问题", feedbackURL)
-	feedbackIcon := widget.NewIcon(theme.InfoIcon())
-
-	newBadge := canvas.NewText("", upgradeHintColor)
-	newBadge.TextSize = 14
-	newBadge.TextStyle = fyne.TextStyle{Bold: true}
-
-	upgradeBox := container.NewHBox(updateIcon, newBadge, updateLink)
-	upgradeBox.Hide()
-
-	m_nat_hint_icon = widget.NewIcon(theme.InfoIcon())
-	m_nat_hint_text = canvas.NewText("正在检测当前网络环境...", natDetectColor)
-	m_nat_hint_text.TextSize = 14
-	m_nat_hint_text.TextStyle = fyne.TextStyle{Bold: true}
-	m_nat_hint_box = container.NewHBox(m_nat_hint_icon, m_nat_hint_text)
-
-	footerContent := container.NewHBox(
-		m_nat_hint_box,
-		layout.NewSpacer(),
-		upgradeBox,
-		container.NewHBox(feedbackIcon, feedbackLink),
-	)
-
+func startUpgradeCheck() {
 	go func() {
-		needUpgrade, latestVer := checkLatestVersion(currentVersion)
+		needUpgrade, latestVer := checkLatestVersion(config.GetVersion())
 		if needUpgrade {
-			fyne.Do(func() {
-				updateLink.SetText("v" + latestVer)
-				newBadge.Text = "有新版本!"
-				newBadge.Refresh()
-				upgradeBox.Show()
-			})
+			setUpgradeInfo(true, latestVer)
 		}
 	}()
-
-	return container.NewVBox(
-		separator,
-		footerContent,
-	)
 }

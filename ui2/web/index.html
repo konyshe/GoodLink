@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Goodlink</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230078ff'/%3E%3Ctext x='16' y='22' text-anchor='middle' fill='white' font-size='18' font-family='sans-serif'%3EG%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 id="app-title">Goodlink</h1>
+    </header>
+
+    <section class="row">
+      <span class="label">工作端侧:</span>
+      <div class="work-type" id="work-type">
+        <button type="button" class="work-btn" data-type="Local" id="btn-local">Local端</button>
+        <span class="vsep"></span>
+        <button type="button" class="work-btn" data-type="Remote" id="btn-remote">Remote端</button>
+      </div>
+    </section>
+
+    <section class="row">
+      <span class="label">连接密钥:</span>
+      <input id="tun-key" class="key-input" type="text" placeholder="16-64字节长度" autocomplete="off" spellcheck="false">
+    </section>
+
+    <section class="key-actions">
+      <button type="button" id="btn-generate">生成密钥</button>
+      <button type="button" id="btn-copy">复制密钥</button>
+      <button type="button" id="btn-paste">粘贴密钥</button>
+    </section>
+
+    <button type="button" id="btn-start" class="start-btn high" disabled>
+      <span class="spinner hidden" id="start-spinner"></span>
+      <span id="start-text">检测网络中...</span>
+    </button>
+
+    <section class="logs">
+      <div class="label">运行日志:</div>
+      <pre id="log-list"></pre>
+    </section>
+
+    <footer class="footer">
+      <div id="nat-hint" class="nat detecting">正在检测当前网络环境...</div>
+      <div class="footer-links">
+        <a id="upgrade-box" class="upgrade hidden" href="https://gitee.com/konyshe/goodlink/releases" target="_blank" rel="noopener">有新版本! <span id="upgrade-ver"></span></a>
+        <a href="https://gitee.com/konyshe/goodlink/issues" target="_blank" rel="noopener">反馈问题</a>
+      </div>
+    </footer>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

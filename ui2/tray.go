@@ -3,56 +3,85 @@
 package ui2
 
 import (
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/driver/desktop"
+	"sync/atomic"
+
+	"goodlink/config"
+
+	"github.com/getlantern/systray"
 )
 
 var (
-	trayApp desktop.App
 	// Pre-generated tray icon data (ICO bytes), set by InitTrayIcons.
 	trayIconIdle    []byte
 	trayIconWarning []byte
 	trayIconDanger  []byte
 	trayIconSuccess []byte
+	trayReady       atomic.Bool
 )
 
 // InitTrayIcons sets the 4 pre-generated tray icon bytes (ICO format).
 // Icons should be from assert/tray_idle.ico, tray_warning.ico, tray_danger.ico, tray_success.ico.
-func InitTrayIcons(desk desktop.App, idle, warning, danger, success []byte) {
-	trayApp = desk
+func InitTrayIcons(idle, warning, danger, success []byte) {
 	trayIconIdle = idle
 	trayIconWarning = warning
 	trayIconDanger = danger
 	trayIconSuccess = success
 }
 
-// iconForState returns the tray icon resource for the given button state.
-func iconForState(state buttonState) fyne.Resource {
-	var data []byte
-	switch {
-	case state == buttonStateIdle, state == buttonStateInitializing:
-		data = trayIconIdle
-	case state == buttonStateStarting, state == buttonStateConnecting, state == buttonStateConnectingNat4, state == buttonStateStopping:
-		data = trayIconWarning
-	case state == buttonStateConnectingNat4ToNat4:
-		data = trayIconDanger
-	case state == buttonStateConnected, state == buttonStateRunning:
-		data = trayIconSuccess
+// iconBytesForState returns the tray icon bytes for the given button state.
+func iconBytesForState(state buttonState) []byte {
+	switch state.kind {
+	case kindIdle, kindInitializing:
+		return trayIconIdle
+	case kindStarting, kindConnecting, kindConnectingNat4, kindStopping:
+		return trayIconWarning
+	case kindConnectingNat4ToNat4:
+		return trayIconDanger
+	case kindConnected, kindRunning:
+		return trayIconSuccess
 	default:
-		data = trayIconIdle
+		return trayIconIdle
 	}
-	if len(data) == 0 {
-		return nil
-	}
-	return fyne.NewStaticResource("tray_icon.ico", data)
 }
 
 func UpdateTrayIcon(state buttonState) {
-	if trayApp == nil {
+	if !trayReady.Load() {
 		return
 	}
-	icon := iconForState(state)
-	if icon != nil {
-		trayApp.SetSystemTrayIcon(icon)
+	data := iconBytesForState(state)
+	if len(data) > 0 {
+		systray.SetIcon(data)
 	}
+}
+
+func SetupTray(uiURL string) {
+	stateMu.RLock()
+	btn := currentButton
+	stateMu.RUnlock()
+
+	trayReady.Store(true)
+	UpdateTrayIcon(btn)
+	systray.SetTooltip(M_APP_TITLE + "  v" + config.GetVersion())
+
+	// 创建菜单，确保只有一个退出选项
+	mOpen := systray.AddMenuItem("打开主程序", "在浏览器中打开")
+	systray.AddSeparator()
+	mQuit := systray.AddMenuItem("退出", "退出")
+
+	go func() {
+		for {
+			select {
+			case <-mOpen.ClickedCh:
+				OpenBrowser(uiURL)
+			case <-mQuit.ClickedCh:
+				StopCmdProcess()
+				systray.Quit()
+			}
+		}
+	}()
+}
+
+// OnTrayExit 程序退出时停止子进程
+func OnTrayExit() {
+	StopCmdProcess()
 }

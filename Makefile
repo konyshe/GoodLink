@@ -12,6 +12,15 @@ GOBUILD=GO111MODULE=on \
     	-X "go2.GitStatus=$(GitStatus)" \
     	-X "go2.BuildTime=$(BuildTime)" \
 		-w -s -buildid='
+GOBUILD_UI=CGO_ENABLED=0 GO111MODULE=on \
+		GOPROXY="https://goproxy.cn,direct" \
+		GOEXPERIMENT=jsonv2 \
+		GOEXPERIMENT=loopvar \
+		go build -trimpath -ldflags \
+		'-H=windowsgui -X "go2.GitCommitLog=$(GitCommitLog)" \
+    	-X "go2.GitStatus=$(GitStatus)" \
+    	-X "go2.BuildTime=$(BuildTime)" \
+		-w -s -buildid='
 
 LINUX_PLATFORM_LIST = \
 	linux-386-cmd \
@@ -92,9 +101,8 @@ windows-arm64-cmd:
 	GOARCH=arm64 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-amd64-ui:
-#	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 fyne package -os windows -icon theme/favicon.ico
-#	go build -ldflags -H=windowsgui
-	mkdir bin; fyne package -release; mv *.exe bin/
+	mkdir -p $(BINDIR)
+	GOARCH=amd64 GOOS=windows $(GOBUILD_UI) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-386-cmd:
 	GOARCH=386 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
@@ -102,7 +110,7 @@ windows-386-cmd:
 windows-arm-cmd:
 	GOARCH=arm GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
 create_nac:
-	rsrc -manifest nac.manifest -o nac.syso
+	rsrc -manifest nac.manifest -ico assert/favicon.ico -o nac.syso
 
 rm_nac:
 	rm -rf nac.syso
