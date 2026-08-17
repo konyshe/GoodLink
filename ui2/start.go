@@ -1,5 +1,3 @@
-//go:build windows
-
 package ui2
 
 import (
@@ -13,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"goodlink/pro"
@@ -116,11 +113,8 @@ func startCmdProcess() error {
 	m_cmd_mutex.Lock()
 	m_cmd_process = exec.Command(cmdPath, args...)
 
-	// 隐藏子进程窗口
-	m_cmd_process.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow:    true,
-		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
-	}
+	// 隐藏子进程窗口（仅 Windows）
+	hideChildWindow(m_cmd_process)
 
 	// 获取输出管道
 	stdout, err := m_cmd_process.StdoutPipe()

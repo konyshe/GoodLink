@@ -54,6 +54,12 @@ func UpdateTrayIcon(state buttonState) {
 	}
 }
 
+func RunLoop(uiURL string) {
+	systray.Run(func() {
+		SetupTray(uiURL)
+	}, OnTrayExit)
+}
+
 func SetupTray(uiURL string) {
 	stateMu.RLock()
 	btn := currentButton

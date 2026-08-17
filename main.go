@@ -1,8 +1,7 @@
-//go:build cmd
-
 package main
 
 import (
+	"embed"
 	"flag"
 	go2log "go2/log"
 	go2pool "go2/pool"
@@ -10,6 +9,7 @@ import (
 	"goodlink/pro"
 	_ "goodlink/pro"
 	"goodlink/stun2"
+	"goodlink/ui2"
 	"goodlink/utils"
 	goodlink_config "goodlink3/config"
 	"log"
@@ -22,6 +22,9 @@ import (
 	"syscall"
 	"time"
 )
+
+//go:embed assert/tray_idle.ico assert/tray_warning.ico assert/tray_danger.ico assert/tray_success.ico
+var trayIcons embed.FS
 
 func main2() {
 	log.Println("官方网址: https://gitee.com/konyshe/goodlink")
@@ -79,7 +82,57 @@ func main2() {
 	pro.StopRemote()
 }
 
+func runUI() {
+	// 隐藏 UI 主进程控制台窗口（仅 Windows；从已有终端启动时只脱离本进程）
+	hideUIConsole()
+
+	// 检查单实例，如果不是第一个实例则退出
+	// 必须在创建任何UI资源之前检查，避免影响已运行的实例
+	if !utils.CheckSingleInstance() {
+		// 已有实例运行，直接退出
+		return
+	}
+
+	// 启动前清理遗留的cmd进程
+	utils.CleanupOrphanedCmdProcesses()
+
+	goodlink_config.DeleteLocalConfig()
+
+	config.SetVersion(GetVersionFromAppConfig())
+
+	idle, _ := trayIcons.ReadFile("assert/tray_idle.ico")
+	warning, _ := trayIcons.ReadFile("assert/tray_warning.ico")
+	danger, _ := trayIcons.ReadFile("assert/tray_danger.ico")
+	success, _ := trayIcons.ReadFile("assert/tray_success.ico")
+	ui2.InitTrayIcons(idle, warning, danger, success)
+
+	ui2.Init()
+
+	uiURL, err := ui2.StartServer()
+	if err != nil {
+		return
+	}
+
+	// 监听显示窗口请求（二次启动时重新打开浏览器）
+	go func() {
+		for range utils.GetShowWindowChan() {
+			ui2.OpenBrowser(uiURL)
+		}
+	}()
+
+	ui2.OpenBrowser(uiURL)
+
+	// Windows：主线程运行托盘消息循环；Linux/macOS：等待信号后退出
+	ui2.RunLoop(uiURL)
+}
+
 func main() {
+	// 无任何参数时启动 UI（Windows/Linux/macOS）
+	if len(os.Args) <= 1 {
+		runUI()
+		return
+	}
+
 	config.SetVersion(GetVersionFromAppConfig())
 	config.Help()
 

@@ -1,5 +1,3 @@
-//go:build windows
-
 package ui2
 
 import (
@@ -8,8 +6,6 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
-	"os/exec"
-	"syscall"
 	"time"
 )
 
@@ -17,15 +13,6 @@ import (
 var webFS embed.FS
 
 const defaultUIAddr = "127.0.0.1:16780"
-
-func OpenBrowser(url string) {
-	cmd := exec.Command("cmd", "/c", "start", "", url)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow:    true,
-		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
-	}
-	_ = cmd.Start()
-}
 
 func StartServer() (string, error) {
 	ln, err := net.Listen("tcp", defaultUIAddr)

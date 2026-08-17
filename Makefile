@@ -12,16 +12,6 @@ GOBUILD=GO111MODULE=on \
     	-X "go2.GitStatus=$(GitStatus)" \
     	-X "go2.BuildTime=$(BuildTime)" \
 		-w -s -buildid='
-GOBUILD_UI=CGO_ENABLED=0 GO111MODULE=on \
-		GOPROXY="https://goproxy.cn,direct" \
-		GOEXPERIMENT=jsonv2 \
-		GOEXPERIMENT=loopvar \
-		go build -trimpath -ldflags \
-		'-H=windowsgui -X "go2.GitCommitLog=$(GitCommitLog)" \
-    	-X "go2.GitStatus=$(GitStatus)" \
-    	-X "go2.BuildTime=$(BuildTime)" \
-		-w -s -buildid='
-
 LINUX_PLATFORM_LIST = \
 	linux-386-cmd \
 	linux-amd64-cmd \
@@ -40,7 +30,6 @@ DARWIN_PLATFORM_LIST = \
 	darwin-arm64-cmd \
 
 WINDOWS_PLATFORM_LIST = \
-	windows-amd64-ui \
 	windows-amd64-cmd \
 
 WINDOWS_PLATFORM2_LIST = \
@@ -56,59 +45,55 @@ windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac strip
 linux: $(LINUX_PLATFORM_LIST) strip
 
 linux-386-cmd:
-	GOARCH=386 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=386 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-amd64-cmd:
-	GOARCH=amd64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-loong64-cmd:
-	GOARCH=loong64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=loong64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-mips-cmd:
-	GOARCH=mips GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=mips GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-mipsle-cmd:
-	GOARCH=mipsle GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=mipsle GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-mips64-cmd:
-	GOARCH=mips64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=mips64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-mips64le-cmd:
-	GOARCH=mips64le GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=mips64le GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-riscv64-cmd:
-	GOARCH=riscv64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=riscv64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-arm-cmd:
-	GOARCH=arm GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=arm GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-armv6l-cmd:
-	GOARCH=arm GOARM=6 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=arm GOARM=6 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-arm64-cmd:
-	GOARCH=arm64 GOOS=linux $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 darwin-amd64-cmd:
-	GOARCH=amd64 GOOS=darwin $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=amd64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 darwin-arm64-cmd:
-	GOARCH=arm64 GOOS=darwin $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@
+	GOARCH=arm64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 windows-amd64-cmd:
-	GOARCH=amd64 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-arm64-cmd:
-	GOARCH=arm64 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
-
-windows-amd64-ui:
-	mkdir -p $(BINDIR)
-	GOARCH=amd64 GOOS=windows $(GOBUILD_UI) -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=arm64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-386-cmd:
-	GOARCH=386 GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=386 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-arm-cmd:
-	GOARCH=arm GOOS=windows $(GOBUILD) -tags "cmd" -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=arm GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 create_nac:
 	rsrc -manifest nac.manifest -ico assert/favicon.ico -o nac.syso
 
