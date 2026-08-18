@@ -178,7 +178,24 @@ func HandleForwards(localMode string, rules []config.UIForwardRule) error {
 	if running {
 		localMode = getLocalMode()
 	}
-	if err := setLocalModeAndRules(localMode, rules); err != nil {
+
+	cfg := config.UIConfig{
+		LocalMode:    localMode,
+		ForwardRules: rules,
+	}
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return err
+	}
+
+	var skip []config.UIForwardRule
+	if running {
+		skip = getForwardRules()
+	}
+	if conflicts := config.ListenConflicts(cfg.ForwardRules, skip); len(conflicts) > 0 {
+		return fmt.Errorf("%s", config.FormatListenConflicts(conflicts))
+	}
+
+	if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
 		return err
 	}
 	if err := saveConfig(); err != nil {
@@ -204,8 +221,25 @@ func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRul
 		return fmt.Errorf("busy")
 	}
 
+	cfg := config.UIConfig{
+		LocalMode:    localMode,
+		ForwardRules: rules,
+	}
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return err
+	}
+	wt := workType
+	if wt != workTypeLocal && wt != workTypeRemote {
+		wt = GetWorkType()
+	}
+	if wt == workTypeLocal && cfg.LocalMode == config.LocalModeForward {
+		if conflicts := config.ListenConflicts(cfg.ForwardRules, nil); len(conflicts) > 0 {
+			return fmt.Errorf("%s", config.FormatListenConflicts(conflicts))
+		}
+	}
+
 	setWorkTypeAndKey(workType, tunKey)
-	if err := setLocalModeAndRules(localMode, rules); err != nil {
+	if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
 		return err
 	}
 	if err := saveConfig(); err != nil {

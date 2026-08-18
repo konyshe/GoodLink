@@ -407,6 +407,9 @@ body,
   align-items: center;
   gap: 16px;
   text-align: center;
+  max-width: 520px;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .admin-card button {

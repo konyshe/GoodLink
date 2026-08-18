@@ -33,6 +33,7 @@ export default function App() {
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
   const [adminHint, setAdminHint] = useState(false);
+  const [conflictHint, setConflictHint] = useState("");
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
   const logRef = useRef(null);
@@ -93,8 +94,13 @@ export default function App() {
   async function onConfirm() {
     if (!mappingEnabled) return;
     setFormError("");
+    setConflictHint("");
     const result = await applyForwards(localMode, rulesFromRows(rows));
     if (result.error) {
+      if (String(result.error).includes("端口已被占用")) {
+        setConflictHint(result.error);
+        return;
+      }
       setFormError(result.error);
     }
   }
@@ -103,8 +109,13 @@ export default function App() {
     if (!startEnabled) return;
     if (button.kind === "idle") {
       setFormError("");
+      setConflictHint("");
       const result = await start(workType, tunKey, localMode, rulesFromRows(rows));
       if (result.error) {
+        if (String(result.error).includes("端口已被占用")) {
+          setConflictHint(result.error);
+          return;
+        }
         setFormError(result.error);
         if (String(result.error).includes("管理员权限")) {
           setAdminHint(true);
@@ -238,6 +249,15 @@ export default function App() {
         <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
           <div>{ADMIN_HINT}</div>
           <button type="button" onClick={() => setAdminHint(false)}>确定</button>
+        </div>
+      </div>
+      <div
+        className={"exit-overlay" + (!exited && conflictHint ? "" : " hidden")}
+        onClick={() => setConflictHint("")}
+      >
+        <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
+          <div>{conflictHint}</div>
+          <button type="button" onClick={() => setConflictHint("")}>确定</button>
         </div>
       </div>
     </>

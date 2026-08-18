@@ -136,3 +136,66 @@ func parseHostPortIPv4(addr string) (string, int, error) {
 	}
 	return ip.To4().String(), port, nil
 }
+
+func listenRuleKey(r UIForwardRule) string {
+	return strings.ToLower(strings.TrimSpace(r.Proto)) + "|" + r.Listen
+}
+
+// ListenConflicts 探测规则中尚未被 skip 覆盖的本地监听是否已被占用。
+// skip 用于跳过本程序已持有的监听（例如转发子进程正在使用的端口）。
+func ListenConflicts(rules, skip []UIForwardRule) []string {
+	owned := make(map[string]struct{}, len(skip))
+	for _, r := range skip {
+		owned[listenRuleKey(r)] = struct{}{}
+	}
+	var conflicts []string
+	seen := make(map[string]struct{})
+	for _, r := range rules {
+		key := listenRuleKey(r)
+		if _, ok := owned[key]; ok {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		if listenOccupied(r.Proto, r.Listen) {
+			proto := strings.ToUpper(strings.TrimSpace(r.Proto))
+			if proto == "" {
+				proto = "TCP"
+			}
+			conflicts = append(conflicts, proto+" "+r.Listen)
+		}
+	}
+	return conflicts
+}
+
+func listenOccupied(proto, addr string) bool {
+	switch strings.ToLower(strings.TrimSpace(proto)) {
+	case "udp":
+		udpAddr, err := net.ResolveUDPAddr("udp4", addr)
+		if err != nil {
+			return true
+		}
+		pc, err := net.ListenUDP("udp4", udpAddr)
+		if err != nil {
+			return true
+		}
+		pc.Close()
+		return false
+	default:
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			return true
+		}
+		ln.Close()
+		return false
+	}
+}
+
+func FormatListenConflicts(conflicts []string) string {
+	if len(conflicts) == 0 {
+		return ""
+	}
+	return "本地端口已被占用: " + strings.Join(conflicts, "、")
+}
