@@ -115,6 +115,20 @@ export default function App() {
     await stop();
   }
 
+  function onExportLogs() {
+    if (!logs.length) return;
+    const pad = (n) => String(n).padStart(2, "0");
+    const d = new Date();
+    const name = `goodlink-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.log`;
+    const blob = new Blob([logs.join("\n") + "\n"], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const keyProps = {
     tunKey,
     setTunKey,
@@ -192,7 +206,10 @@ export default function App() {
         </button>
 
         <section className="logs">
-          <div className="label">运行日志:</div>
+          <div className="logs-head">
+            <div className="label">运行日志:</div>
+            <button type="button" disabled={!logs.length} onClick={onExportLogs}>导出日志</button>
+          </div>
           <pre id="log-list" ref={logRef}>{logs.join("\n")}</pre>
         </section>
 
