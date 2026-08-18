@@ -17,7 +17,11 @@ const defaultNat = {
   text: "正在检测当前网络环境...",
 };
 
-let nextRowId = 1;
+const ADMIN_HINT = "TUN模式需要管理员权限重新启动Goodlink";
+
+function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
+  return nextWorkType === "Local" && nextLocalMode === "tun" && isAdmin === false;
+}
 
 function newRow() {
   return {
@@ -70,6 +74,7 @@ export default function App() {
   const [localMode, setLocalMode] = useState("tun");
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
+  const [adminHint, setAdminHint] = useState(false);
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
   const logRef = useRef(null);
@@ -82,6 +87,9 @@ export default function App() {
       setLocalMode(state.localMode || "tun");
       setRows(rowsFromRules(state.forwardRules));
       initialized.current = true;
+      if (needsAdminHint(state.workType || "Local", state.localMode || "tun", state.isAdmin)) {
+        setAdminHint(true);
+      }
       return;
     }
     if (!state.button.othersEnabled) {
@@ -148,6 +156,9 @@ export default function App() {
       const result = await start(workType, tunKey, localMode, rulesFromRows(rows));
       if (result.error) {
         setFormError(result.error);
+        if (String(result.error).includes("管理员权限")) {
+          setAdminHint(true);
+        }
       }
       return;
     }
@@ -168,7 +179,12 @@ export default function App() {
               type="button"
               className={"work-btn" + (workType === "Local" ? " active" : "")}
               disabled={!othersEnabled}
-              onClick={() => setWorkType("Local")}
+              onClick={() => {
+                setWorkType("Local");
+                if (needsAdminHint("Local", localMode, state?.isAdmin)) {
+                  setAdminHint(true);
+                }
+              }}
             >
               Local端
             </button>
@@ -213,7 +229,12 @@ export default function App() {
                 type="button"
                 className={"work-btn" + (localMode === "tun" ? " active" : "")}
                 disabled={!othersEnabled}
-                onClick={() => setLocalMode("tun")}
+                onClick={() => {
+                  setLocalMode("tun");
+                  if (needsAdminHint(workType, "tun", state?.isAdmin)) {
+                    setAdminHint(true);
+                  }
+                }}
               >
                 TUN模式
               </button>
@@ -342,6 +363,15 @@ export default function App() {
       </div>
       <div className={"exit-overlay" + (exited ? "" : " hidden")}>
         <div className="exit-card">程序已退出，请重新启动 Goodlink</div>
+      </div>
+      <div
+        className={"exit-overlay" + (!exited && adminHint ? "" : " hidden")}
+        onClick={() => setAdminHint(false)}
+      >
+        <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
+          <div>{ADMIN_HINT}</div>
+          <button type="button" onClick={() => setAdminHint(false)}>确定</button>
+        </div>
       </div>
     </>
   );

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"goodlink/config"
+	"goodlink/utils"
 )
 
 const (
@@ -55,6 +56,7 @@ type UIState struct {
 	TunKey       string                 `json:"tunKey"`
 	LocalMode    string                 `json:"localMode"`
 	ForwardRules []config.UIForwardRule `json:"forwardRules"`
+	IsAdmin      bool                   `json:"isAdmin"`
 	Button       ButtonInfo             `json:"button"`
 	NAT          NATInfo                `json:"nat"`
 	Upgrade      UpgradeInfo            `json:"upgrade"`
@@ -216,6 +218,7 @@ func snapshot(includeLogs bool) UIState {
 		TunKey:       m_tun_key,
 		LocalMode:    localMode,
 		ForwardRules: rules,
+		IsAdmin:      utils.IsAdmin(),
 		Button: ButtonInfo{
 			Kind:          currentButton.kind,
 			Text:          currentButton.text,

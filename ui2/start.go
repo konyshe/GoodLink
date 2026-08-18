@@ -211,6 +211,9 @@ func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRul
 	if err := saveConfig(); err != nil {
 		return err
 	}
+	if GetWorkType() == workTypeLocal && getLocalMode() == config.LocalModeTUN && !utils.IsAdmin() {
+		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
+	}
 
 	if GetWorkType() == workTypeLocal {
 		updateButtonState(buttonStateConnecting)

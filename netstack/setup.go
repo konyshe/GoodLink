@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"goodlink/utils"
+
 	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -83,7 +85,7 @@ func initStack() error {
 
 	dev, err := Open(NetStackName, 0)
 	if err != nil {
-		return fmt.Errorf("请管理员权限运行")
+		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
 	}
 	currentDevice = dev
 
