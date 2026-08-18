@@ -25,7 +25,7 @@ RUN --mount=target=. \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     make clean && \
-    make ${TARGETOS}-${TARGETARCH}-cmd BINDIR=  && \
+    make ${TARGETOS}-${TARGETARCH} BINDIR=  && \
     mv /goodlink* /goodlink
 
 COPY upx /usr/bin/

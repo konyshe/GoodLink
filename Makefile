@@ -12,34 +12,34 @@ GOBUILD=GO111MODULE=on \
     	-X "go2.BuildTime=$(BuildTime)" \
 		-w -s -buildid='
 LINUX_PLATFORM_LIST = \
-	linux-386-cmd \
-	linux-amd64-cmd \
-	linux-arm-cmd \
-	linux-armv6l-cmd \
-	linux-arm64-cmd \
-	linux-loong64-cmd \
-	linux-mips-cmd \
-	linux-mipsle-cmd \
-	linux-mips64-cmd \
-	linux-riscv64-cmd \
-	linux-mips64le-cmd \
+	linux-386 \
+	linux-amd64 \
+	linux-arm \
+	linux-armv6l \
+	linux-arm64 \
+	linux-loong64 \
+	linux-mips \
+	linux-mipsle \
+	linux-mips64 \
+	linux-riscv64 \
+	linux-mips64le \
 
 DARWIN_PLATFORM_LIST = \
-	darwin-amd64-cmd \
-	darwin-arm64-cmd \
+	darwin-amd64 \
+	darwin-arm64 \
 
 WINDOWS_PLATFORM_LIST = \
-	windows-amd64-cmd \
+	windows-amd64 \
 
 WINDOWS_PLATFORM2_LIST = \
-	windows-386-cmd \
-	windows-arm-cmd \
+	windows-386 \
+	windows-arm \
 
 .PHONY: ui
 ui:
 	cd ui2/frontend && npm ci && npm run build
 
-debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64-cmd
+debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64
 
 macos: $(DARWIN_PLATFORM_LIST) strip
 
@@ -47,55 +47,55 @@ windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac strip
 
 linux: $(LINUX_PLATFORM_LIST) strip
 
-linux-386-cmd:
+linux-386:
 	GOARCH=386 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-amd64-cmd:
+linux-amd64:
 	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-loong64-cmd:
+linux-loong64:
 	GOARCH=loong64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-mips-cmd:
+linux-mips:
 	GOARCH=mips GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-mipsle-cmd:
+linux-mipsle:
 	GOARCH=mipsle GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-mips64-cmd:
+linux-mips64:
 	GOARCH=mips64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-mips64le-cmd:
+linux-mips64le:
 	GOARCH=mips64le GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-riscv64-cmd:
+linux-riscv64:
 	GOARCH=riscv64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-arm-cmd:
+linux-arm:
 	GOARCH=arm GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-armv6l-cmd:
+linux-armv6l:
 	GOARCH=arm GOARM=6 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-arm64-cmd:
+linux-arm64:
 	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-darwin-amd64-cmd:
+darwin-amd64:
 	GOARCH=amd64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-darwin-arm64-cmd:
+darwin-arm64:
 	GOARCH=arm64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-windows-amd64-cmd:
+windows-amd64:
 	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
-windows-arm64-cmd:
+windows-arm64:
 	GOARCH=arm64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
-windows-386-cmd:
+windows-386:
 	GOARCH=386 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
-windows-arm-cmd:
+windows-arm:
 	GOARCH=arm GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 create_nac:
 	rsrc -manifest nac.manifest -ico assert/favicon.ico -o nac.syso

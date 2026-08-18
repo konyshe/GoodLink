@@ -12,17 +12,17 @@ make linux
 make macos
 cd bin
 
-zip goodlink-linux-amd64-cmd.zip goodlink-linux-amd64-cmd
-zip goodlink-linux-arm64-cmd.zip goodlink-linux-arm64-cmd
-zip goodlink-linux-386-cmd.zip goodlink-linux-386-cmd
-zip goodlink-linux-arm-cmd.zip goodlink-linux-arm-cmd
-zip goodlink-linux-armv6l-cmd.zip goodlink-linux-armv6l-cmd
-zip goodlink-linux-loong64-cmd.zip goodlink-linux-loong64-cmd
-zip goodlink-linux-mips-cmd.zip goodlink-linux-mips-cmd
-zip goodlink-linux-mipsle-cmd.zip goodlink-linux-mipsle-cmd
-zip goodlink-linux-mips64-cmd.zip goodlink-linux-mips64-cmd
-zip goodlink-linux-mips64le-cmd.zip goodlink-linux-mips64le-cmd
-zip goodlink-linux-riscv64-cmd.zip goodlink-linux-riscv64-cmd
+zip goodlink-linux-amd64.zip goodlink-linux-amd64
+zip goodlink-linux-arm64.zip goodlink-linux-arm64
+zip goodlink-linux-386.zip goodlink-linux-386
+zip goodlink-linux-arm.zip goodlink-linux-arm
+zip goodlink-linux-armv6l.zip goodlink-linux-armv6l
+zip goodlink-linux-loong64.zip goodlink-linux-loong64
+zip goodlink-linux-mips.zip goodlink-linux-mips
+zip goodlink-linux-mipsle.zip goodlink-linux-mipsle
+zip goodlink-linux-mips64.zip goodlink-linux-mips64
+zip goodlink-linux-mips64le.zip goodlink-linux-mips64le
+zip goodlink-linux-riscv64.zip goodlink-linux-riscv64
 
-zip goodlink-darwin-amd64-cmd.zip goodlink-darwin-amd64-cmd
-zip goodlink-darwin-arm64-cmd.zip goodlink-darwin-arm64-cmd
+zip goodlink-darwin-amd64.zip goodlink-darwin-amd64
+zip goodlink-darwin-arm64.zip goodlink-darwin-arm64

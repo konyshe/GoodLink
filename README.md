@@ -65,12 +65,12 @@ Remote端不需要管理员权限。
 
 ```
 # windows
-.\goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+.\goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
 ```
 # linux
-./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
 ```
 
 ```
@@ -90,12 +90,12 @@ Local端创建虚拟网卡，需要管理员权限运行（Windows 请右键以�
 
 ```
 # windows
-.\goodlink-windows-amd64-cmd.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+.\goodlink-windows-amd64.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
 ```
 # linux
-./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --local
 ```
 
 ```
@@ -115,7 +115,7 @@ Docker暂不支持虚拟网卡（TUN模式）
     连接成功后，访问192.17.19.1，就等于访问Remote端
 
     举例: 在Local端打开 windows 远程桌面, 填写: 192.17.19.1:13389, 即可访问Remote端的远程桌面
-    
+
 ### TUN代理模式
 
     可访问Remote端所有的网络资源
@@ -131,7 +131,7 @@ Docker暂不支持虚拟网卡（TUN模式）
 
 ```
 # linux其他环境以此类推）
-./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
+./goodlink-linux-amd64 --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
 ```
 
     连接成功后，在本机配置代理即可使用(仅支持TCP代理):
@@ -146,17 +146,17 @@ Docker暂不支持虚拟网卡（TUN模式）
 
 ```
 # linux, 单个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
+./goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
 ```
 
 ```
 # linux, 多个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
 ```
 # linux, 同时使用代理和端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
     连接成功后:
