@@ -41,8 +41,6 @@ func main2() {
 		}
 	}()
 
-	config.SetVersion(GetVersionFromAppConfig())
-
 	go2pool.Init()
 
 	// 第三方集成, 关注以下代码即可
@@ -89,8 +87,6 @@ func runUI() {
 
 	goodlink_config.DeleteLocalConfig()
 
-	config.SetVersion(GetVersionFromAppConfig())
-
 	ui2.InitTrayIcons()
 
 	ui2.Init()
@@ -120,7 +116,6 @@ func main() {
 		return
 	}
 
-	config.SetVersion(GetVersionFromAppConfig())
 	config.Help()
 
 	if config.Arg_stun_svr_ip != "" && config.Arg_stun_svr_port > 0 {

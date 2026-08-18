@@ -3,15 +3,11 @@ package config
 import "strings"
 
 var (
-	m_version string
+	version = "3.0.0"
 )
 
-func SetVersion(v string) {
-	m_version = v
-}
-
 func GetVersion() string {
-	return m_version
+	return version
 }
 
 // VersionsCompatible reports whether two X.Y.Z style version strings are
