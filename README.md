@@ -59,7 +59,7 @@ Remote端不需要管理员权限。
 
 #### UI版本（仅Windows）
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/v2/assert/doc/5.png "使用说明")
 
 #### 命令行版本
 
@@ -84,7 +84,7 @@ Local端创建虚拟网卡，需要管理员权限运行（Windows 请右键以�
 
 #### UI版本（仅Windows）
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/v2/assert/doc/6.png "使用说明")
 
 #### 命令行版本
 
