@@ -66,6 +66,12 @@ export default function App() {
     }
   }, [logs]);
 
+  useEffect(() => {
+    if (state?.version) {
+      document.title = "Goodlink v" + state.version;
+    }
+  }, [state?.version]);
+
   const button = state?.button || defaultButton;
   const nat = state?.nat || defaultNat;
   const othersEnabled = !exited && !!button.othersEnabled;
@@ -153,10 +159,6 @@ export default function App() {
   return (
     <>
       <div className="app">
-        <header className="header">
-          <h1>Goodlink{state ? "  v" + (state.version || "") : ""}</h1>
-        </header>
-
         <section className="row">
           <span className="label">工作端侧:</span>
           <div className="work-type">
