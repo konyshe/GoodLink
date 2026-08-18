@@ -164,8 +164,6 @@ body,
 }
 
 .forwards-table {
-  max-height: 220px;
-  overflow: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #262626;
