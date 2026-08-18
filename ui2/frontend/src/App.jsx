@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { applyForwards, generateKey, start, stop } from "./api";
+import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
+import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
 
 const defaultButton = {
@@ -21,50 +23,6 @@ const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
 
 function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
   return nextWorkType === "Local" && nextLocalMode === "tun" && isAdmin === false;
-}
-
-function newRow() {
-  return {
-    id: nextRowId++,
-    proto: "tcp",
-    listenHost: "127.0.0.1",
-    listenPort: "",
-    remoteHost: "127.0.0.1",
-    remotePort: "",
-  };
-}
-
-function splitHostPort(addr) {
-  const value = addr || "";
-  const i = value.lastIndexOf(":");
-  if (i <= 0) return { host: "", port: "" };
-  return { host: value.slice(0, i), port: value.slice(i + 1) };
-}
-
-function rowsFromRules(rules) {
-  if (!rules || !rules.length) return [];
-  return rules.map((r) => {
-    const listen = splitHostPort(r.listen);
-    const remote = splitHostPort(r.remote);
-    return {
-      id: nextRowId++,
-      proto: r.proto || "tcp",
-      listenHost: listen.host || "127.0.0.1",
-      listenPort: listen.port || "",
-      remoteHost: remote.host || "127.0.0.1",
-      remotePort: remote.port || "",
-    };
-  });
-}
-
-function rulesFromRows(rows) {
-  return rows
-    .filter((r) => String(r.listenPort || "").trim() !== "" || String(r.remotePort || "").trim() !== "")
-    .map((r) => ({
-      proto: r.proto || "tcp",
-      listen: `${(r.listenHost || "").trim()}:${(r.listenPort || "").trim()}`,
-      remote: `${(r.remoteHost || "").trim()}:${(r.remotePort || "").trim()}`,
-    }));
 }
 
 export default function App() {
@@ -132,14 +90,6 @@ export default function App() {
     } catch (_) { }
   }
 
-  function updateRow(id, field, value) {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
-  }
-
-  function removeRow(id) {
-    setRows((prev) => prev.filter((row) => row.id !== id));
-  }
-
   async function onConfirm() {
     if (!mappingEnabled) return;
     setFormError("");
@@ -164,6 +114,16 @@ export default function App() {
     }
     await stop();
   }
+
+  const keyProps = {
+    tunKey,
+    setTunKey,
+    keyInputRef,
+    othersEnabled,
+    onGenerate,
+    onCopy,
+    onPaste,
+  };
 
   return (
     <>
@@ -200,133 +160,23 @@ export default function App() {
           </div>
         </section>
 
-        <section className="row">
-          <span className="label">连接密钥:</span>
-          <input
-            ref={keyInputRef}
-            className="key-input"
-            type="text"
-            placeholder="16-64字节长度"
-            autoComplete="off"
-            spellCheck="false"
-            value={tunKey}
-            disabled={!othersEnabled}
-            onChange={(e) => setTunKey(e.target.value)}
+        {workType === "Local" ? (
+          <LocalPanel
+            {...keyProps}
+            localMode={localMode}
+            setLocalMode={setLocalMode}
+            rows={rows}
+            setRows={setRows}
+            mappingEnabled={mappingEnabled}
+            onConfirm={onConfirm}
+            onNeedAdminHint={() => {
+              if (needsAdminHint(workType, "tun", state?.isAdmin)) {
+                setAdminHint(true);
+              }
+            }}
           />
-        </section>
-
-        <section className="key-actions">
-          <button type="button" disabled={!othersEnabled} onClick={onGenerate}>生成密钥</button>
-          <button type="button" onClick={onCopy}>复制密钥</button>
-          <button type="button" disabled={!othersEnabled} onClick={onPaste}>粘贴密钥</button>
-        </section>
-
-        {workType === "Local" && (
-          <section className="row">
-            <span className="label">工作模式:</span>
-            <div className="work-type">
-              <button
-                type="button"
-                className={"work-btn" + (localMode === "tun" ? " active" : "")}
-                disabled={!othersEnabled}
-                onClick={() => {
-                  setLocalMode("tun");
-                  if (needsAdminHint(workType, "tun", state?.isAdmin)) {
-                    setAdminHint(true);
-                  }
-                }}
-              >
-                TUN模式
-              </button>
-              <span className="vsep"></span>
-              <button
-                type="button"
-                className={"work-btn" + (localMode === "forward" ? " active" : "")}
-                disabled={!othersEnabled}
-                onClick={() => setLocalMode("forward")}
-              >
-                转发模式
-              </button>
-            </div>
-          </section>
-        )}
-
-        {workType === "Local" && localMode === "forward" && (
-          <section className="forwards">
-            <div className="forwards-head">
-              <span className="label">端口映射:</span>
-              <div className="forwards-actions">
-                <button type="button" disabled={!mappingEnabled} onClick={() => setRows((prev) => [...prev, newRow()])}>
-                  添加
-                </button>
-                <button type="button" disabled={!mappingEnabled} onClick={onConfirm}>
-                  确认
-                </button>
-              </div>
-            </div>
-            <div className="forwards-table">
-              <div className="forwards-row forwards-header">
-                <span>协议</span>
-                <span>本地地址</span>
-                <span>本地端口</span>
-                <span>Remote地址</span>
-                <span>Remote端口</span>
-                <span></span>
-              </div>
-              {rows.length === 0 && (
-                <div className="forwards-empty">点击添加以配置端口映射，确认后立即生效</div>
-              )}
-              {rows.map((row) => (
-                <div className="forwards-row" key={row.id}>
-                  <select
-                    value={row.proto}
-                    disabled={!mappingEnabled}
-                    onChange={(e) => updateRow(row.id, "proto", e.target.value)}
-                  >
-                    <option value="tcp">TCP</option>
-                    <option value="udp">UDP</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={row.listenHost}
-                    disabled={!mappingEnabled}
-                    spellCheck="false"
-                    autoComplete="off"
-                    onChange={(e) => updateRow(row.id, "listenHost", e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={row.listenPort}
-                    disabled={!mappingEnabled}
-                    spellCheck="false"
-                    autoComplete="off"
-                    onChange={(e) => updateRow(row.id, "listenPort", e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    value={row.remoteHost}
-                    disabled={!mappingEnabled}
-                    spellCheck="false"
-                    autoComplete="off"
-                    onChange={(e) => updateRow(row.id, "remoteHost", e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={row.remotePort}
-                    disabled={!mappingEnabled}
-                    spellCheck="false"
-                    autoComplete="off"
-                    onChange={(e) => updateRow(row.id, "remotePort", e.target.value)}
-                  />
-                  <button type="button" disabled={!mappingEnabled} onClick={() => removeRow(row.id)}>
-                    删除
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
+        ) : (
+          <RemotePanel {...keyProps} />
         )}
 
         {formError && <div className="form-error">{formError}</div>}
