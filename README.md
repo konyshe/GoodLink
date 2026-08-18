@@ -55,7 +55,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 ### **启动 remote端 (以下方法任选其一即可)**
 
-#### 方法一:  通过网页启动, 适合小白, 直接双击 goodlink-windows-amd64-cmd.exe 即可
+#### 方法一:  通过网页启动, 适合小白, 直接双击 goodlink-windows-amd64.exe 即可
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/5.png "使用说明")
 
@@ -63,12 +63,12 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 ```
 # windows
-.\goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
+.\goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
 ```
 # linux
-./goodlink-linux-amd64-cmd --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
+./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
 ```
@@ -80,7 +80,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 注意: Local端默认使用TUN模式，需要管理员权限运行（Windows 请右键以管理员身份运行）。
 
-#### 方法一:  通过网页启动, 适合小白, 直接双击 goodlink-windows-amd64-cmd.exe 即可
+#### 方法一:  通过网页启动, 适合小白, 直接双击 goodlink-windows-amd64.exe 即可
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/6.png "使用说明")
 
@@ -88,12 +88,12 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 ```
 # windows
-.\goodlink-windows-amd64-cmd.exe --fork --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
+.\goodlink-windows-amd64.exe --fork --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
 ```
 
 ```
 # linux
-./goodlink-linux-amd64-cmd --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
+./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
 ```
 
 ```
@@ -128,12 +128,12 @@ Docker暂不支持虚拟网卡（TUN模式）
 
     适用于无法创建虚拟网卡的环境（如MacOS、Docker、无管理员权限等），或同一主机有多个Local端的场景（虚拟网卡不能创建多个）
 
-    如果直接命令行启动，使用 --proxy 选项，即可启动该模式
+    如果通过命令行启动，使用 --proxy 选项，即可启动该模式
     格式: --proxy=Local端监听地址:Local端监听端口
 
 ```
 # linux其他环境以此类推）
-./goodlink-linux-amd64-cmd --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080
+./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080
 ```
 
     连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口可自定义):
@@ -143,23 +143,23 @@ Docker暂不支持虚拟网卡（TUN模式）
 
     在本地代理模式的基础上，适用于不支持代理方式访问的场景, 比如有些APP不支持通过代理
 
-    如果直接命令行启动，使用 --forward_tcp 或 --forward_udp 选项，即可启动该模式
+    如果通过命令行启动，使用 --forward_tcp 或 --forward_udp 选项，即可启动该模式
     连接成功后，在Local端访问本地指定端口等于在Remote端访问指定地址和端口
     格式: --forward_tcp=Local端监听地址:Local端监听端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
 
 ```
 # linux, 单个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
+./goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
 ```
 
 ```
 # linux, 多个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
 ```
 # linux, 同时使用代理和端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
     连接成功后:
