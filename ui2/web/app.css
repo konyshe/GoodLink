@@ -18,7 +18,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   height: 100%;
   background: var(--bg);
@@ -140,10 +141,23 @@ html, body {
   gap: 10px;
 }
 
-.start-btn.high { background: var(--primary); }
-.start-btn.warning { background: var(--warning); color: #222; }
-.start-btn.danger { background: var(--danger); }
-.start-btn.success { background: var(--success); color: #123; }
+.start-btn.high {
+  background: var(--primary);
+}
+
+.start-btn.warning {
+  background: var(--warning);
+  color: #222;
+}
+
+.start-btn.danger {
+  background: var(--danger);
+}
+
+.start-btn.success {
+  background: var(--success);
+  color: #123;
+}
 
 .start-btn:disabled {
   opacity: 0.65;
@@ -159,10 +173,14 @@ html, body {
   animation: spin 0.8s linear infinite;
 }
 
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .logs {
@@ -204,9 +222,17 @@ html, body {
   font-weight: 700;
 }
 
-.nat.detecting { color: #b4b4b4; }
-.nat.ok { color: var(--success); }
-.nat.warn { color: var(--warning); }
+.nat.detecting {
+  color: #b4b4b4;
+}
+
+.nat.ok {
+  color: var(--success);
+}
+
+.nat.warn {
+  color: var(--warning);
+}
 
 .footer-links {
   display: flex;
@@ -221,5 +247,24 @@ html, body {
 
 .upgrade {
   color: #ff503c;
+  font-weight: 700;
+}
+
+.exit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.exit-card {
+  padding: 24px 32px;
+  border-radius: var(--radius);
+  background: #3a3a3a;
+  color: var(--fg);
+  font-size: 18px;
   font-weight: 700;
 }

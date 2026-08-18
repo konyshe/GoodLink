@@ -13,11 +13,13 @@ const els = {
   nat: document.getElementById("nat-hint"),
   upgrade: document.getElementById("upgrade-box"),
   upgradeVer: document.getElementById("upgrade-ver"),
+  overlay: document.getElementById("exit-overlay"),
 };
 
 let workType = "Local";
 let initialized = false;
 let currentKind = "initializing";
+let connectedOnce = false;
 
 function setWorkType(type) {
   workType = type;
@@ -93,14 +95,14 @@ els.generate.addEventListener("click", async () => {
 els.copy.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(els.key.value || "");
-  } catch (_) {}
+  } catch (_) { }
 });
 
 els.paste.addEventListener("click", async () => {
   try {
     const text = await navigator.clipboard.readText();
     if (text) els.key.value = text;
-  } catch (_) {}
+  } catch (_) { }
 });
 
 els.start.addEventListener("click", async () => {
@@ -116,15 +118,43 @@ els.start.addEventListener("click", async () => {
   await fetch("/api/stop", { method: "POST" });
 });
 
+function hideExited() {
+  els.overlay.classList.add("hidden");
+}
+
+function showExited() {
+  els.overlay.classList.remove("hidden");
+  setControlsEnabled(false);
+  els.start.disabled = true;
+}
+
+async function checkAlive() {
+  try {
+    const resp = await fetch("/api/state", { cache: "no-store" });
+    if (resp.ok) return;
+  } catch (_) { }
+  showExited();
+}
+
 function connectEvents() {
   const es = new EventSource("/api/events");
   es.addEventListener("snapshot", (e) => {
+    connectedOnce = true;
+    hideExited();
     const s = JSON.parse(e.data);
     applyState(s);
     renderLogs(s.logs || []);
   });
   es.addEventListener("state", (e) => applyState(JSON.parse(e.data)));
   es.addEventListener("log", (e) => appendLog(JSON.parse(e.data).line));
+  es.onopen = () => {
+    connectedOnce = true;
+    hideExited();
+  };
+  es.onerror = () => {
+    if (!connectedOnce) return;
+    checkAlive();
+  };
 }
 
 connectEvents();
