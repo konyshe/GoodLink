@@ -5,8 +5,7 @@ GitCommitLog=$(shell git log --pretty=oneline -n 1)
 BuildTime=$(shell date +'%Y-%m-%d %H:%M:%S')
 GOBUILD=GO111MODULE=on \
 		GOPROXY="https://goproxy.cn,direct" \
-		GOEXPERIMENT=jsonv2 \
-		GOEXPERIMENT=loopvar \
+		GOEXPERIMENT=jsonv2,loopvar \
 		go build -trimpath -ldflags \
 		'-X "go2.GitCommitLog=$(GitCommitLog)" \
     	-X "go2.GitStatus=$(GitStatus)" \
