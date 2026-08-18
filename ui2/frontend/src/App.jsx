@@ -17,7 +17,7 @@ const defaultNat = {
   text: "正在检测当前网络环境...",
 };
 
-const ADMIN_HINT = "TUN模式需要管理员权限重新启动Goodlink";
+const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
 
 function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
   return nextWorkType === "Local" && nextLocalMode === "tun" && isAdmin === false;
