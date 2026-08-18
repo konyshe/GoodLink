@@ -26,7 +26,6 @@ var (
 	Arg_conn_active_n1          int
 	Arg_conn_active_send_time   int
 	Arg_conn_passive_send_time  int
-	Arg_local_config            *bool
 	Arg_ui                      *bool
 	Arg_stun_svr_ip             string
 	Arg_stun_svr_port           int
@@ -38,7 +37,6 @@ var (
 func Help() {
 	v := flag.Bool("v", false, "查看版本信息")
 
-	Arg_local_config = flag.Bool("local_config", false, "优先加载本地配置")
 	Arg_ui = flag.Bool("ui", false, "由UI启动, 从 goodlink.json 读取并监听转发配置")
 
 	flag.StringVar(&Arg_stun_svr_ip, "stun_svr_ip", "", "STUN服务IP地址")

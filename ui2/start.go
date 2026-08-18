@@ -105,7 +105,7 @@ func startCmdProcess() error {
 
 	// 构建命令行参数
 	workType := GetWorkType()
-	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + getTunKey(), "--local_config", "--ui"}
+	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + getTunKey(), "--ui"}
 
 	// 创建子进程
 	m_cmd_mutex.Lock()

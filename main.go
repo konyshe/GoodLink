@@ -133,10 +133,6 @@ func main() {
 		return
 	}
 
-	if !*config.Arg_local_config {
-		goodlink_config.DeleteLocalConfig()
-	}
-
 	goodlink_config.Init()
 
 	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
