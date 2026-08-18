@@ -127,6 +127,112 @@ body,
   cursor: not-allowed;
 }
 
+.forwards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.forwards-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.forwards-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.forwards-actions button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--btn);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.forwards-actions button:hover:not(:disabled) {
+  background: var(--btn-hover);
+}
+
+.forwards-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.forwards-table {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #262626;
+}
+
+.forwards-row {
+  display: grid;
+  grid-template-columns: 72px 1.2fr 80px 1.2fr 90px 56px;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+}
+
+.forwards-header {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+}
+
+.forwards-empty {
+  padding: 12px 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.forwards-row input,
+.forwards-row select {
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: #1f1f1f;
+  color: var(--fg);
+  font-size: 13px;
+}
+
+.forwards-row input:disabled,
+.forwards-row select:disabled {
+  opacity: 0.6;
+}
+
+.forwards-row button {
+  padding: 6px 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--btn);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.forwards-row button:hover:not(:disabled) {
+  background: var(--danger);
+}
+
+.forwards-row button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .start-btn {
   width: 100%;
   padding: 12px 16px;

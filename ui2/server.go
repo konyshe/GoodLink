@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"goodlink/config"
 )
 
 //go:embed web
@@ -34,6 +36,7 @@ func StartServer() (string, error) {
 	mux.HandleFunc("/api/state", handleState)
 	mux.HandleFunc("/api/start", handleStart)
 	mux.HandleFunc("/api/stop", handleStop)
+	mux.HandleFunc("/api/forwards", handleForwards)
 	mux.HandleFunc("/api/key/generate", handleGenerateKey)
 	mux.HandleFunc("/api/events", handleEvents)
 	mux.Handle("/", http.FileServer(http.FS(webContent)))
@@ -65,12 +68,38 @@ func handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		WorkType string `json:"workType"`
-		TunKey   string `json:"tunKey"`
+		WorkType     string                 `json:"workType"`
+		TunKey       string                 `json:"tunKey"`
+		LocalMode    string                 `json:"localMode"`
+		ForwardRules []config.UIForwardRule `json:"forwardRules"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
-	if err := HandleStart(req.WorkType, req.TunKey); err != nil {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+	if err := HandleStart(req.WorkType, req.TunKey, req.LocalMode, req.ForwardRules); err != nil {
+		code := http.StatusBadRequest
+		if err.Error() == "already started" || err.Error() == "busy" {
+			code = http.StatusConflict
+		}
+		writeJSON(w, code, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, snapshot(false))
+}
+
+func handleForwards(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		LocalMode    string                 `json:"localMode"`
+		ForwardRules []config.UIForwardRule `json:"forwardRules"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
+		return
+	}
+	if err := HandleForwards(req.LocalMode, req.ForwardRules); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, snapshot(false))

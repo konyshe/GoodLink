@@ -21,7 +21,7 @@ var (
 	m_tun_active       *tun.TunActive
 	m_tun_passive      *tun.TunPassive
 	g_netstack_started = false
-	m_forward_clients  []proxy.ForwardRunner
+	m_forward_mgr      *proxy.ForwardManager
 )
 
 // handleState0_RegisterSession 处理 State 0: 注册会话并等待 Remote 端认领
@@ -223,17 +223,103 @@ func GetLocalStats() int {
 
 func StopLocal() error {
 	m_local_state = 0
-	for _, c := range m_forward_clients {
-		c.Close()
+	if m_forward_mgr != nil {
+		m_forward_mgr.Close()
+		m_forward_mgr = nil
 	}
-	m_forward_clients = nil
 	Release(m_tun_active, m_tun_passive, nil)
 	return nil
 }
 
-func RunLocal() error {
-	var err error
+func watchUIForwardConfig(mgr *proxy.ForwardManager, last string) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	lastFail := ""
+	for range ticker.C {
+		if m_local_state == 0 {
+			return
+		}
+		cfg, err := config.LoadUIConfig(config.UIConfigFileName)
+		if err != nil {
+			continue
+		}
+		if err := config.NormalizeAndValidate(&cfg); err != nil {
+			fp := cfg.ForwardFingerprint()
+			if fp != lastFail {
+				log.Printf("[proxy] 转发配置无效: %v", err)
+				lastFail = fp
+			}
+			continue
+		}
+		fp := cfg.ForwardFingerprint()
+		if fp == last {
+			continue
+		}
+		if cfg.LocalMode != config.LocalModeForward {
+			last = fp
+			lastFail = ""
+			continue
+		}
+		rules, err := proxy.RulesFromUI(cfg.ForwardRules)
+		if err != nil {
+			if fp != lastFail {
+				log.Printf("[proxy] 转发配置解析失败: %v", err)
+				lastFail = fp
+			}
+			continue
+		}
+		if err := mgr.Apply(rules); err != nil {
+			if fp != lastFail {
+				log.Printf("[proxy] 更新端口映射失败: %v", err)
+				lastFail = fp
+			}
+			continue
+		}
+		last = fp
+		lastFail = ""
+		log.Println("[proxy] 端口映射已更新")
+	}
+}
 
+func setupForwardMode() (bool, error) {
+	if config.FromUI() {
+		cfg, err := config.LoadUIConfig(config.UIConfigFileName)
+		if err != nil {
+			return false, err
+		}
+		if err := config.NormalizeAndValidate(&cfg); err != nil {
+			return false, err
+		}
+		if cfg.LocalMode != config.LocalModeForward {
+			return false, nil
+		}
+		rules, err := proxy.RulesFromUI(cfg.ForwardRules)
+		if err != nil {
+			return false, err
+		}
+		m_forward_mgr = proxy.NewForwardManager()
+		if err := m_forward_mgr.Apply(rules); err != nil {
+			m_forward_mgr.Close()
+			m_forward_mgr = nil
+			return false, err
+		}
+		go watchUIForwardConfig(m_forward_mgr, cfg.ForwardFingerprint())
+		return true, nil
+	}
+
+	if !proxy.CheckForwardArgs() {
+		return false, nil
+	}
+	m_forward_mgr = proxy.NewForwardManager()
+	if err := m_forward_mgr.Apply(proxy.ForwardRules); err != nil {
+		m_forward_mgr.Close()
+		m_forward_mgr = nil
+		return false, err
+	}
+	return true, nil
+}
+
+func RunLocal() error {
 	m_local_state = 1
 
 	count := 0
@@ -241,16 +327,9 @@ func RunLocal() error {
 	var udp_conn *net.UDPConn
 	var addr tun.AddrType
 
-	useForward := proxy.CheckForwardArgs()
-
-	if useForward {
-		m_forward_clients, err = proxy.NewForwardRunners()
-		if err != nil {
-			return err
-		}
-		for _, c := range m_forward_clients {
-			go c.Serve()
-		}
+	useForward, err := setupForwardMode()
+	if err != nil {
+		return err
 	}
 
 	for m_local_state == 1 {
@@ -288,12 +367,10 @@ func RunLocal() error {
 		m_tun_active = tun_active
 		m_tun_passive = tun_passive
 
-		if useForward {
-			for _, c := range m_forward_clients {
-				c.SetQuicConn(quic_conn)
-			}
+		if useForward && m_forward_mgr != nil {
+			m_forward_mgr.SetQuic(quic_conn)
 			log.Println("[proxy] QUIC连接已设置，开始转发")
-		} else {
+		} else if !useForward {
 			netstack.SetForWarder(quic_conn)
 			log.Printf("Remote端IP: %s", netstack.NetStackIP)
 		}
@@ -307,11 +384,9 @@ func RunLocal() error {
 		log.Printf("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive, nil)
 
-		if useForward {
-			for _, c := range m_forward_clients {
-				c.ClearQuicConn()
-			}
-		} else {
+		if useForward && m_forward_mgr != nil {
+			m_forward_mgr.SetQuic(nil)
+		} else if !useForward {
 			netstack.SetForWarder(nil)
 		}
 		count = 0

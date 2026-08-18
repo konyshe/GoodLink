@@ -50,13 +50,15 @@ type UpgradeInfo struct {
 }
 
 type UIState struct {
-	Version  string      `json:"version"`
-	WorkType string      `json:"workType"`
-	TunKey   string      `json:"tunKey"`
-	Button   ButtonInfo  `json:"button"`
-	NAT      NATInfo     `json:"nat"`
-	Upgrade  UpgradeInfo `json:"upgrade"`
-	Logs     []string    `json:"logs,omitempty"`
+	Version      string                 `json:"version"`
+	WorkType     string                 `json:"workType"`
+	TunKey       string                 `json:"tunKey"`
+	LocalMode    string                 `json:"localMode"`
+	ForwardRules []config.UIForwardRule `json:"forwardRules"`
+	Button       ButtonInfo             `json:"button"`
+	NAT          NATInfo                `json:"nat"`
+	Upgrade      UpgradeInfo            `json:"upgrade"`
+	Logs         []string               `json:"logs,omitempty"`
 }
 
 // 预定义的按钮状态
@@ -136,13 +138,15 @@ var (
 )
 
 var (
-	stateMu       sync.RWMutex
-	m_work_type   string
-	m_tun_key     string
-	currentButton buttonState
-	m_nat         = NATInfo{Text: "正在检测当前网络环境..."}
-	m_upgrade     UpgradeInfo
-	sseHubInst    = newSSEHub()
+	stateMu         sync.RWMutex
+	m_work_type     string
+	m_tun_key       string
+	m_local_mode    string
+	m_forward_rules []config.UIForwardRule
+	currentButton   buttonState
+	m_nat           = NATInfo{Text: "正在检测当前网络环境..."}
+	m_upgrade       UpgradeInfo
+	sseHubInst      = newSSEHub()
 )
 
 type sseHub struct {
@@ -200,10 +204,18 @@ func broadcastLog(line string) {
 
 func snapshot(includeLogs bool) UIState {
 	stateMu.RLock()
+	localMode := m_local_mode
+	if localMode == "" {
+		localMode = config.LocalModeTUN
+	}
+	rules := make([]config.UIForwardRule, len(m_forward_rules))
+	copy(rules, m_forward_rules)
 	st := UIState{
-		Version:  config.GetVersion(),
-		WorkType: m_work_type,
-		TunKey:   m_tun_key,
+		Version:      config.GetVersion(),
+		WorkType:     m_work_type,
+		TunKey:       m_tun_key,
+		LocalMode:    localMode,
+		ForwardRules: rules,
 		Button: ButtonInfo{
 			Kind:          currentButton.kind,
 			Text:          currentButton.text,
@@ -250,6 +262,20 @@ func getTunKey() string {
 	return m_tun_key
 }
 
+func getLocalMode() string {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	return m_local_mode
+}
+
+func getForwardRules() []config.UIForwardRule {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	out := make([]config.UIForwardRule, len(m_forward_rules))
+	copy(out, m_forward_rules)
+	return out
+}
+
 func setWorkTypeAndKey(workType, tunKey string) {
 	stateMu.Lock()
 	if workType == workTypeLocal || workType == workTypeRemote {
@@ -259,6 +285,21 @@ func setWorkTypeAndKey(workType, tunKey string) {
 		m_tun_key = tunKey
 	}
 	stateMu.Unlock()
+}
+
+func setLocalModeAndRules(localMode string, rules []config.UIForwardRule) error {
+	cfg := config.UIConfig{
+		LocalMode:    localMode,
+		ForwardRules: rules,
+	}
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return err
+	}
+	stateMu.Lock()
+	m_local_mode = cfg.LocalMode
+	m_forward_rules = cfg.ForwardRules
+	stateMu.Unlock()
+	return nil
 }
 
 // SetNATHint 根据 STUN 检测结果显示 NAT 类型提示

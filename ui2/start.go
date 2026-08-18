@@ -2,9 +2,7 @@ package ui2
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
-	"go2"
 	"log"
 	"os"
 	"os/exec"
@@ -13,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"goodlink/config"
 	"goodlink/pro"
 	"goodlink/utils"
-	goodlink_config "goodlink3/config"
 )
 
 var (
@@ -107,7 +105,7 @@ func startCmdProcess() error {
 
 	// 构建命令行参数
 	workType := GetWorkType()
-	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + getTunKey(), "--local_config"}
+	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + getTunKey(), "--local_config", "--ui"}
 
 	// 创建子进程
 	m_cmd_mutex.Lock()
@@ -158,19 +156,40 @@ func startCmdProcess() error {
 	return nil
 }
 
-// 保存配置文件, 下次启动加载
-func saveConfig() {
-	//先对需要填写的数据进行校验
-	configByte, _ := json.Marshal(&goodlink_config.ConfigInfo{
-		WorkType: GetWorkType(),
-		TunKey:   getTunKey(),
-	})
-	log.Println(string(configByte))
-	os.Remove(goodlinkFileName)
-	go2.FileAppend(goodlinkFileName, configByte)
+func saveConfig() error {
+	cfg := config.UIConfig{
+		WorkType:     GetWorkType(),
+		TunKey:       getTunKey(),
+		LocalMode:    getLocalMode(),
+		ForwardRules: getForwardRules(),
+	}
+	log.Println(cfg)
+	if err := config.SaveUIConfig(goodlinkFileName, cfg); err != nil {
+		log.Println("保存 goodlink.json 失败:", err)
+		return err
+	}
+	return nil
 }
 
-func HandleStart(workType, tunKey string) error {
+func HandleForwards(localMode string, rules []config.UIForwardRule) error {
+	m_start_button_lock.Lock()
+	running := m_start_button_state == 1
+	m_start_button_lock.Unlock()
+	if running {
+		localMode = getLocalMode()
+	}
+	if err := setLocalModeAndRules(localMode, rules); err != nil {
+		return err
+	}
+	if err := saveConfig(); err != nil {
+		return err
+	}
+	broadcastState()
+	UILogPrintF("端口映射已保存")
+	return nil
+}
+
+func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRule) error {
 	m_start_button_lock.Lock()
 	defer m_start_button_lock.Unlock()
 
@@ -186,14 +205,18 @@ func HandleStart(workType, tunKey string) error {
 	}
 
 	setWorkTypeAndKey(workType, tunKey)
+	if err := setLocalModeAndRules(localMode, rules); err != nil {
+		return err
+	}
+	if err := saveConfig(); err != nil {
+		return err
+	}
 
 	if GetWorkType() == workTypeLocal {
 		updateButtonState(buttonStateConnecting)
 	} else {
 		updateButtonState(buttonStateStarting)
 	}
-
-	saveConfig()
 
 	m_start_button_state = 1
 

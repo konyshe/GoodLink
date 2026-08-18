@@ -102,6 +102,7 @@ func CheckForwardArgs() bool {
 type ForwardRunner interface {
 	SetQuicConn(conn *quic.Conn)
 	ClearQuicConn()
+	SetTarget(ip net.IP, port uint16)
 	Serve()
 	Close()
 }
@@ -134,48 +135,35 @@ func (u *udpWriteBack) Write(b []byte) (int, error) {
 	return u.pc.WriteTo(b, u.addr)
 }
 
-func NewForwardRunners() ([]ForwardRunner, error) {
-	runners := make([]ForwardRunner, 0, len(ForwardRules))
-	for _, rule := range ForwardRules {
-		switch rule.Proto {
-		case 0x01:
-			udpAddr, err := net.ResolveUDPAddr("udp4", rule.ListenAddr)
-			if err != nil {
-				for _, r := range runners {
-					r.Close()
-				}
-				return nil, err
-			}
-			pc, err := net.ListenUDP("udp4", udpAddr)
-			if err != nil {
-				for _, r := range runners {
-					r.Close()
-				}
-				return nil, err
-			}
-			log.Printf("[proxy] UDP转发监听: %s -> %s:%d", rule.ListenAddr, rule.RemoteIP, rule.RemotePort)
-			runners = append(runners, &ForwardUDPClient{
-				pc:         pc,
-				remoteIP:   rule.RemoteIP,
-				remotePort: rule.RemotePort,
-			})
-		default:
-			ln, err := net.Listen("tcp", rule.ListenAddr)
-			if err != nil {
-				for _, r := range runners {
-					r.Close()
-				}
-				return nil, err
-			}
-			log.Printf("[proxy] TCP转发监听: %s -> %s:%d", rule.ListenAddr, rule.RemoteIP, rule.RemotePort)
-			runners = append(runners, &ForwardClient{
-				listener:   ln,
-				remoteIP:   rule.RemoteIP,
-				remotePort: rule.RemotePort,
-			})
+func newForwardRunner(rule ForwardRule) (ForwardRunner, error) {
+	switch rule.Proto {
+	case 0x01:
+		udpAddr, err := net.ResolveUDPAddr("udp4", rule.ListenAddr)
+		if err != nil {
+			return nil, err
 		}
+		pc, err := net.ListenUDP("udp4", udpAddr)
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("[proxy] UDP转发监听: %s -> %s:%d", rule.ListenAddr, rule.RemoteIP, rule.RemotePort)
+		return &ForwardUDPClient{
+			pc:         pc,
+			remoteIP:   rule.RemoteIP,
+			remotePort: rule.RemotePort,
+		}, nil
+	default:
+		ln, err := net.Listen("tcp", rule.ListenAddr)
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("[proxy] TCP转发监听: %s -> %s:%d", rule.ListenAddr, rule.RemoteIP, rule.RemotePort)
+		return &ForwardClient{
+			listener:   ln,
+			remoteIP:   rule.RemoteIP,
+			remotePort: rule.RemotePort,
+		}, nil
 	}
-	return runners, nil
 }
 
 func (p *ForwardClient) SetQuicConn(conn *quic.Conn) {
@@ -194,6 +182,19 @@ func (p *ForwardClient) getQuicConn() *quic.Conn {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.quicConn
+}
+
+func (p *ForwardClient) SetTarget(ip net.IP, port uint16) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.remoteIP = ip
+	p.remotePort = port
+}
+
+func (p *ForwardClient) target() (net.IP, uint16) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.remoteIP, p.remotePort
 }
 
 func (p *ForwardClient) Serve() {
@@ -226,11 +227,13 @@ func (p *ForwardClient) handleConn(tcpConn net.Conn, quicConn *quic.Conn) {
 		return
 	}
 
+	remoteIP, remotePort := p.target()
+
 	ioBuf := go2pool.Malloc(HEAD_LEN)
 
 	ioBuf[0] = 0x00 // TCP协议标识
-	copy(ioBuf[1:5], p.remoteIP.To4())
-	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], p.remotePort)
+	copy(ioBuf[1:5], remoteIP.To4())
+	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], remotePort)
 
 	if _, err := stream.Write(ioBuf[:HEAD_LEN]); err != nil {
 		go2pool.Free(ioBuf)
@@ -270,6 +273,19 @@ func (p *ForwardUDPClient) getQuicConn() *quic.Conn {
 	return p.quicConn
 }
 
+func (p *ForwardUDPClient) SetTarget(ip net.IP, port uint16) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.remoteIP = ip
+	p.remotePort = port
+}
+
+func (p *ForwardUDPClient) target() (net.IP, uint16) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.remoteIP, p.remotePort
+}
+
 func (p *ForwardUDPClient) Serve() {
 	buf := make([]byte, 65535)
 	for {
@@ -302,10 +318,12 @@ func (p *ForwardUDPClient) handleDatagram(payload []byte, clientAddr net.Addr, q
 		return
 	}
 
+	remoteIP, remotePort := p.target()
+
 	ioBuf := go2pool.Malloc(HEAD_LEN)
 	ioBuf[0] = 0x01 // UDP协议标识
-	copy(ioBuf[1:5], p.remoteIP.To4())
-	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], p.remotePort)
+	copy(ioBuf[1:5], remoteIP.To4())
+	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], remotePort)
 	if _, err := stream.Write(ioBuf[:HEAD_LEN]); err != nil {
 		go2pool.Free(ioBuf)
 		log.Println("[proxy] UDP转发写入头部失败:", err)

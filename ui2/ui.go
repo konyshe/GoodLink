@@ -1,7 +1,6 @@
 package ui2
 
 import (
-	"encoding/json"
 	"fmt"
 	"go2"
 	"log"
@@ -10,11 +9,10 @@ import (
 
 	"goodlink/config"
 	"goodlink/stun2"
-	goodlink_config "goodlink3/config"
 )
 
 const (
-	goodlinkFileName = "goodlink.json"
+	goodlinkFileName = config.UIConfigFileName
 	M_APP_TITLE      = "Goodlink"
 	workTypeLocal    = "Local"
 	workTypeRemote   = "Remote"
@@ -23,22 +21,35 @@ const (
 func Init() {
 	m_log_entries = make([]string, 0, maxLogEntries)
 
-	var configInfo goodlink_config.ConfigInfo
-	json.Unmarshal(go2.FileReadAll(goodlinkFileName), &configInfo)
-	log.Println(configInfo)
+	cfg, err := config.LoadUIConfig(goodlinkFileName)
+	if err != nil {
+		log.Println("读取 goodlink.json 失败:", err)
+	} else {
+		log.Println(cfg)
+	}
+
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		log.Println("goodlink.json 转发规则无效, 已忽略:", err)
+		cfg.ForwardRules = []config.UIForwardRule{}
+		if cfg.LocalMode != config.LocalModeTUN && cfg.LocalMode != config.LocalModeForward {
+			cfg.LocalMode = config.LocalModeTUN
+		}
+	}
 
 	// 如果密钥为空，自动生成密钥
-	if len(configInfo.TunKey) == 0 {
-		configInfo.TunKey = string(go2.RandomBytes(config.TunKeyByteLen))
-		log.Println("自动生成密钥:", configInfo.TunKey)
+	if len(cfg.TunKey) == 0 {
+		cfg.TunKey = string(go2.RandomBytes(config.TunKeyByteLen))
+		log.Println("自动生成密钥:", cfg.TunKey)
 	}
-	if configInfo.WorkType == "" {
-		configInfo.WorkType = workTypeLocal
+	if cfg.WorkType == "" {
+		cfg.WorkType = workTypeLocal
 	}
 
 	stateMu.Lock()
-	m_work_type = configInfo.WorkType
-	m_tun_key = configInfo.TunKey
+	m_work_type = cfg.WorkType
+	m_tun_key = cfg.TunKey
+	m_local_mode = cfg.LocalMode
+	m_forward_rules = cfg.ForwardRules
 	stateMu.Unlock()
 
 	m_start_button_state = 0
