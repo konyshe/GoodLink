@@ -8,6 +8,7 @@ cd ..
 rm -rf goodlink-windows-amd64
 mv bin goodlink-windows-amd64
 zip goodlink-windows-amd64.zip goodlink-windows-amd64
+rm -rf goodlink-windows-amd64
 
 make clean
 make linux
