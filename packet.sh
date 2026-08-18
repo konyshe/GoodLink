@@ -7,7 +7,7 @@ wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
 cd ..
 rm -rf goodlink-windows-amd64
 mv bin goodlink-windows-amd64
-zip goodlink-windows-amd64.zip goodlink-windows-amd64
+zip -r goodlink-windows-amd64.zip goodlink-windows-amd64
 rm -rf goodlink-windows-amd64
 
 make clean
