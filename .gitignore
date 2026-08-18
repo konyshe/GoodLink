@@ -20,3 +20,4 @@ tun
 goodlink-windows-amd64
 goodlink.log
 .cursor
+ui2/frontend/node_modules

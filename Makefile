@@ -35,6 +35,10 @@ WINDOWS_PLATFORM2_LIST = \
 	windows-386-cmd \
 	windows-arm-cmd \
 
+.PHONY: ui
+ui:
+	cd ui2/frontend && npm ci && npm run build
+
 debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64-cmd
 
 macos: $(DARWIN_PLATFORM_LIST) strip
