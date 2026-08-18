@@ -40,7 +40,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 4. 可以在 local 端访问 remote 端, 但是反过来不可以。通过相同的密钥(--key)确认连接关系
 
-5. 遇到无法连接windows远程桌面的情况，在IP后面加上 :13389，再尝试连接
+5. TUN模式如果无法连接windows远程桌面，可在IP后面加上 :13389，再尝试连接
 
 ### 📡 NAT兼容清单
 
@@ -53,49 +53,47 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 # 快速使用
 
-### **启动 remote端(以下方式任选)**
+### **启动 remote端 (以下方法任选其一即可)**
 
-Remote端不需要管理员权限。
-
-#### UI版本（仅Windows）
+#### 方法一:  通过网页启动, 适合小白, 直接双击 goodlink-windows-amd64-cmd.exe 即可
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/5.png "使用说明")
 
-#### 命令行版本
+#### 方法二:  通过命令行启动, 适合嵌入第三方软件
 
 ```
 # windows
-.\goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+.\goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
 ```
 # linux
-./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+./goodlink-linux-amd64-cmd --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
 ```
 # linux, Docker
-docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=AIabJpEIYHMDIA6NBgOBboYJ --remote
+docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
-### **启动 local端(以下方式任选)**
+### **启动 local端 (以下方法任选其一即可)**
 
-Local端创建虚拟网卡，需要管理员权限运行（Windows 请右键以管理员身份运行）。
+注意: Local端默认使用TUN模式，需要管理员权限运行（Windows 请右键以管理员身份运行）。
 
-#### UI版本（仅Windows）
+#### 方法一:  通过网页启动, 适合小白, 直接双击 goodlink-windows-amd64-cmd.exe 即可
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/6.png "使用说明")
 
-#### 命令行版本
+#### 方法二:  通过命令行, 适合嵌入第三方软件
 
 ```
 # windows
-.\goodlink-windows-amd64-cmd.exe --fork --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+.\goodlink-windows-amd64-cmd.exe --fork --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
 ```
 
 ```
 # linux
-./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local
+./goodlink-linux-amd64-cmd --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
 ```
 
 ```
@@ -103,13 +101,14 @@ Local端创建虚拟网卡，需要管理员权限运行（Windows 请右键以�
 Docker暂不支持虚拟网卡（TUN模式）
 ```
 
-# Local端工作模式
+# Local端工作模式介绍 (高手进阶功能, 小白不用看)
 
 注：该工具默认同时启动TUN直连模式和TUN代理模式
 
 ### TUN直连模式
 
     Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP (192.17.19.1)
+
     支持TCP和UDP连接
 
     连接成功后，访问192.17.19.1，就等于访问Remote端
@@ -118,45 +117,49 @@ Docker暂不支持虚拟网卡（TUN模式）
 
 ### TUN代理模式
 
-    可访问Remote端所有的网络资源
+    可利用Remote端做代理跳板, 访问Remote端所有的网络资源
 
-    连接成功后，在本机配置代理即可使用(仅支持TCP代理):
+    连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口固定: 1080):
     socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
 
-### 本地代理模式（高阶使用）（该模式下，TUN直连模式、TUN代理模式不会启动）
+### 本地代理模式（适合极客, 该模式下，TUN直连模式、TUN代理模式不会启动）
+
+    可利用Remote端做代理跳板, 访问Remote端所有的网络资源
 
     适用于无法创建虚拟网卡的环境（如MacOS、Docker、无管理员权限等），或同一主机有多个Local端的场景（虚拟网卡不能创建多个）
-    该模式目前只支持命令行版本，使用 --proxy 选项，即可启动该模式
+
+    如果直接命令行启动，使用 --proxy 选项，即可启动该模式
     格式: --proxy=Local端监听地址:Local端监听端口
 
 ```
 # linux其他环境以此类推）
-./goodlink-linux-amd64-cmd --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080
+./goodlink-linux-amd64-cmd --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080
 ```
 
-    连接成功后，在本机配置代理即可使用(仅支持TCP代理):
+    连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口可自定义):
     socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
 
-### 本地转发模式（高阶使用）（该模式下，TUN直连模式、TUN代理模式不会启动）
+### 本地转发模式（适合极客, 该模式下，TUN直连模式、TUN代理模式不会启动, 可通过网页配置）
 
-    在本地代理模式的基础上，适用于不支持代理方式访问的场景
-    该模式目前只支持命令行版本，使用 --forward_tcp 或 --forward_udp 选项，即可启动该模式
+    在本地代理模式的基础上，适用于不支持代理方式访问的场景, 比如有些APP不支持通过代理
+
+    如果直接命令行启动，使用 --forward_tcp 或 --forward_udp 选项，即可启动该模式
     连接成功后，在Local端访问本地指定端口等于在Remote端访问指定地址和端口
     格式: --forward_tcp=Local端监听地址:Local端监听端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
 
 ```
 # linux, 单个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
+./goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
 ```
 
 ```
 # linux, 多个端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
 ```
 # linux, 同时使用代理和端口转发（其他环境以此类推）
-./goodlink-windows-amd64-cmd.exe --key=AIabJpEIYHMDIA6NBgOBboYJ --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
+./goodlink-windows-amd64-cmd.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
 ```
 
     连接成功后:
