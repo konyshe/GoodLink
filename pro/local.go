@@ -264,7 +264,7 @@ func RunLocal() error {
 
 		if !useForward && !g_netstack_started {
 			if err := netstack.Start(); err != nil {
-				if strings.Contains(err.Error(), "请管理员权限运行") {
+				if strings.Contains(err.Error(), "请管理员权限重新启动Goodlink") {
 					UpdateStartButtonStatue(TagStatusNeedAdmin)
 					time.Sleep(1 * time.Second) // 保证 UI 读到状态并关闭自动重启后再退出
 				}
