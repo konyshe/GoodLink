@@ -94,7 +94,7 @@ export default function LocalPanel({
               onNeedAdminHint?.();
             }}
           >
-            TUN模式(简单易用, 需管理权限)
+            TUN模式(简单易用, 需管理权限, 不支持OSX系统)
           </button>
           <span className="vsep"></span>
           <button
