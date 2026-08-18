@@ -1,17 +1,20 @@
 make clean
+make ui
 make windows
 cd bin
 rm -rf goodlink.json
 wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
 cd ..
 rm -rf goodlink-windows-amd64
-cp -r bin goodlink-windows-amd64
+mv bin goodlink-windows-amd64
+zip goodlink-windows-amd64.zip goodlink-windows-amd64
 
 make clean
 make linux
 make macos
 cd bin
 
+mv ../goodlink-windows-amd64.zip .
 zip goodlink-linux-amd64.zip goodlink-linux-amd64
 zip goodlink-linux-arm64.zip goodlink-linux-arm64
 zip goodlink-linux-386.zip goodlink-linux-386
