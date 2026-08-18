@@ -94,7 +94,7 @@ export default function LocalPanel({
               onNeedAdminHint?.();
             }}
           >
-            TUN模式
+            TUN模式(简单易用, 需管理权限)
           </button>
           <span className="vsep"></span>
           <button
@@ -103,7 +103,7 @@ export default function LocalPanel({
             disabled={!othersEnabled}
             onClick={() => setLocalMode("forward")}
           >
-            转发模式
+            转发模式(灵活强大, 无需管理权限)
           </button>
         </div>
       </section>
@@ -111,7 +111,7 @@ export default function LocalPanel({
       {localMode === "forward" && (
         <section className="forwards">
           <div className="forwards-head">
-            <span className="label">端口转发规则:</span>
+            <span className="label">端口转发:</span>
             <div className="forwards-actions">
               <button type="button" disabled={!mappingEnabled} onClick={() => setRows((prev) => [...prev, newRow()])}>
                 添加

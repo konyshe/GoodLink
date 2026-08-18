@@ -171,7 +171,7 @@ export default function App() {
                 }
               }}
             >
-              Local端
+              Local端(本地客户端)
             </button>
             <span className="vsep"></span>
             <button
@@ -180,7 +180,7 @@ export default function App() {
               disabled={!othersEnabled}
               onClick={() => setWorkType("Remote")}
             >
-              Remote端
+              Remote端(被连接服务端)
             </button>
           </div>
         </section>
