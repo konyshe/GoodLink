@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -25,6 +26,7 @@ func StartServer() (string, error) {
 			return "", err
 		}
 	}
+	log.Println("UI server started on", ln.Addr().String())
 
 	webContent, err := fs.Sub(webFS, "web")
 	if err != nil {
