@@ -91,7 +91,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
 ```
 
-### 如果需要嵌入第三方软件, 或者需要开机自动运行. 则可以使用选项启动, 不需要网页操作, 以remote端举例, local端亦可, 可 --h 查看功能选项:
+### 如果需要嵌入第三方软件, 或者需要开机自动运行. 则可以使用选项启动, 不需要网页操作, 以remote端举例, 可 --h 查看功能选项:
 
 ```
 # windows
