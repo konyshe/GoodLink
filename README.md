@@ -57,6 +57,8 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 #### 方法一:  通过网页启动, 简单易用, 直接双击 goodlink-windows-amd64.exe 即可
 
+浏览器访问: http://127.0.0.1:16780/, (程序会启动启动浏览器, 如果16780端口已被占用, 会变成其他端口)
+
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/5.png "使用说明")
 
 #### 方法二:  通过命令行启动, 适合嵌入第三方软件
@@ -81,6 +83,8 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 注意: Local端默认使用TUN模式，需要管理员权限运行（Windows 请右键以管理员身份运行）。
 
 #### 方法一:  通过网页启动, 简单易用, 直接双击 goodlink-windows-amd64.exe 即可
+
+浏览器访问: http://127.0.0.1:16780/, (程序会启动启动浏览器, 如果16780端口已被占用, 会变成其他端口)
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/6.png "使用说明")
 
