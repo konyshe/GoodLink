@@ -88,14 +88,11 @@ body,
   background: var(--line);
 }
 
-.proxy-row {
-  align-items: flex-start;
-}
-
 .proxy-addrs {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: 6px 12px;
   min-width: 0;
   flex: 1;
 }
@@ -103,25 +100,28 @@ body,
 .proxy-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .proxy-item code {
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
   background: #1f1f1f;
   border: 1px solid #555;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.4;
   word-break: break-all;
 }
 
 .proxy-item button {
-  padding: 6px 10px;
+  padding: 2px 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--btn);
   color: var(--fg);
+  font-size: 12px;
+  line-height: 1.4;
   cursor: pointer;
   white-space: nowrap;
 }
