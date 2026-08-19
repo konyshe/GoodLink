@@ -282,40 +282,30 @@ func watchUIForwardConfig(mgr *proxy.ForwardManager, last string) {
 }
 
 func setupForwardMode() (bool, error) {
-	if config.FromUI() {
-		cfg, err := config.LoadUIConfig(config.UIConfigFileName)
-		if err != nil {
-			return false, err
-		}
-		if err := config.NormalizeAndValidate(&cfg); err != nil {
-			return false, err
-		}
-		if cfg.LocalMode != config.LocalModeForward {
-			return false, nil
-		}
-		rules, err := proxy.RulesFromUI(cfg.ForwardRules)
-		if err != nil {
-			return false, err
-		}
-		m_forward_mgr = proxy.NewForwardManager()
-		if err := m_forward_mgr.Apply(rules); err != nil {
-			m_forward_mgr.Close()
-			m_forward_mgr = nil
-			return false, err
-		}
-		go watchUIForwardConfig(m_forward_mgr, cfg.ForwardFingerprint())
-		return true, nil
-	}
-
-	if !proxy.CheckForwardArgs() {
+	if !config.FromUI() {
 		return false, nil
 	}
+	cfg, err := config.LoadUIConfig(config.UIConfigFileName)
+	if err != nil {
+		return false, err
+	}
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return false, err
+	}
+	if cfg.LocalMode != config.LocalModeForward {
+		return false, nil
+	}
+	rules, err := proxy.RulesFromUI(cfg.ForwardRules)
+	if err != nil {
+		return false, err
+	}
 	m_forward_mgr = proxy.NewForwardManager()
-	if err := m_forward_mgr.Apply(proxy.ForwardRules); err != nil {
+	if err := m_forward_mgr.Apply(rules); err != nil {
 		m_forward_mgr.Close()
 		m_forward_mgr = nil
 		return false, err
 	}
+	go watchUIForwardConfig(m_forward_mgr, cfg.ForwardFingerprint())
 	return true, nil
 }
 

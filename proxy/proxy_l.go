@@ -4,12 +4,9 @@ import (
 	"context"
 	"encoding/binary"
 	go2pool "go2/pool"
-	"goodlink/config"
 	"io"
 	"log"
 	"net"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,81 +18,6 @@ type ForwardRule struct {
 	RemoteIP   net.IP
 	RemotePort uint16
 	Proto      byte // 0x00 TCP, 0x01 UDP（与 Remote process_stream 一致）
-}
-
-var ForwardRules []ForwardRule
-
-func appendForwardRuleEntries(csv string, proto byte) bool {
-	if csv == "" {
-		return true
-	}
-	entries := strings.Split(csv, ",")
-	for _, entry := range entries {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			continue
-		}
-		parts := strings.SplitN(entry, "@", 2)
-		if len(parts) != 2 {
-			log.Printf("[proxy] 转发地址格式错误(需要 listenHost:listenPort@remoteHost:remotePort): %s", entry)
-			ForwardRules = nil
-			return false
-		}
-		listenHost, listenPort, err := net.SplitHostPort(parts[0])
-		if err != nil {
-			log.Printf("[proxy] 转发监听地址解析失败: %s, %v", parts[0], err)
-			ForwardRules = nil
-			return false
-		}
-		listenAddr := net.JoinHostPort(listenHost, listenPort)
-		remoteHost, remotePortStr, err := net.SplitHostPort(parts[1])
-		if err != nil {
-			log.Printf("[proxy] 转发目标地址解析失败: %s, %v", parts[1], err)
-			ForwardRules = nil
-			return false
-		}
-		remoteIP := net.ParseIP(remoteHost)
-		if remoteIP == nil {
-			log.Printf("[proxy] 转发目标IP解析失败: %s", remoteHost)
-			ForwardRules = nil
-			return false
-		}
-		remotePort, err := strconv.Atoi(remotePortStr)
-		if err != nil || remotePort <= 0 || remotePort > 65535 {
-			log.Printf("[proxy] 转发目标端口无效: %s", remotePortStr)
-			ForwardRules = nil
-			return false
-		}
-		ForwardRules = append(ForwardRules, ForwardRule{
-			ListenAddr: listenAddr,
-			RemoteIP:   remoteIP.To4(),
-			RemotePort: uint16(remotePort),
-			Proto:      proto,
-		})
-	}
-	return true
-}
-
-func CheckForwardArgs() bool {
-	ForwardRules = nil
-
-	if config.Arg_local_proxy_addr != "" {
-		ForwardRules = append(ForwardRules, ForwardRule{
-			ListenAddr: config.Arg_local_proxy_addr,
-			RemoteIP:   net.IPv4(127, 0, 0, 1),
-			RemotePort: PROXY_PORT,
-			Proto:      0x00,
-		})
-	}
-
-	if !appendForwardRuleEntries(config.Arg_local_forward_tcp_addrs, 0x00) {
-		return false
-	}
-	if !appendForwardRuleEntries(config.Arg_local_forward_udp_addrs, 0x01) {
-		return false
-	}
-
-	return len(ForwardRules) > 0
 }
 
 // ForwardRunner 本地转发监听器（TCP 或 UDP），隧道重连时通过 SetQuicConn/ClearQuicConn 热替换 QUIC。

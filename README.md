@@ -42,7 +42,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 5. TUN模式如果无法连接windows远程桌面，可在IP后面加上 :13389，再尝试连接
 
-### 📡 NAT兼容清单
+## 📡 NAT兼容清单
 
 | Remote端NAT | Local端NAT | P2P连接 | 说明 |
 |-------------|------------|---------|------|
@@ -53,19 +53,54 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 # 快速使用
 
-### **启动 remote端 (以下方法任选其一即可)**
+直接双击 goodlink-windows-amd64.exe 启动即可
 
-#### 方法一:  通过网页启动, 简单易用, 直接双击 goodlink-windows-amd64.exe 即可
+浏览器访问: http://127.0.0.1:16780/
 
-浏览器访问: http://127.0.0.1:16780/, (程序会启动启动浏览器, 如果16780端口已被占用, 会变成其他端口)
+程序会启动启动浏览器, 如果16780端口已被占用, 会变成其他端口, 参考程序输出日志:
+
+``` UI server started on [::]:16780```
+
+## **在需要被连接的电脑上, 启动 remote端**
 
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/5.png "使用说明")
 
-#### 方法二:  通过命令行启动, 适合嵌入第三方软件
+## **在需要发起连接的电脑上, 启动 local端**
+
+注: local端默认使用TUN模式, 简单易用, 适合小白, 但需要管理员权限启动 goodlink-windows-amd64.exe
+
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/6.png "使用说明")
+
+
+# 高阶使用, 跨平台, 嵌入第三方软件
+
+### 该程序支持 Windows, Linux, MacOS, Docker
+
+```
+# MacOS
+./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
+```
+
+```
+# linux
+./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
+```
+
+```
+# linux, Docker
+docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
+```
+
+### 如果需要嵌入第三方软件, 或者需要开机自动运行. 则可以使用选项启动, 不需要网页操作, 以remote端举例, local端亦可, 可 --h 查看功能选项:
 
 ```
 # windows
 .\goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
+```
+
+```
+# MacOS
+./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
 ```
@@ -78,34 +113,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
-### **启动 local端 (以下方法任选其一即可)**
-
-注意: Local端默认使用TUN模式，需要管理员权限运行（Windows 请右键以管理员身份运行）。
-
-#### 方法一:  通过网页启动, 简单易用, 直接双击 goodlink-windows-amd64.exe 即可
-
-浏览器访问: http://127.0.0.1:16780/, (程序会启动启动浏览器, 如果16780端口已被占用, 会变成其他端口)
-
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/6.png "使用说明")
-
-#### 方法二:  通过命令行, 适合嵌入第三方软件
-
-```
-# windows
-.\goodlink-windows-amd64.exe --fork --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
-```
-
-```
-# linux
-./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local
-```
-
-```
-# linux, Docker
-Docker暂不支持虚拟网卡（TUN模式）
-```
-
-# Local端工作模式介绍 (高手进阶功能, 小白不用看)
+# Local端工作模式介绍
 
 注：该工具默认同时启动TUN直连模式和TUN代理模式
 
@@ -132,44 +140,22 @@ Docker暂不支持虚拟网卡（TUN模式）
 
     适用于无法创建虚拟网卡的环境（如MacOS、Docker、无管理员权限等），或同一主机有多个Local端的场景（虚拟网卡不能创建多个）
 
-    如果通过命令行启动，使用 --proxy 选项，即可启动该模式
-    格式: --proxy=Local端监听地址:Local端监听端口
-
-```
-# linux其他环境以此类推）
-./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080
-```
+    通过网页 UI 选择「转发模式」，添加 TCP 规则即可（等价于本地代理）:
+    本地地址:端口 -> Remote端 127.0.0.1:1080，例如: 0.0.0.0:1080 -> 127.0.0.1:1080
+    配置会写入 goodlink.json，连接成功后无需命令行参数
 
     连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口可自定义):
     socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
 
-### 本地转发模式（适合极客, 该模式下，TUN直连模式、TUN代理模式不会启动, 可通过网页配置）
+### 本地转发模式（适合极客, 该模式下，TUN直连模式、TUN代理模式不会启动）
 
     在本地代理模式的基础上，适用于不支持代理方式访问的场景, 比如有些APP不支持通过代理
 
-    如果通过命令行启动，使用 --forward_tcp 或 --forward_udp 选项，即可启动该模式
+    通过网页 UI 选择「转发模式」配置端口映射，规则持久化到 goodlink.json
     连接成功后，在Local端访问本地指定端口等于在Remote端访问指定地址和端口
-    格式: --forward_tcp=Local端监听地址:Local端监听端口@Remote端目标地址:Remote端目标端口，多个转发规则用逗号间隔
+    例如: TCP 0.0.0.0:22 -> 127.0.0.1:22，访问本地22端口等同于在Remote端访问SSH
 
-```
-# linux, 单个端口转发（其他环境以此类推）
-./goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22
-```
-
-```
-# linux, 多个端口转发（其他环境以此类推）
-./goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
-```
-
-```
-# linux, 同时使用代理和端口转发（其他环境以此类推）
-./goodlink-windows-amd64.exe --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --local --proxy=0.0.0.0:1080 --forward_tcp=0.0.0.0:22@127.0.0.1:22,0.0.0.0:80@127.0.0.1:80
-```
-
-    连接成功后:
-    - 本地1080端口提供socks5/http代理服务
-    - 访问本地22端口等同于在Remote端访问127.0.0.1:22（SSH）
-    - 访问本地80端口等同于在Remote端访问127.0.0.1:80（WEB）
+    代理与端口转发可同时配置多条规则，修改后点击确认即可热更新，无需重新连接
 
 ## 💬 交流方式
 
