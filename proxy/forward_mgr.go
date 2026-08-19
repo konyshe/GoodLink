@@ -19,10 +19,13 @@ type forwardEntry struct {
 	runner ForwardRunner
 }
 
+const BuiltinProxyHost = "127.0.0.1"
+
 // ForwardManager 管理本地转发监听器：按 proto+listen 做 diff，热更新时不断隧道。
 type ForwardManager struct {
 	mu      sync.Mutex
 	entries []forwardEntry
+	builtin ForwardRunner
 	quic    *quic.Conn
 	closed  bool
 }
@@ -130,6 +133,58 @@ func (m *ForwardManager) Apply(rules []ForwardRule) error {
 	return nil
 }
 
+// StartBuiltinProxy 在本机启动内置 SOCKS5/HTTP 代理入口：优先 127.0.0.1:1080，占用则改随机端口。
+// 不进入用户转发规则表；Apply 热更新不会关闭该监听。
+func (m *ForwardManager) StartBuiltinProxy() (listenAddr string, fallback bool, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.closed {
+		return "", false, fmt.Errorf("forward manager closed")
+	}
+	if m.builtin != nil {
+		if addr := m.builtin.ListenAddr(); addr != "" {
+			host, portStr, splitErr := net.SplitHostPort(addr)
+			if splitErr == nil && host == BuiltinProxyHost && portStr != strconv.Itoa(PROXY_PORT) {
+				fallback = true
+			}
+			return addr, fallback, nil
+		}
+	}
+
+	preferred := net.JoinHostPort(BuiltinProxyHost, strconv.Itoa(PROXY_PORT))
+	ln, err := net.Listen("tcp4", preferred)
+	if err != nil {
+		ln, err = net.Listen("tcp4", net.JoinHostPort(BuiltinProxyHost, "0"))
+		if err != nil {
+			return "", false, err
+		}
+		fallback = true
+	}
+
+	listenAddr = ln.Addr().String()
+	if tcpAddr, ok := ln.Addr().(*net.TCPAddr); ok {
+		listenAddr = net.JoinHostPort(BuiltinProxyHost, strconv.Itoa(tcpAddr.Port))
+	}
+
+	runner := &ForwardClient{
+		listener:   ln,
+		remoteIP:   net.IPv4(127, 0, 0, 1).To4(),
+		remotePort: PROXY_PORT,
+	}
+	if m.quic != nil {
+		runner.SetQuicConn(m.quic)
+	}
+	m.builtin = runner
+	go runner.Serve()
+
+	if fallback {
+		log.Printf("[proxy] 端口 %d 已被占用，内置代理改用 %s -> 127.0.0.1:%d", PROXY_PORT, listenAddr, PROXY_PORT)
+	} else {
+		log.Printf("[proxy] 内置代理监听: %s -> 127.0.0.1:%d", listenAddr, PROXY_PORT)
+	}
+	return listenAddr, fallback, nil
+}
+
 func (m *ForwardManager) SetQuic(conn *quic.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -137,13 +192,21 @@ func (m *ForwardManager) SetQuic(conn *quic.Conn) {
 		return
 	}
 	m.quic = conn
+	setRunnerQuic(m.builtin, conn)
 	for _, e := range m.entries {
-		if conn == nil {
-			e.runner.ClearQuicConn()
-		} else {
-			e.runner.SetQuicConn(conn)
-		}
+		setRunnerQuic(e.runner, conn)
 	}
+}
+
+func setRunnerQuic(runner ForwardRunner, conn *quic.Conn) {
+	if runner == nil {
+		return
+	}
+	if conn == nil {
+		runner.ClearQuicConn()
+		return
+	}
+	runner.SetQuicConn(conn)
 }
 
 func (m *ForwardManager) Close() {
@@ -151,6 +214,11 @@ func (m *ForwardManager) Close() {
 	defer m.mu.Unlock()
 	m.closed = true
 	m.quic = nil
+	if m.builtin != nil {
+		m.builtin.ClearQuicConn()
+		m.builtin.Close()
+		m.builtin = nil
+	}
 	for _, e := range m.entries {
 		e.runner.ClearQuicConn()
 		e.runner.Close()

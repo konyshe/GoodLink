@@ -58,6 +58,18 @@ func parseStatusMessage(line string) (string, bool) {
 	return "", false
 }
 
+func parseProxyMessage(line string) (string, bool) {
+	idx := strings.Index(line, pro.TagProxyPrefix)
+	if idx == -1 {
+		return "", false
+	}
+	addr := strings.TrimSpace(line[idx+len(pro.TagProxyPrefix):])
+	if addr == "" {
+		return "", false
+	}
+	return addr, true
+}
+
 // updateConnectionStatus 根据连接状态更新按钮（Local端直接映射，Remote端在连接成功后才切换为运行状态）
 // 由 handleProcessOutput goroutine 调用，状态通过 SSE 推送到浏览器
 func updateConnectionStatus(status string) {
@@ -140,7 +152,10 @@ func startCmdProcess() error {
 	handleProcessOutput := func(scanner *bufio.Scanner) {
 		for scanner.Scan() {
 			line := scanner.Text()
-			// 检查是否是状态消息
+			if addr, ok := parseProxyMessage(line); ok {
+				setProxyListen(addr)
+				continue
+			}
 			if status, ok := parseStatusMessage(line); ok {
 				updateConnectionStatus(status)
 			} else {
@@ -249,6 +264,7 @@ func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRul
 		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
 	}
 
+	resetProxyListen()
 	if GetWorkType() == workTypeLocal {
 		updateButtonState(buttonStateConnecting)
 	} else {
@@ -265,6 +281,7 @@ func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRul
 		UILogPrintF("启动失败: %v", err)
 		m_start_button_state = 0
 		m_auto_restart_enabled = false
+		resetProxyListen()
 		updateButtonState(buttonStateIdle)
 		return err
 	}
@@ -291,6 +308,7 @@ func HandleStop() {
 	go func() {
 		StopCmdProcess()
 		m_start_button_state = 0
+		resetProxyListen()
 		updateButtonState(buttonStateIdle)
 	}()
 }
@@ -322,6 +340,7 @@ func waitForProcessAndHandleExit() {
 	} else {
 		// 正常停止，恢复 UI
 		m_start_button_state = 0
+		resetProxyListen()
 		updateButtonState(buttonStateIdle)
 	}
 }
@@ -341,10 +360,12 @@ func autoRestartProcess() {
 
 	UILogPrintF("检测到进程异常退出，正在自动重启...")
 
+	resetProxyListen()
 	// 重启进程
 	if err := startCmdProcess(); err != nil {
 		UILogPrintF("启动失败: %v", err)
 		m_start_button_state = 0
+		resetProxyListen()
 		updateButtonState(buttonStateIdle)
 		return
 	}

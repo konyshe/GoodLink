@@ -88,6 +88,59 @@ body,
   background: var(--line);
 }
 
+.proxy-row {
+  align-items: flex-start;
+}
+
+.proxy-addrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.proxy-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.proxy-item code {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #1f1f1f;
+  border: 1px solid #555;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.proxy-item button {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--btn);
+  color: var(--fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.proxy-item button:hover:not(:disabled) {
+  background: var(--btn-hover);
+}
+
+.proxy-item button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.proxy-hint {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .key-input {
   flex: 1;
   min-width: 0;

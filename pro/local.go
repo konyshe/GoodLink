@@ -10,6 +10,7 @@ import (
 	"goodlink/tun"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -305,6 +306,18 @@ func setupForwardMode() (bool, error) {
 		m_forward_mgr = nil
 		return false, err
 	}
+	listenAddr, fallback, err := m_forward_mgr.StartBuiltinProxy()
+	if err != nil {
+		m_forward_mgr.Close()
+		m_forward_mgr = nil
+		return false, err
+	}
+	if fallback {
+		log.Printf("代理服务端口 %d 已被占用，改用 %s", proxy.PROXY_PORT, listenAddr)
+	} else {
+		log.Printf("代理服务已启动: socks5://%s  http://%s", listenAddr, listenAddr)
+	}
+	ReportProxyAddr(listenAddr)
 	go watchUIForwardConfig(m_forward_mgr, cfg.ForwardFingerprint())
 	return true, nil
 }
@@ -363,6 +376,7 @@ func RunLocal() error {
 		} else if !useForward {
 			netstack.SetForWarder(quic_conn)
 			log.Printf("Remote端IP: %s", netstack.NetStackIP)
+			ReportProxyAddr(net.JoinHostPort(netstack.NetStackIP, strconv.Itoa(proxy.PROXY_PORT)))
 		}
 
 		m_local_state = 2

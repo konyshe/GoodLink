@@ -19,11 +19,37 @@ const defaultNat = {
   text: "正在检测当前网络环境...",
 };
 
-const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
+const TUN_PROXY = {
+  socks: "socks5://192.17.19.1:1080",
+  http: "http://192.17.19.1:1080",
+  fallback: false,
+};
+
+const FWD_PROXY = {
+  socks: "socks5://127.0.0.1:1080",
+  http: "http://127.0.0.1:1080",
+  fallback: false,
+};
+
+function resolveProxy(localMode, proxy) {
+  if (localMode === "tun") {
+    return TUN_PROXY;
+  }
+  if (proxy?.socks && String(proxy.socks).includes("127.0.0.1")) {
+    return {
+      socks: proxy.socks,
+      http: proxy.http || String(proxy.socks).replace("socks5://", "http://"),
+      fallback: !!proxy.fallback,
+    };
+  }
+  return FWD_PROXY;
+}
 
 function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
   return nextWorkType === "Local" && nextLocalMode === "tun" && isAdmin === false;
 }
+
+const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
 
 export default function App() {
   const { state, logs, exited } = useUIEvents();
@@ -201,6 +227,7 @@ export default function App() {
                 setAdminHint(true);
               }
             }}
+            proxy={resolveProxy(localMode, state?.proxy)}
           />
         ) : (
           <RemotePanel {...keyProps} />

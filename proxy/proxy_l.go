@@ -25,6 +25,7 @@ type ForwardRunner interface {
 	SetQuicConn(conn *quic.Conn)
 	ClearQuicConn()
 	SetTarget(ip net.IP, port uint16)
+	ListenAddr() string
 	Serve()
 	Close()
 }
@@ -171,6 +172,13 @@ func (p *ForwardClient) handleConn(tcpConn net.Conn, quicConn *quic.Conn) {
 	go ForwardQ2T(stream, tcpConn)
 }
 
+func (p *ForwardClient) ListenAddr() string {
+	if p.listener != nil {
+		return p.listener.Addr().String()
+	}
+	return ""
+}
+
 func (p *ForwardClient) Close() {
 	if p.listener != nil {
 		p.listener.Close()
@@ -271,6 +279,13 @@ func (p *ForwardUDPClient) handleDatagram(payload []byte, clientAddr net.Addr, q
 	}
 	stream.CancelRead(0)
 	stream.Close()
+}
+
+func (p *ForwardUDPClient) ListenAddr() string {
+	if p.pc != nil {
+		return p.pc.LocalAddr().String()
+	}
+	return ""
 }
 
 func (p *ForwardUDPClient) Close() {

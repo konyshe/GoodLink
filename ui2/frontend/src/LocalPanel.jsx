@@ -61,6 +61,7 @@ export default function LocalPanel({
   mappingEnabled,
   onConfirm,
   onNeedAdminHint,
+  proxy,
 }) {
   function updateRow(id, field, value) {
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
@@ -69,6 +70,16 @@ export default function LocalPanel({
   function removeRow(id) {
     setRows((prev) => prev.filter((row) => row.id !== id));
   }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text || "");
+    } catch (_) {}
+  }
+
+  const socks = proxy?.socks || "";
+  const http = proxy?.http || "";
+  const fallback = !!proxy?.fallback;
 
   return (
     <>
@@ -105,6 +116,25 @@ export default function LocalPanel({
           >
             转发模式(灵活强大, 无需管理权限)
           </button>
+        </div>
+      </section>
+
+      <section className="row proxy-row">
+        <span className="label">代理地址:</span>
+        <div className="proxy-addrs">
+          <div className="proxy-item">
+            <code>{socks}</code>
+            <button type="button" disabled={!socks} onClick={() => copyText(socks)}>
+              复制
+            </button>
+          </div>
+          <div className="proxy-item">
+            <code>{http}</code>
+            <button type="button" disabled={!http} onClick={() => copyText(http)}>
+              复制
+            </button>
+          </div>
+          {fallback && <div className="proxy-hint">1080 已被占用，已改用随机端口</div>}
         </div>
       </section>
 

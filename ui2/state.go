@@ -2,9 +2,14 @@ package ui2
 
 import (
 	"encoding/json"
+	"net"
+	"strconv"
+	"strings"
 	"sync"
 
 	"goodlink/config"
+	"goodlink/netstack"
+	"goodlink/proxy"
 	"goodlink/utils"
 )
 
@@ -50,6 +55,12 @@ type UpgradeInfo struct {
 	Latest string `json:"latest"`
 }
 
+type ProxyInfo struct {
+	Socks    string `json:"socks,omitempty"`
+	HTTP     string `json:"http,omitempty"`
+	Fallback bool   `json:"fallback,omitempty"`
+}
+
 type UIState struct {
 	Version      string                 `json:"version"`
 	WorkType     string                 `json:"workType"`
@@ -60,6 +71,7 @@ type UIState struct {
 	Button       ButtonInfo             `json:"button"`
 	NAT          NATInfo                `json:"nat"`
 	Upgrade      UpgradeInfo            `json:"upgrade"`
+	Proxy        ProxyInfo              `json:"proxy"`
 	Logs         []string               `json:"logs,omitempty"`
 }
 
@@ -148,6 +160,8 @@ var (
 	currentButton   buttonState
 	m_nat           = NATInfo{Text: "正在检测当前网络环境..."}
 	m_upgrade       UpgradeInfo
+	m_proxy_host    string
+	m_proxy_port    int
 	sseHubInst      = newSSEHub()
 )
 
@@ -229,12 +243,63 @@ func snapshot(includeLogs bool) UIState {
 		},
 		NAT:     m_nat,
 		Upgrade: m_upgrade,
+		Proxy:   proxyInfoLocked(localMode),
 	}
 	stateMu.RUnlock()
 	if includeLogs {
 		st.Logs = snapshotLogs()
 	}
 	return st
+}
+
+func makeProxyInfo(host string, port int, fallback bool) ProxyInfo {
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
+	return ProxyInfo{
+		Socks:    "socks5://" + addr,
+		HTTP:     "http://" + addr,
+		Fallback: fallback,
+	}
+}
+
+// proxyInfoLocked 需在持有 stateMu 读锁时调用。
+func proxyInfoLocked(localMode string) ProxyInfo {
+	if m_work_type != workTypeLocal {
+		return ProxyInfo{}
+	}
+	if localMode == config.LocalModeTUN {
+		return makeProxyInfo(netstack.NetStackIP, proxy.PROXY_PORT, false)
+	}
+	host := m_proxy_host
+	port := m_proxy_port
+	if host == "" || port <= 0 {
+		host = proxy.BuiltinProxyHost
+		port = proxy.PROXY_PORT
+	}
+	return makeProxyInfo(host, port, port != proxy.PROXY_PORT)
+}
+
+func setProxyListen(addr string) {
+	host, portStr, err := net.SplitHostPort(strings.TrimSpace(addr))
+	if err != nil {
+		return
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port <= 0 || port > 65535 {
+		return
+	}
+	stateMu.Lock()
+	m_proxy_host = host
+	m_proxy_port = port
+	stateMu.Unlock()
+	broadcastState()
+}
+
+func resetProxyListen() {
+	stateMu.Lock()
+	m_proxy_host = ""
+	m_proxy_port = 0
+	stateMu.Unlock()
+	broadcastState()
 }
 
 // updateButtonState 更新启动按钮的状态，同时同步托盘图标
