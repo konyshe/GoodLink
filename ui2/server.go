@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"goodlink/config"
@@ -18,10 +19,10 @@ var webFS embed.FS
 const defaultUIAddr = "0.0.0.0:16780"
 
 func StartServer() (string, error) {
-	ln, err := net.Listen("tcp", defaultUIAddr)
+	ln, err := net.Listen("tcp4", defaultUIAddr)
 	if err != nil {
 		// 固定端口占用时回退到随机端口
-		ln, err = net.Listen("tcp", "0.0.0.0:0")
+		ln, err = net.Listen("tcp4", "0.0.0.0:0")
 		if err != nil {
 			return "", err
 		}
@@ -47,7 +48,7 @@ func StartServer() (string, error) {
 		_ = http.Serve(ln, mux)
 	}()
 
-	return "http://" + ln.Addr().String() + "/", nil
+	return "http://127.0.0.1:" + strings.Split(ln.Addr().String(), ":")[1] + "/", nil
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
