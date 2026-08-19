@@ -116,17 +116,17 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 ```
 # MacOS
-./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
+./goodlink-linux-amd64
 ```
 
 ```
 # linux
-./goodlink-linux-amd64 --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
+./goodlink-linux-amd64
 ```
 
 ```
 # linux, Docker
-docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
+docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink
 ```
 
 ### 如果需要嵌入第三方软件, 或者开机自动启动Remote端. 不想再网页操作:
