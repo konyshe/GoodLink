@@ -74,7 +74,7 @@ export default function LocalPanel({
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text || "");
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const socks = proxy?.socks || "";
@@ -95,7 +95,7 @@ export default function LocalPanel({
 
       <section className="row">
         <span className="label">工作模式:</span>
-        <div className="work-type">
+        <div className="work-type work-type-sm">
           <button
             type="button"
             className={"work-btn" + (localMode === "tun" ? " active" : "")}

@@ -88,6 +88,24 @@ body,
   background: var(--line);
 }
 
+/* 小号工作模式按钮组 */
+.work-type-sm {
+  gap: 8px;
+}
+
+/* 小号工作模式按钮 */
+.work-type-sm .work-btn {
+  min-width: 0;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-width: 2px;
+}
+
+/* 中间分割线高度 */
+.work-type-sm .vsep {
+  height: 24px;
+}
+
 .proxy-addrs {
   display: flex;
   align-items: center;
