@@ -50,4 +50,4 @@ WORKDIR /home/
 ENTRYPOINT ["./goodlink"]
 
 #CMD 可变参数, 会被docker run带入的参数替换
-CMD ["--h"]
+#CMD ["--h"]
