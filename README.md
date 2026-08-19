@@ -72,9 +72,47 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 ![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/doc/6.png "使用说明")
 
 
+
+# Local端工作模式介绍
+
+## TUN模式
+
+### TUN模式会创建一个虚拟网卡, 因此需要管理员权限运行
+
+    连接成功后，界面会显示: Remote端IP (192.17.19.1)
+
+    支持TCP和UDP连接
+
+    连接成功后，访问192.17.19.1，就等于访问Remote端
+
+    举例: 在Local端打开 windows 远程桌面, 填写: 192.17.19.1:13389, 即可访问Remote端的远程桌面
+
+### TUN模式可利用Remote端做代理跳板, 访问Remote端所有的网络资源
+
+    连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口固定: 1080):
+    socks5://192.17.19.1:1080 或 http://192.17.19.1:1080
+
+## 转发模式
+
+### 转发模式不会创建虚拟网卡, 因此不需要管理员权限运行
+
+    通过网页 UI 选择「转发模式」配置端口映射
+
+    连接成功后，在Local端访问本地指定端口等于在Remote端访问指定地址和端口
+
+    例如: TCP 0.0.0.0:22 -> 127.0.0.1:22，访问本地22端口等同于在Remote端访问SSH
+
+    代理与端口转发可同时配置多条规则，修改后点击确认即可，无需重新连接
+
+
+### 转发模式同样可利用Remote端做代理跳板, 访问Remote端所有的网络资源
+
+    连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口可自定义):
+    socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
+
 # 高阶使用, 跨平台, 嵌入第三方软件
 
-### 该程序支持 Windows, Linux, MacOS, Docker
+### 该程序还支持 Windows, Linux, MacOS, Docker
 
 ```
 # MacOS
@@ -91,7 +129,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf
 ```
 
-### 如果需要嵌入第三方软件, 或者需要开机自动运行. 则可以使用选项启动, 不需要网页操作, 以remote端举例, 可 --h 查看功能选项:
+### 如果需要嵌入第三方软件, 或者开机自动启动Remote端. 不想再网页操作:
 
 ```
 # windows
@@ -113,49 +151,6 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink --key=a0i7oeRSQvTKYJR0iL50dxXQbExDmHU1kcCr6gotwwsSrLf --remote
 ```
 
-# Local端工作模式介绍
-
-注：该工具默认同时启动TUN直连模式和TUN代理模式
-
-### TUN直连模式
-
-    Local端会创建一个虚拟网卡, 因此需要管理员权限运行。连接成功后，界面会显示: Remote端IP (192.17.19.1)
-
-    支持TCP和UDP连接
-
-    连接成功后，访问192.17.19.1，就等于访问Remote端
-
-    举例: 在Local端打开 windows 远程桌面, 填写: 192.17.19.1:13389, 即可访问Remote端的远程桌面
-
-### TUN代理模式
-
-    可利用Remote端做代理跳板, 访问Remote端所有的网络资源
-
-    连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口固定: 1080):
-    socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
-
-### 本地代理模式（适合极客, 该模式下，TUN直连模式、TUN代理模式不会启动）
-
-    可利用Remote端做代理跳板, 访问Remote端所有的网络资源
-
-    适用于无法创建虚拟网卡的环境（如MacOS、Docker、无管理员权限等），或同一主机有多个Local端的场景（虚拟网卡不能创建多个）
-
-    通过网页 UI 选择「转发模式」，添加 TCP 规则即可（等价于本地代理）:
-    本地地址:端口 -> Remote端 127.0.0.1:1080，例如: 0.0.0.0:1080 -> 127.0.0.1:1080
-    配置会写入 goodlink.json，连接成功后无需命令行参数
-
-    连接成功后，在本机配置代理即可使用(仅支持TCP代理, 端口可自定义):
-    socks5://127.0.0.1:1080 或 http://127.0.0.1:1080
-
-### 本地转发模式（适合极客, 该模式下，TUN直连模式、TUN代理模式不会启动）
-
-    在本地代理模式的基础上，适用于不支持代理方式访问的场景, 比如有些APP不支持通过代理
-
-    通过网页 UI 选择「转发模式」配置端口映射，规则持久化到 goodlink.json
-    连接成功后，在Local端访问本地指定端口等于在Remote端访问指定地址和端口
-    例如: TCP 0.0.0.0:22 -> 127.0.0.1:22，访问本地22端口等同于在Remote端访问SSH
-
-    代理与端口转发可同时配置多条规则，修改后点击确认即可热更新，无需重新连接
 
 ## 💬 交流方式
 
