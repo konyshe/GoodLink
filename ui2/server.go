@@ -14,13 +14,13 @@ import (
 //go:embed web
 var webFS embed.FS
 
-const defaultUIAddr = "127.0.0.1:16780"
+const defaultUIAddr = "0.0.0.0:16780"
 
 func StartServer() (string, error) {
 	ln, err := net.Listen("tcp", defaultUIAddr)
 	if err != nil {
 		// 固定端口占用时回退到随机端口
-		ln, err = net.Listen("tcp", "127.0.0.1:0")
+		ln, err = net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
 			return "", err
 		}
