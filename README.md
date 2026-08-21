@@ -42,8 +42,6 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 5. TUN模式如果无法连接windows远程桌面，可在IP后面加上 :13389，再尝试连接
 
-6. 以下说明仅针对 v3.0.0 以上版本
-
 ## 📡 NAT兼容清单
 
 | Remote端NAT | Local端NAT | P2P连接 | 说明 |
@@ -115,7 +113,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 # 高阶使用, 跨平台, 嵌入第三方软件
 
-### 该程序还支持 Windows, Linux, MacOS, Docker
+### 该程序还支持 Linux, MacOS, Docker
 
 ```
 # MacOS
@@ -132,7 +130,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.aliyuncs.com/kony/goodlink
 ```
 
-### 如果需要嵌入第三方软件, 或者开机自动启动Remote端. 不想再网页操作:
+### 如果想直接启动Remote端, 无需再网页操作:
 
 ```
 # windows
