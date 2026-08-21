@@ -8,27 +8,29 @@ import (
 )
 
 // TunKeyByteLen 连接密钥固定字节长度（Local/Remote 必须一致）
-const TunKeyByteLen = 48
+const (
+	TunKeyByteLen              = 48
+	Arg_p2p_timeout            = 15  // 最大连接超时
+	Arg_conn_active_n0         = 256 // active n0
+	Arg_conn_active_n1         = 4   // active n1
+	Arg_conn_active_send_time  = 7   // active send time
+	Arg_conn_passive_send_time = 2   // passive send time
+)
 
 var (
-	Arg_pprof_addr             string
-	Arg_tun_local              *bool
-	Arg_tun_remote             *bool
-	Arg_redis_addr             string
-	Arg_redis_tls_addr         string
-	Arg_redis_pass             string
-	Arg_redis_id               int
-	Arg_tun_key                string
-	Arg_stun_test              *bool
-	Arg_p2p_timeout            int
-	Arg_conn_type              int
-	Arg_conn_active_n0         int
-	Arg_conn_active_n1         int
-	Arg_conn_active_send_time  int
-	Arg_conn_passive_send_time int
-	Arg_ui                     *bool
-	Arg_stun_svr_ip            string
-	Arg_stun_svr_port          int
+	Arg_pprof_addr     string
+	Arg_tun_local      *bool
+	Arg_tun_remote     *bool
+	Arg_redis_addr     string
+	Arg_redis_tls_addr string
+	Arg_redis_pass     string
+	Arg_redis_id       int
+	Arg_tun_key        string
+	Arg_stun_test      *bool
+	Arg_conn_type      int
+	Arg_ui             *bool
+	Arg_stun_svr_ip    string
+	Arg_stun_svr_port  int
 )
 
 func Help() {
@@ -49,12 +51,6 @@ func Help() {
 	Arg_tun_local = flag.Bool("local", false, "启动Local端")
 	Arg_tun_remote = flag.Bool("remote", false, "启动Remote端")
 	flag.StringVar(&Arg_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
-
-	flag.IntVar(&Arg_p2p_timeout, "time_out", 15, "最大连接超时, 单位: 秒")
-	flag.IntVar(&Arg_conn_active_n0, "a0", 256, "active n0")
-	flag.IntVar(&Arg_conn_active_n1, "a1", 4, "active n1")
-	flag.IntVar(&Arg_conn_active_send_time, "ast", 7, "active send time")
-	flag.IntVar(&Arg_conn_passive_send_time, "pst", 2, "passive send time")
 
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")
