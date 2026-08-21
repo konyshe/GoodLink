@@ -36,7 +36,6 @@ func Help() {
 
 	Arg_ui = flag.Bool("ui", false, "由UI启动, 从 goodlink.json 读取并监听转发配置")
 
-	Arg_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
 	flag.StringVar(&Arg_pprof_addr, "pprof_addr", "", "如果CPU/内存/网络异常, 可监测运行, 例如: 0.0.0.0:6060")
 
 	flag.StringVar(&Arg_stun_svr_ip, "stun_svr_ip", "", "STUN服务IP地址")
@@ -45,6 +44,7 @@ func Help() {
 	flag.StringVar(&Arg_redis_tls_addr, "redis_tls_addr", "", "Redis服务TLS地址, 例如: 1.2.3.4:16378")
 	flag.StringVar(&Arg_redis_pass, "redis_pass", "", "Redis服务密码, 例如: 123456")
 	flag.IntVar(&Arg_redis_id, "redis_id", 15, "Redis服务可使用的表ID")
+	Arg_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
 
 	Arg_tun_local = flag.Bool("local", false, "启动Local端")
 	Arg_tun_remote = flag.Bool("remote", false, "启动Remote端")
