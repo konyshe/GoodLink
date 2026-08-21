@@ -24,7 +24,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 
 	redisJson.RemoteVersion = config.GetVersion()
 	redisJson.State = 1
-	redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
+	redisJson.SocketTimeOut = time.Duration(tun.Arg_p2p_timeout) * time.Second
 	redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 
 	// 版本兼容性检查（主版本.次版本一致即可）
@@ -49,7 +49,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		*conn_type = 0
 		log.Printf("会话 %s Local端未发来IP，使用主动连接", sessionID)
 
-		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
 		*tun_active_chain = (*tun_active).GetChain()
 
 		redisJson.SendPortCount = 0x100
@@ -58,7 +58,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		log.Printf("会话 %s Local端有发来IP: %v，使用被动连接", sessionID, redisJson.LocalAddr)
 		*conn_type = 1
 
-		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
 		(*tun_passive).Start()
 
 		*tun_passive_chain = (*tun_passive).GetChain()
@@ -106,7 +106,7 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 		}
 		return false, nil
 
-	case <-time.After(time.Duration(config.Arg_p2p_timeout) * time.Second):
+	case <-time.After(time.Duration(tun.Arg_p2p_timeout) * time.Second):
 		redisJson.State = 4
 		log.Printf("会话 %s State 2 -> State 4: Local端连接超时", sessionID)
 		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
@@ -168,7 +168,7 @@ func processSession(redisJson *RedisJsonType) {
 		}
 
 		redisJson.RemoteVersion = config.GetVersion()
-		redisJson.SocketTimeOut = time.Duration(config.Arg_p2p_timeout) * time.Second
+		redisJson.SocketTimeOut = time.Duration(tun.Arg_p2p_timeout) * time.Second
 		redisJson.RedisTimeOut = redisJson.SocketTimeOut * 3
 
 		// 根据状态进行处理

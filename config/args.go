@@ -9,12 +9,7 @@ import (
 
 // TunKeyByteLen 连接密钥固定字节长度（Local/Remote 必须一致）
 const (
-	TunKeyByteLen              = 48
-	Arg_p2p_timeout            = 15  // 最大连接超时
-	Arg_conn_active_n0         = 256 // active n0
-	Arg_conn_active_n1         = 4   // active n1
-	Arg_conn_active_send_time  = 7   // active send time
-	Arg_conn_passive_send_time = 2   // passive send time
+	TunKeyByteLen = 48
 )
 
 var (

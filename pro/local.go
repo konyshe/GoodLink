@@ -96,7 +96,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 
 		redisJson.LocalAddr = *addr
 
-		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(config.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
 		(*tun_passive).Start()
 
 		redisJson.State = 2
@@ -110,7 +110,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 		}
 		*tun_passive = nil
 
-		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(config.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
 		(*tun_active).Start()
 
 		redisJson.State = 2
