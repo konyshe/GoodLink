@@ -5,6 +5,7 @@ import (
 	"go2"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"goodlink/config"
@@ -89,4 +90,48 @@ func GenerateKey() string {
 	stateMu.Unlock()
 	broadcastState()
 	return key
+}
+
+func currentUIConfig() config.UIConfig {
+	return config.UIConfig{
+		WorkType:     GetWorkType(),
+		TunKey:       getTunKey(),
+		LocalMode:    getLocalMode(),
+		ForwardRules: getForwardRules(),
+	}
+}
+
+func HandleImportConfig(cfg config.UIConfig) error {
+	if !othersEnabled() {
+		return fmt.Errorf("busy")
+	}
+
+	wt := strings.TrimSpace(cfg.WorkType)
+	if wt == "" {
+		wt = workTypeLocal
+	}
+	if wt != workTypeLocal && wt != workTypeRemote {
+		return fmt.Errorf("无效的工作端侧: %s", wt)
+	}
+
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return err
+	}
+
+	tunKey := cfg.TunKey
+	if len(tunKey) == 0 {
+		tunKey = string(go2.RandomBytes(config.TunKeyByteLen))
+		log.Println("自动生成密钥:", tunKey)
+	}
+
+	setWorkTypeAndKey(wt, tunKey)
+	if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
+		return err
+	}
+	if err := saveConfig(); err != nil {
+		return err
+	}
+	broadcastState()
+	UILogPrintF("已导入配置")
+	return nil
 }

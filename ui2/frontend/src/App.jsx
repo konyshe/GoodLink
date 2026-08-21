@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyForwards, generateKey, start, stop } from "./api";
+import { applyForwards, generateKey, importConfig, start, stop } from "./api";
 import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
@@ -62,6 +62,7 @@ export default function App() {
   const [conflictHint, setConflictHint] = useState("");
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const logRef = useRef(null);
 
   useEffect(() => {
@@ -123,6 +124,57 @@ export default function App() {
     } catch (_) { }
   }
 
+  function onExportConfig() {
+    const cfg = {
+      work_type: workType,
+      tun_key: tunKey || "",
+      local_mode: localMode || "tun",
+      forward_rules: rulesFromRows(rows),
+    };
+    const blob = new Blob([JSON.stringify(cfg, null, 2) + "\n"], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "goodlink.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function onImportClick() {
+    if (!othersEnabled) return;
+    fileInputRef.current?.click();
+  }
+
+  async function onImportFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setFormError("");
+    setConflictHint("");
+    let cfg;
+    try {
+      cfg = JSON.parse(await file.text());
+    } catch (_) {
+      setFormError("配置文件格式错误");
+      return;
+    }
+    const result = await importConfig(cfg);
+    if (result.error) {
+      setFormError(result.error);
+      return;
+    }
+    const next = result.state || {};
+    const nextWorkType = next.workType || "Local";
+    const nextLocalMode = next.localMode || "tun";
+    setWorkType(nextWorkType);
+    setTunKey(next.tunKey || "");
+    setLocalMode(nextLocalMode);
+    setRows(rowsFromRules(next.forwardRules));
+    if (needsAdminHint(nextWorkType, nextLocalMode, state?.isAdmin)) {
+      setAdminHint(true);
+    }
+  }
+
   async function onConfirm() {
     if (!mappingEnabled) return;
     setFormError("");
@@ -176,10 +228,14 @@ export default function App() {
     tunKey,
     setTunKey,
     keyInputRef,
+    fileInputRef,
     othersEnabled,
     onGenerate,
     onCopy,
     onPaste,
+    onExportConfig,
+    onImportClick,
+    onImportFile,
   };
 
   return (

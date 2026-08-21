@@ -39,3 +39,16 @@ export async function fetchState() {
   const resp = await fetch("/api/state", { cache: "no-store" });
   return resp;
 }
+
+export async function importConfig(cfg) {
+  const resp = await fetch("/api/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    return { error: data.error || "导入失败" };
+  }
+  return { error: null, state: data };
+}

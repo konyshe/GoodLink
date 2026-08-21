@@ -50,10 +50,14 @@ export default function LocalPanel({
   tunKey,
   setTunKey,
   keyInputRef,
+  fileInputRef,
   othersEnabled,
   onGenerate,
   onCopy,
   onPaste,
+  onExportConfig,
+  onImportClick,
+  onImportFile,
   localMode,
   setLocalMode,
   rows,
@@ -87,10 +91,14 @@ export default function LocalPanel({
         tunKey={tunKey}
         setTunKey={setTunKey}
         keyInputRef={keyInputRef}
+        fileInputRef={fileInputRef}
         othersEnabled={othersEnabled}
         onGenerate={onGenerate}
         onCopy={onCopy}
         onPaste={onPaste}
+        onExportConfig={onExportConfig}
+        onImportClick={onImportClick}
+        onImportFile={onImportFile}
       />
 
       <section className="row">

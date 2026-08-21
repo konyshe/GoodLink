@@ -1,4 +1,16 @@
-export default function KeySection({ tunKey, setTunKey, keyInputRef, othersEnabled, onGenerate, onCopy, onPaste }) {
+export default function KeySection({
+  tunKey,
+  setTunKey,
+  keyInputRef,
+  fileInputRef,
+  othersEnabled,
+  onGenerate,
+  onCopy,
+  onPaste,
+  onExportConfig,
+  onImportClick,
+  onImportFile,
+}) {
   return (
     <>
       <section className="row">
@@ -20,6 +32,18 @@ export default function KeySection({ tunKey, setTunKey, keyInputRef, othersEnabl
         <button type="button" disabled={!othersEnabled} onClick={onGenerate}>生成密钥</button>
         <button type="button" onClick={onCopy}>复制密钥</button>
         <button type="button" disabled={!othersEnabled} onClick={onPaste}>粘贴密钥</button>
+      </section>
+
+      <section className="key-actions config-actions">
+        <button type="button" onClick={onExportConfig}>导出配置</button>
+        <button type="button" disabled={!othersEnabled} onClick={onImportClick}>导入配置</button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={onImportFile}
+        />
       </section>
     </>
   );

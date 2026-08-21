@@ -180,6 +180,10 @@ body,
   gap: 10px;
 }
 
+.config-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
 .key-actions button {
   padding: 8px 10px;
   border: 0;
