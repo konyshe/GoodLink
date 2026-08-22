@@ -20,6 +20,9 @@ fi
 
 make clean
 
+rm -rf ui2/web
+make ui
+
 BUILD_TIME=$(date +'%Y%m%d%H%M')
 sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
 
