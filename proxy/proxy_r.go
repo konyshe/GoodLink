@@ -38,11 +38,11 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 	}
 
 	// 在释放缓冲区前提取所有需要的数据
-	protocolType := headerBuf[0]
-	remoteIP := headerBuf[1:5]
-	remotePort := binary.BigEndian.Uint16(headerBuf[5:HEAD_LEN])
+	protocolType := headerBuf[0]                                 // 传输协议类型
+	remoteIP := headerBuf[1:5]                                   // 远程IP地址
+	remotePort := binary.BigEndian.Uint16(headerBuf[5:HEAD_LEN]) // 远程端口号
 
-	switch protocolType {
+	switch protocolType { // 根据传输协议类型处理
 	case 0x00: // TCP
 		switch remotePort {
 		case PROXY_PORT:
