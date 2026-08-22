@@ -3,7 +3,7 @@ package config
 import "strings"
 
 var (
-	version = "3.0.0"
+	version = "3.0.1"
 )
 
 func GetVersion() string {
