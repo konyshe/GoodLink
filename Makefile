@@ -107,7 +107,7 @@ rm_nac:
 	rm -rf nac.syso
 
 strip:
-	upx $(BINDIR)/*
+	-upx $(BINDIR)/*
 
 clean:
 	rm -rf $(BINDIR) *.exe
