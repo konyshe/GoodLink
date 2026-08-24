@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
+
 rm -rf goodlink-windows-amd64 goodlink-windows-amd64.zip bin
 
 make clean
@@ -14,7 +20,46 @@ cd ..
 rm -rf bin
 
 make clean
-make linux
+
+# Linux 在 glibc 2.17 容器中编译，不改动宿主机 glibc / gcc / go
+if ! command -v docker >/dev/null 2>&1; then
+    echo "需要 docker 或 podman，以便在隔离环境中使用 glibc 2.17 编译 Linux 产物" >&2
+    exit 1
+fi
+
+GO_VERSION="$(awk '/^go /{print $2; exit}' go.mod)"
+IMAGE="localhost/goodlink-builder-glibc217:go${GO_VERSION}"
+BASE_IMAGE="${GLIBC217_BASE_IMAGE:-docker.m.daocloud.io/library/centos:7}"
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "构建 glibc 2.17 编译镜像: $IMAGE"
+    docker build \
+        --build-arg "GO_VERSION=${GO_VERSION}" \
+        --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+        -t "$IMAGE" \
+        -f "$ROOT/Dockerfile.glibc217" \
+        "$ROOT"
+fi
+
+PARENT="$(dirname "$ROOT")"
+docker run --rm \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
+    -e GOPROXY="${GOPROXY:-https://goproxy.cn,direct}" \
+    -e GO111MODULE=on \
+    -e GOTOOLCHAIN=local \
+    -e GOCACHE=/tmp/go-build \
+    -e GOMODCACHE=/tmp/go-mod \
+    -v "$PARENT":/src \
+    -w /src/goodlink \
+    "$IMAGE" \
+    make linux-build
+
+if command -v objdump >/dev/null 2>&1 && [ -f bin/goodlink-linux-amd64 ]; then
+    echo "goodlink-linux-amd64 依赖的 GLIBC 符号:"
+    objdump -T bin/goodlink-linux-amd64 | grep -oE 'GLIBC_[0-9.]+' | sort -Vu || true
+fi
+
 make macos
 cd bin
 
