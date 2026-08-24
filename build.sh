@@ -29,7 +29,7 @@ sed -i "/111111111111/s/111111111111/$BUILD_TIME/g" Dockerfile
 docker rmi dev/goodlink:latest -f
 docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
 
-rm -rf go2 proxy2 goroutine-pool upx
+rm -rf go2 proxy2 goroutine-pool upx goodlink3
 
 sed -i "/$BUILD_TIME/s/$BUILD_TIME/111111111111/g" Dockerfile
 
