@@ -2,12 +2,8 @@ package config
 
 import "strings"
 
-var (
-	version = "3.0.2"
-)
-
 func GetVersion() string {
-	return version
+	return "3.0.2"
 }
 
 // VersionsCompatible reports whether two X.Y.Z style version strings are
