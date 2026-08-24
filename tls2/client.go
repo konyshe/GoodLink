@@ -5,8 +5,6 @@ import (
 )
 
 func GetClientTLSConfig() *tls.Config {
-	return &tls.Config{
-		InsecureSkipVerify: true,
-		NextProtos:         []string{"goodlink"},
-	}
+	initOnce.Do(initTLSConfigs)
+	return clientConfig
 }
