@@ -279,20 +279,20 @@ export default function App() {
           <div className="work-type work-type-sm">
             <button
               type="button"
-              className={"work-btn" + (transport === "quic" ? " active" : "")}
-              disabled={!othersEnabled}
-              onClick={() => setTransport("quic")}
-            >
-              QUIC(二次加密, 传输稳定, 适合企业)
-            </button>
-            <span className="vsep"></span>
-            <button
-              type="button"
               className={"work-btn" + (transport === "kcp" ? " active" : "")}
               disabled={!othersEnabled}
               onClick={() => setTransport("kcp")}
             >
               KCP(CPU降低40%, 响应提升30%, 适合个人)
+            </button>
+            <span className="vsep"></span>
+            <button
+              type="button"
+              className={"work-btn" + (transport === "quic" ? " active" : "")}
+              disabled={!othersEnabled}
+              onClick={() => setTransport("quic")}
+            >
+              QUIC(二次加密, 传输稳定, 适合企业)
             </button>
           </div>
         </section>
