@@ -35,6 +35,9 @@ func Init() {
 		if cfg.LocalMode != config.LocalModeTUN && cfg.LocalMode != config.LocalModeForward {
 			cfg.LocalMode = config.LocalModeTUN
 		}
+		if cfg.Transport != config.TransportQUIC && cfg.Transport != config.TransportKCP {
+			cfg.Transport = config.TransportQUIC
+		}
 	}
 
 	// 如果密钥为空，自动生成密钥
@@ -45,11 +48,15 @@ func Init() {
 	if cfg.WorkType == "" {
 		cfg.WorkType = workTypeLocal
 	}
+	if cfg.Transport == "" {
+		cfg.Transport = config.TransportQUIC
+	}
 
 	stateMu.Lock()
 	m_work_type = cfg.WorkType
 	m_tun_key = cfg.TunKey
 	m_local_mode = cfg.LocalMode
+	m_transport = cfg.Transport
 	m_forward_rules = cfg.ForwardRules
 	stateMu.Unlock()
 
@@ -97,6 +104,7 @@ func currentUIConfig() config.UIConfig {
 		WorkType:     GetWorkType(),
 		TunKey:       getTunKey(),
 		LocalMode:    getLocalMode(),
+		Transport:    getTransport(),
 		ForwardRules: getForwardRules(),
 	}
 }
@@ -128,6 +136,7 @@ func HandleImportConfig(cfg config.UIConfig) error {
 	if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
 		return err
 	}
+	setTransport(cfg.Transport)
 	if err := saveConfig(); err != nil {
 		return err
 	}

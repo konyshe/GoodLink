@@ -94,6 +94,7 @@ type RedisJsonType struct {
 	RemoteVersion string        `bson:"remote_version" json:"remote_version"`
 	SessionID     string        `bson:"session_id" json:"session_id"`
 	State         int           `bson:"state" json:"state"`
+	Transport     string        `bson:"transport" json:"transport"`
 	SocketTimeOut time.Duration `bson:"socket_time_out" json:"socket_time_out"`
 	RedisTimeOut  time.Duration `bson:"redis_time_out" json:"redis_time_out"`
 	SendPortCount int           `bson:"send_port_count" json:"send_port_count"`

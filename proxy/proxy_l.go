@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	go2pool "go2/pool"
+	"goodlink/tls2"
 	"io"
 	"log"
 	"net"
 	"sync"
 	"time"
-
-	"github.com/quic-go/quic-go"
 )
 
 type ForwardRule struct {
@@ -22,7 +21,7 @@ type ForwardRule struct {
 
 // ForwardRunner 本地转发监听器（TCP 或 UDP），隧道重连时通过 SetQuicConn/ClearQuicConn 热替换 QUIC。
 type ForwardRunner interface {
-	SetQuicConn(conn *quic.Conn)
+	SetQuicConn(conn tls2.Conn)
 	ClearQuicConn()
 	SetTarget(ip net.IP, port uint16)
 	ListenAddr() string
@@ -35,16 +34,16 @@ type ForwardRunner interface {
 type ForwardClient struct {
 	listener   net.Listener
 	mu         sync.RWMutex
-	quicConn   *quic.Conn
+	quicConn   tls2.Conn
 	remoteIP   net.IP
 	remotePort uint16
 }
 
-// ForwardUDPClient 管理 UDP 监听：每个入站数据报对应一条 QUIC 流。
+// ForwardUDPClient 管理 UDP 监听：每个入站数据报对应一条隧道流。
 type ForwardUDPClient struct {
 	pc         *net.UDPConn
 	mu         sync.RWMutex
-	quicConn   *quic.Conn
+	quicConn   tls2.Conn
 	remoteIP   net.IP
 	remotePort uint16
 }
@@ -89,7 +88,7 @@ func newForwardRunner(rule ForwardRule) (ForwardRunner, error) {
 	}
 }
 
-func (p *ForwardClient) SetQuicConn(conn *quic.Conn) {
+func (p *ForwardClient) SetQuicConn(conn tls2.Conn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.quicConn = conn
@@ -101,7 +100,7 @@ func (p *ForwardClient) ClearQuicConn() {
 	p.quicConn = nil
 }
 
-func (p *ForwardClient) getQuicConn() *quic.Conn {
+func (p *ForwardClient) getQuicConn() tls2.Conn {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.quicConn
@@ -139,7 +138,7 @@ func (p *ForwardClient) Serve() {
 	}
 }
 
-func (p *ForwardClient) handleConn(tcpConn net.Conn, quicConn *quic.Conn) {
+func (p *ForwardClient) handleConn(tcpConn net.Conn, quicConn tls2.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -185,7 +184,7 @@ func (p *ForwardClient) Close() {
 	}
 }
 
-func (p *ForwardUDPClient) SetQuicConn(conn *quic.Conn) {
+func (p *ForwardUDPClient) SetQuicConn(conn tls2.Conn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.quicConn = conn
@@ -197,7 +196,7 @@ func (p *ForwardUDPClient) ClearQuicConn() {
 	p.quicConn = nil
 }
 
-func (p *ForwardUDPClient) getQuicConn() *quic.Conn {
+func (p *ForwardUDPClient) getQuicConn() tls2.Conn {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.quicConn
@@ -238,7 +237,7 @@ func (p *ForwardUDPClient) Serve() {
 	}
 }
 
-func (p *ForwardUDPClient) handleDatagram(payload []byte, clientAddr net.Addr, quicConn *quic.Conn) {
+func (p *ForwardUDPClient) handleDatagram(payload []byte, clientAddr net.Addr, quicConn tls2.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

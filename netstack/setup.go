@@ -8,9 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"goodlink/tls2"
 	"goodlink/utils"
-
-	"github.com/quic-go/quic-go"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -173,7 +172,7 @@ func rebuildStack() {
 	log.Printf("[netstack] 协议栈重建成功")
 }
 
-func SetForWarder(stun_quic_conn *quic.Conn) {
+func SetForWarder(stun_quic_conn tls2.Conn) {
 	mu.Lock()
 	defer mu.Unlock()
 

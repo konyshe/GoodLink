@@ -52,7 +52,7 @@ func parseStatusMessage(line string) (string, bool) {
 	}
 	// 提取状态值（去除前缀后的内容，可能包含空格）
 	status := strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):])
-	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning || status == pro.TagStatusConnectingNAT4 || status == pro.TagStatusVersionMismatch || status == pro.TagStatusNeedAdmin {
+	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning || status == pro.TagStatusConnectingNAT4 || status == pro.TagStatusVersionMismatch || status == pro.TagStatusTransportMismatch || status == pro.TagStatusNeedAdmin {
 		return status, true
 	}
 	return "", false
@@ -89,6 +89,15 @@ func updateConnectionStatus(status string) {
 			m_start_button_lock.Unlock()
 			go func() {
 				time.Sleep(500 * time.Millisecond) // 短暂延迟，确保日志已输出
+				StopCmdProcess()
+			}()
+		case pro.TagStatusTransportMismatch:
+			// 传输协议不一致，禁用自动重启并停止进程
+			m_start_button_lock.Lock()
+			m_auto_restart_enabled = false
+			m_start_button_lock.Unlock()
+			go func() {
+				time.Sleep(500 * time.Millisecond)
 				StopCmdProcess()
 			}()
 		case pro.TagStatusNeedAdmin:
@@ -176,6 +185,7 @@ func saveConfig() error {
 		WorkType:     GetWorkType(),
 		TunKey:       getTunKey(),
 		LocalMode:    getLocalMode(),
+		Transport:    getTransport(),
 		ForwardRules: getForwardRules(),
 	}
 	log.Println(cfg)
@@ -221,7 +231,7 @@ func HandleForwards(localMode string, rules []config.UIForwardRule) error {
 	return nil
 }
 
-func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRule) error {
+func HandleStart(workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
 	m_start_button_lock.Lock()
 	defer m_start_button_lock.Unlock()
 
@@ -238,6 +248,7 @@ func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRul
 
 	cfg := config.UIConfig{
 		LocalMode:    localMode,
+		Transport:    transport,
 		ForwardRules: rules,
 	}
 	if err := config.NormalizeAndValidate(&cfg); err != nil {
@@ -257,6 +268,7 @@ func HandleStart(workType, tunKey, localMode string, rules []config.UIForwardRul
 	if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
 		return err
 	}
+	setTransport(cfg.Transport)
 	if err := saveConfig(); err != nil {
 		return err
 	}

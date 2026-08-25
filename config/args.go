@@ -26,6 +26,7 @@ var (
 	Arg_ui             *bool
 	Arg_stun_svr_ip    string
 	Arg_stun_svr_port  int
+	Arg_transport      string
 )
 
 func Help() {
@@ -46,11 +47,18 @@ func Help() {
 	Arg_tun_local = flag.Bool("local", false, "启动Local端")
 	Arg_tun_remote = flag.Bool("remote", false, "启动Remote端")
 	flag.StringVar(&Arg_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
+	flag.StringVar(&Arg_transport, "transport", TransportQUIC, "传输协议: quic 或 kcp")
 
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")
 
 	flag.Parse()
+
+	Arg_transport = NormalizeTransport(Arg_transport)
+	if Arg_transport != TransportQUIC && Arg_transport != TransportKCP {
+		fmt.Printf("无效的传输协议: %s（仅支持 quic 或 kcp）\n", Arg_transport)
+		os.Exit(1)
+	}
 
 	if *v {
 		fmt.Printf("Version: %s\n", GetVersion())

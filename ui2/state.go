@@ -66,6 +66,7 @@ type UIState struct {
 	WorkType     string                 `json:"workType"`
 	TunKey       string                 `json:"tunKey"`
 	LocalMode    string                 `json:"localMode"`
+	Transport    string                 `json:"transport"`
 	ForwardRules []config.UIForwardRule `json:"forwardRules"`
 	IsAdmin      bool                   `json:"isAdmin"`
 	Button       ButtonInfo             `json:"button"`
@@ -156,6 +157,7 @@ var (
 	m_work_type     string
 	m_tun_key       string
 	m_local_mode    string
+	m_transport     string
 	m_forward_rules []config.UIForwardRule
 	currentButton   buttonState
 	m_nat           = NATInfo{Text: "正在检测当前网络环境..."}
@@ -224,6 +226,10 @@ func snapshot(includeLogs bool) UIState {
 	if localMode == "" {
 		localMode = config.LocalModeTUN
 	}
+	transport := m_transport
+	if transport == "" {
+		transport = config.TransportQUIC
+	}
 	rules := make([]config.UIForwardRule, len(m_forward_rules))
 	copy(rules, m_forward_rules)
 	st := UIState{
@@ -231,6 +237,7 @@ func snapshot(includeLogs bool) UIState {
 		WorkType:     m_work_type,
 		TunKey:       m_tun_key,
 		LocalMode:    localMode,
+		Transport:    transport,
 		ForwardRules: rules,
 		IsAdmin:      utils.IsAdmin(),
 		Button: ButtonInfo{
@@ -336,6 +343,15 @@ func getLocalMode() string {
 	return m_local_mode
 }
 
+func getTransport() string {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	if m_transport == "" {
+		return config.TransportQUIC
+	}
+	return m_transport
+}
+
 func getForwardRules() []config.UIForwardRule {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
@@ -368,6 +384,16 @@ func setLocalModeAndRules(localMode string, rules []config.UIForwardRule) error 
 	m_forward_rules = cfg.ForwardRules
 	stateMu.Unlock()
 	return nil
+}
+
+func setTransport(transport string) {
+	transport = config.NormalizeTransport(transport)
+	if transport != config.TransportQUIC && transport != config.TransportKCP {
+		transport = config.TransportQUIC
+	}
+	stateMu.Lock()
+	m_transport = transport
+	stateMu.Unlock()
 }
 
 // SetNATHint 根据 STUN 检测结果显示 NAT 类型提示

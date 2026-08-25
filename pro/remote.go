@@ -4,13 +4,12 @@ import (
 	"errors"
 	"goodlink/config"
 	"goodlink/proxy"
+	"goodlink/tls2"
 	"goodlink/tun"
 	"log"
 	"net"
 	"sync"
 	"time"
-
-	"github.com/quic-go/quic-go"
 )
 
 var (
@@ -19,7 +18,7 @@ var (
 )
 
 // handleState1_SendRemoteAddr 处理 State 1: 发送 Remote 端地址，创建 TUN 连接
-func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun_active **tun.TunActive, tun_passive **tun.TunPassive, udp_conn **net.UDPConn, conn_type *int, tun_active_chain *chan *quic.Conn, tun_passive_chain *chan *quic.Conn) error {
+func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun_active **tun.TunActive, tun_passive **tun.TunPassive, udp_conn **net.UDPConn, conn_type *int, tun_active_chain *chan tls2.Conn, tun_passive_chain *chan tls2.Conn) error {
 	log.Printf("会话 %s State 1: 发送Remote端地址", sessionID)
 
 	redisJson.RemoteVersion = config.GetVersion()
@@ -35,6 +34,16 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		return errors.New("两端版本不兼容")
 	}
 
+	localTransport := config.NormalizeTransport(redisJson.Transport)
+	remoteTransport := config.GetTransport()
+	if localTransport != remoteTransport {
+		log.Printf("会话 %s 两端传输协议不一致: Local: %s => Remote: %s", sessionID, localTransport, remoteTransport)
+		redisJson.State = -2
+		RedisSessionSet(sessionID, redisJson.SocketTimeOut*3, redisJson)
+		return errors.New("两端传输协议不一致")
+	}
+	log.Printf("会话 %s 传输协议: %s", sessionID, remoteTransport)
+
 	// 获取 UDP 地址
 	*udp_conn, redisJson.RemoteAddr = GetUDPAddr()
 	if redisJson.RemoteAddr.WanPort1 == redisJson.RemoteAddr.WanPort2 {
@@ -49,7 +58,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		*conn_type = 0
 		log.Printf("会话 %s Local端未发来IP，使用主动连接", sessionID)
 
-		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
 		*tun_active_chain = (*tun_active).GetChain()
 
 		redisJson.SendPortCount = 0x100
@@ -58,7 +67,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		log.Printf("会话 %s Local端有发来IP: %v，使用被动连接", sessionID, redisJson.LocalAddr)
 		*conn_type = 1
 
-		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
 		(*tun_passive).Start()
 
 		*tun_passive_chain = (*tun_passive).GetChain()
@@ -72,7 +81,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 }
 
 // handleState2_WaitConnection 处理 State 2: 等待连接建立
-func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, conn_type int, tun_active *tun.TunActive, tun_passive *tun.TunPassive, tun_active_chain chan *quic.Conn, tun_passive_chain chan *quic.Conn) (bool, error) {
+func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, conn_type int, tun_active *tun.TunActive, tun_passive *tun.TunPassive, tun_active_chain chan tls2.Conn, tun_passive_chain chan tls2.Conn) (bool, error) {
 	log.Printf("会话 %s State 2: 等待连接建立", sessionID)
 
 	switch conn_type {
@@ -92,7 +101,7 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 		redisJson.State = 3
 		log.Printf("会话 %s State 2 -> State 3: Local端被动连接成功", sessionID)
 		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
-		if tun_active != nil && tun_active.TunQuicConn != nil {
+		if tun_active != nil && tun_active.TunConn != nil {
 			return true, nil
 		}
 		return false, nil
@@ -101,7 +110,7 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 		redisJson.State = 3
 		log.Printf("会话 %s State 2 -> State 3: Local端主动连接成功", sessionID)
 		RedisSessionSet(sessionID, redisJson.RedisTimeOut, redisJson)
-		if tun_passive != nil && tun_passive.TunQuicConn != nil {
+		if tun_passive != nil && tun_passive.TunConn != nil {
 			return true, nil
 		}
 		return false, nil
@@ -118,12 +127,12 @@ func handleState2_WaitConnection(sessionID string, redisJson *RedisJsonType, con
 func handleRemoteState3_ConnectionSuccess(sessionID string, tun_active *tun.TunActive, tun_passive *tun.TunPassive) {
 	log.Printf("会话 %s State 3: 连接成功", sessionID)
 
-	if tun_active != nil && tun_active.TunQuicConn != nil {
+	if tun_active != nil && tun_active.TunConn != nil {
 		// 连接成功，启动代理和健康检查
-		handleConnection(sessionID, tun_active.TunQuicConn, tun_active.TunHealthStream)
-	} else if tun_passive != nil && tun_passive.TunQuicConn != nil {
+		handleConnection(sessionID, tun_active.TunConn, tun_active.TunHealthStream)
+	} else if tun_passive != nil && tun_passive.TunConn != nil {
 		// 连接成功，启动代理和健康检查
-		handleConnection(sessionID, tun_passive.TunQuicConn, tun_passive.TunHealthStream)
+		handleConnection(sessionID, tun_passive.TunConn, tun_passive.TunHealthStream)
 	}
 }
 
@@ -142,8 +151,8 @@ func processSession(redisJson *RedisJsonType) {
 
 	conn_type := 0 // 主动连接
 
-	var tun_active_chain chan *quic.Conn
-	var tun_passive_chain chan *quic.Conn
+	var tun_active_chain chan tls2.Conn
+	var tun_passive_chain chan tls2.Conn
 
 	defer func() {
 		m_upnp_bind.CleanMappings()
@@ -216,17 +225,20 @@ Release:
 }
 
 // handleConnection 处理已建立的连接
-func handleConnection(sessionID string, quicConn *quic.Conn, healthStream *quic.Stream) {
+func handleConnection(sessionID string, sess tls2.Conn, healthStream tls2.Stream) {
 	log.Printf("开始处理连接: %s", sessionID)
 
 	// 启动代理服务
-	go proxy.ProcessProxyServer(quicConn)
+	go proxy.ProcessProxyServer(sess)
 
 	// 阻塞等待健康检查结束
 	tun.ProcessHealth(healthStream, []byte(sessionID))
 
-	port := quicConn.LocalAddr().(*net.UDPAddr).Port
-	quicConn.CloseWithError(0, "health stopped")
+	port := 0
+	if ua, ok := sess.LocalAddr().(*net.UDPAddr); ok {
+		port = ua.Port
+	}
+	sess.CloseWithError(0, "health stopped")
 
 	m_upnp_bind.RemoveKeepPort(port)
 	m_upnp_bind.DelPortMapping(true, port, "udp")

@@ -5,11 +5,10 @@ import (
 	"encoding/binary"
 	"go2/log"
 	go2pool "go2/pool"
+	"goodlink/tls2"
 	"io"
 	"net"
 	proxy_handle "proxy/handle"
-
-	"github.com/quic-go/quic-go"
 )
 
 const (
@@ -17,7 +16,7 @@ const (
 	PROXY_PORT = 1080
 )
 
-func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
+func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 
 	// 复用头部缓冲区，减少内存分配开销
 	headerBuf := go2pool.Malloc(HEAD_LEN)
@@ -95,13 +94,12 @@ func process_stream(new_quic_stream *quic.Stream, remoteAddrStr string) {
 }
 
 // Remote端
-func ProcessProxyServer(stun_quic_conn *quic.Conn) {
+func ProcessProxyServer(stun_quic_conn tls2.Conn) {
 	proxy_handle.Init()
 	log.Info("开启代理模式")
 
 	// 提前获取并缓存远程地址，避免在 goroutine 中重复调用
-	remoteAddr := stun_quic_conn.RemoteAddr().(*net.UDPAddr)
-	remoteAddrStr := remoteAddr.String()
+	remoteAddrStr := stun_quic_conn.RemoteAddr().String()
 
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())

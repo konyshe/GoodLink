@@ -5,23 +5,22 @@ import (
 	"encoding/binary"
 	go2pool "go2/pool"
 	"goodlink/proxy"
-	"log"
-	"os"
-	"time"
-
-	"github.com/quic-go/quic-go"
+	"goodlink/tls2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/waiter"
+	"log"
+	"os"
+	"time"
 )
 
 const quicOpenStreamTimeout = 10 * time.Second
 
 var LoopBackAddr = [4]byte{127, 0, 0, 1}
 
-func ForwardTCPConn(originConn *TcpConn, stun_quic_conn *quic.Conn) {
+func ForwardTCPConn(originConn *TcpConn, stun_quic_conn tls2.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), quicOpenStreamTimeout)
 	defer cancel()
 
@@ -59,7 +58,7 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn *quic.Conn) {
 	go proxy.ForwardT2Q(originConn, new_quic_stream)
 }
 
-func NewTcpForwarder(s *stack.Stack, stun_quic_conn *quic.Conn) *tcp.Forwarder {
+func NewTcpForwarder(s *stack.Stack, stun_quic_conn tls2.Conn) *tcp.Forwarder {
 	return tcp.NewForwarder(s, 0, 2048, func(r *tcp.ForwarderRequest) {
 		var (
 			wq  waiter.Queue

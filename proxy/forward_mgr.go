@@ -9,8 +9,7 @@ import (
 	"sync"
 
 	"goodlink/config"
-
-	"github.com/quic-go/quic-go"
+	"goodlink/tls2"
 )
 
 type forwardEntry struct {
@@ -26,7 +25,7 @@ type ForwardManager struct {
 	mu      sync.Mutex
 	entries []forwardEntry
 	builtin ForwardRunner
-	quic    *quic.Conn
+	quic    tls2.Conn
 	closed  bool
 }
 
@@ -185,7 +184,7 @@ func (m *ForwardManager) StartBuiltinProxy() (listenAddr string, fallback bool, 
 	return listenAddr, fallback, nil
 }
 
-func (m *ForwardManager) SetQuic(conn *quic.Conn) {
+func (m *ForwardManager) SetQuic(conn tls2.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.closed {
@@ -198,7 +197,7 @@ func (m *ForwardManager) SetQuic(conn *quic.Conn) {
 	}
 }
 
-func setRunnerQuic(runner ForwardRunner, conn *quic.Conn) {
+func setRunnerQuic(runner ForwardRunner, conn tls2.Conn) {
 	if runner == nil {
 		return
 	}

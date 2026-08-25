@@ -5,19 +5,18 @@ import (
 	"encoding/binary"
 	go2pool "go2/pool"
 	"goodlink/proxy"
-	"log"
-	"os"
-
-	"github.com/quic-go/quic-go"
+	"goodlink/tls2"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
+	"log"
+	"os"
 )
 
 const quicOpenStreamTimeoutUDP = quicOpenStreamTimeout
 
-func ForwardUdpConn(originConn *udpConn, stun_quic_conn *quic.Conn) {
+func ForwardUdpConn(originConn *udpConn, stun_quic_conn tls2.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), quicOpenStreamTimeoutUDP)
 	defer cancel()
 
@@ -55,7 +54,7 @@ func ForwardUdpConn(originConn *udpConn, stun_quic_conn *quic.Conn) {
 	go proxy.ForwardT2Q(originConn, new_quic_stream)
 }
 
-func NewUdpForwarder(s *stack.Stack, stun_quic_conn *quic.Conn) *udp.Forwarder {
+func NewUdpForwarder(s *stack.Stack, stun_quic_conn tls2.Conn) *udp.Forwarder {
 	return udp.NewForwarder(s, func(r *udp.ForwarderRequest) bool {
 		var (
 			wq waiter.Queue

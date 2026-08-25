@@ -75,10 +75,11 @@ func handleStart(w http.ResponseWriter, r *http.Request) {
 		WorkType     string                 `json:"workType"`
 		TunKey       string                 `json:"tunKey"`
 		LocalMode    string                 `json:"localMode"`
+		Transport    string                 `json:"transport"`
 		ForwardRules []config.UIForwardRule `json:"forwardRules"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
-	if err := HandleStart(req.WorkType, req.TunKey, req.LocalMode, req.ForwardRules); err != nil {
+	if err := HandleStart(req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
 		code := http.StatusBadRequest
 		if err.Error() == "already started" || err.Error() == "busy" {
 			code = http.StatusConflict

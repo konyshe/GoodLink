@@ -3,13 +3,14 @@ package pro
 import "log"
 
 const (
-	TagStatusPrefix          = "[GOODLINK_STATUS]"
-	TagStatusConnecting      = "connecting"
-	TagStatusConnectingNAT4  = "connecting_nat4"
-	TagStatusConnected       = "connected"
-	TagStatusRunning         = "running"
-	TagStatusVersionMismatch = "version_mismatch"
-	TagStatusNeedAdmin       = "need_admin"
+	TagStatusPrefix            = "[GOODLINK_STATUS]"
+	TagStatusConnecting        = "connecting"
+	TagStatusConnectingNAT4    = "connecting_nat4"
+	TagStatusConnected         = "connected"
+	TagStatusRunning           = "running"
+	TagStatusVersionMismatch   = "version_mismatch"
+	TagStatusTransportMismatch = "transport_mismatch"
+	TagStatusNeedAdmin         = "need_admin"
 
 	TagProxyPrefix = "[GOODLINK_PROXY]"
 )

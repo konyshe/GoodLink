@@ -13,6 +13,8 @@ const (
 	UIConfigFileName = "goodlink.json"
 	LocalModeTUN     = "tun"
 	LocalModeForward = "forward"
+	TransportQUIC    = "quic"
+	TransportKCP     = "kcp"
 )
 
 type UIForwardRule struct {
@@ -25,6 +27,7 @@ type UIConfig struct {
 	WorkType     string          `json:"work_type"`
 	TunKey       string          `json:"tun_key"`
 	LocalMode    string          `json:"local_mode"`
+	Transport    string          `json:"transport"`
 	ForwardRules []UIForwardRule `json:"forward_rules"`
 }
 
@@ -35,6 +38,7 @@ func FromUI() bool {
 func LoadUIConfig(path string) (UIConfig, error) {
 	cfg := UIConfig{
 		LocalMode:    LocalModeTUN,
+		Transport:    TransportQUIC,
 		ForwardRules: []UIForwardRule{},
 	}
 	data, err := os.ReadFile(path)
@@ -52,6 +56,9 @@ func LoadUIConfig(path string) (UIConfig, error) {
 	}
 	if cfg.LocalMode == "" {
 		cfg.LocalMode = LocalModeTUN
+	}
+	if cfg.Transport == "" {
+		cfg.Transport = TransportQUIC
 	}
 	if cfg.ForwardRules == nil {
 		cfg.ForwardRules = []UIForwardRule{}
@@ -80,6 +87,10 @@ func NormalizeAndValidate(cfg *UIConfig) error {
 	}
 	if cfg.LocalMode != LocalModeTUN && cfg.LocalMode != LocalModeForward {
 		return fmt.Errorf("无效的工作模式: %s", cfg.LocalMode)
+	}
+	cfg.Transport = NormalizeTransport(cfg.Transport)
+	if cfg.Transport != TransportQUIC && cfg.Transport != TransportKCP {
+		return fmt.Errorf("无效的传输协议: %s", cfg.Transport)
 	}
 	if cfg.ForwardRules == nil {
 		cfg.ForwardRules = []UIForwardRule{}
@@ -198,4 +209,28 @@ func FormatListenConflicts(conflicts []string) string {
 		return ""
 	}
 	return "本地端口已被占用: " + strings.Join(conflicts, "、")
+}
+
+// NormalizeTransport 空值视为 quic，兼容旧配置。
+func NormalizeTransport(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	if s == "" {
+		return TransportQUIC
+	}
+	return s
+}
+
+// GetTransport --ui 从 goodlink.json 读取，否则用 CLI --transport。
+func GetTransport() string {
+	if FromUI() {
+		cfg, err := LoadUIConfig(UIConfigFileName)
+		if err == nil {
+			_ = NormalizeAndValidate(&cfg)
+			t := NormalizeTransport(cfg.Transport)
+			if t == TransportQUIC || t == TransportKCP {
+				return t
+			}
+		}
+	}
+	return NormalizeTransport(Arg_transport)
 }

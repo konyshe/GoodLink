@@ -56,6 +56,7 @@ export default function App() {
   const [workType, setWorkType] = useState("Local");
   const [tunKey, setTunKey] = useState("");
   const [localMode, setLocalMode] = useState("tun");
+  const [transport, setTransport] = useState("quic");
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
   const [adminHint, setAdminHint] = useState(false);
@@ -71,6 +72,7 @@ export default function App() {
       setWorkType(state.workType || "Local");
       setTunKey(state.tunKey || "");
       setLocalMode(state.localMode || "tun");
+      setTransport(state.transport || "quic");
       setRows(rowsFromRules(state.forwardRules));
       initialized.current = true;
       if (needsAdminHint(state.workType || "Local", state.localMode || "tun", state.isAdmin)) {
@@ -84,6 +86,7 @@ export default function App() {
         setTunKey(state.tunKey || "");
       }
       setLocalMode(state.localMode || "tun");
+      setTransport(state.transport || "quic");
     }
   }, [state]);
 
@@ -129,6 +132,7 @@ export default function App() {
       work_type: workType,
       tun_key: tunKey || "",
       local_mode: localMode || "tun",
+      transport: transport || "quic",
       forward_rules: rulesFromRows(rows),
     };
     const blob = new Blob([JSON.stringify(cfg, null, 2) + "\n"], { type: "application/json;charset=utf-8" });
@@ -169,6 +173,7 @@ export default function App() {
     setWorkType(nextWorkType);
     setTunKey(next.tunKey || "");
     setLocalMode(nextLocalMode);
+    setTransport(next.transport || "quic");
     setRows(rowsFromRules(next.forwardRules));
     if (needsAdminHint(nextWorkType, nextLocalMode, state?.isAdmin)) {
       setAdminHint(true);
@@ -194,7 +199,7 @@ export default function App() {
     if (button.kind === "idle") {
       setFormError("");
       setConflictHint("");
-      const result = await start(workType, tunKey, localMode, rulesFromRows(rows));
+      const result = await start(workType, tunKey, localMode, rulesFromRows(rows), transport);
       if (result.error) {
         if (String(result.error).includes("端口已被占用")) {
           setConflictHint(result.error);
@@ -265,6 +270,29 @@ export default function App() {
               onClick={() => setWorkType("Remote")}
             >
               Remote端(被连接服务端)
+            </button>
+          </div>
+        </section>
+
+        <section className="row">
+          <span className="label">传输协议:</span>
+          <div className="work-type work-type-sm">
+            <button
+              type="button"
+              className={"work-btn" + (transport === "quic" ? " active" : "")}
+              disabled={!othersEnabled}
+              onClick={() => setTransport("quic")}
+            >
+              QUIC(加密稳定)
+            </button>
+            <span className="vsep"></span>
+            <button
+              type="button"
+              className={"work-btn" + (transport === "kcp" ? " active" : "")}
+              disabled={!othersEnabled}
+              onClick={() => setTransport("kcp")}
+            >
+              KCP(明文更快)
             </button>
           </div>
         </section>

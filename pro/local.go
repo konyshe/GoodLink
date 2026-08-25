@@ -7,14 +7,13 @@ import (
 	"goodlink/config"
 	"goodlink/netstack"
 	"goodlink/proxy"
+	"goodlink/tls2"
 	"goodlink/tun"
 	"log"
 	"net"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/quic-go/quic-go"
 )
 
 var (
@@ -96,7 +95,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 
 		redisJson.LocalAddr = *addr
 
-		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
 		(*tun_passive).Start()
 
 		redisJson.State = 2
@@ -110,7 +109,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 		}
 		*tun_passive = nil
 
-		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind)
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
 		(*tun_active).Start()
 
 		redisJson.State = 2
@@ -122,19 +121,19 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 }
 
 // handleLocalState3_ConnectionSuccess 处理 Local 端 State 3: 连接成功
-func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive *tun.TunPassive) (*quic.Conn, *quic.Stream, bool) {
+func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive *tun.TunPassive) (tls2.Conn, tls2.Stream, bool) {
 	log.Printf("State 3: 连接成功")
 
-	if tun_passive != nil && tun_passive.TunQuicConn != nil {
+	if tun_passive != nil && tun_passive.TunConn != nil {
 		UpdateStartButtonStatue(TagStatusConnected)
-		return tun_passive.TunQuicConn, tun_passive.TunHealthStream, true
+		return tun_passive.TunConn, tun_passive.TunHealthStream, true
 	}
-	if tun_active != nil && tun_active.TunQuicConn != nil {
+	if tun_active != nil && tun_active.TunConn != nil {
 		UpdateStartButtonStatue(TagStatusConnected)
-		return tun_active.TunQuicConn, tun_active.TunHealthStream, true
+		return tun_active.TunConn, tun_active.TunHealthStream, true
 	}
 
-	log.Println("连接失败: TUN连接已建立但QUIC连接为空")
+	log.Println("连接失败: TUN连接已建立但会话为空")
 	return nil, nil, false
 }
 
@@ -143,7 +142,7 @@ func handleLocalState4_ConnectionTimeout() {
 	log.Printf("State 4: 连接超时")
 }
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, *quic.Conn, *quic.Stream, []byte, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, tls2.Conn, tls2.Stream, []byte, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
@@ -156,7 +155,9 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		State:        0,
 		SessionID:    SessionID,
 		ConnectCount: count,
+		Transport:    config.GetTransport(),
 	}
+	log.Printf("传输协议: %s", redisJson.Transport)
 
 	conn_type := 0 // 被动连接
 	if addr.WanPort1 == addr.WanPort2 {
@@ -190,6 +191,11 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 			UpdateStartButtonStatue(TagStatusVersionMismatch)
 			RedisSessionDel(SessionID)
 			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
+
+		case -2: // Remote端检测到传输协议不一致
+			UpdateStartButtonStatue(TagStatusTransportMismatch)
+			RedisSessionDel(SessionID)
+			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端传输协议不一致: Local: %s", config.GetTransport())
 
 		case 1:
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {

@@ -5,11 +5,11 @@ export async function generateKey() {
   return data.tunKey || null;
 }
 
-export async function start(workType, tunKey, localMode, forwardRules) {
+export async function start(workType, tunKey, localMode, forwardRules, transport) {
   const resp = await fetch("/api/start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ workType, tunKey, localMode, forwardRules }),
+    body: JSON.stringify({ workType, tunKey, localMode, transport, forwardRules }),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) {
