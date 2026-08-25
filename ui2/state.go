@@ -112,7 +112,7 @@ var (
 	}
 	buttonStateConnectingNat4 = buttonState{
 		kind:          kindConnectingNat4,
-		text:          "当前网络是NAT4, 连接中...",
+		text:          "本地网络是NAT4, 连接中...",
 		importance:    "warning",
 		enabled:       true,
 		activity:      true,
@@ -160,7 +160,7 @@ var (
 	m_transport     string
 	m_forward_rules []config.UIForwardRule
 	currentButton   buttonState
-	m_nat           = NATInfo{Text: "正在检测当前网络环境..."}
+	m_nat           = NATInfo{Text: "正在检测本地网络环境..."}
 	m_upgrade       UpgradeInfo
 	m_proxy_host    string
 	m_proxy_port    int
@@ -400,9 +400,9 @@ func setTransport(transport string) {
 func SetNATHint(isNAT4 bool) {
 	stateMu.Lock()
 	if isNAT4 {
-		m_nat = NATInfo{Ready: true, IsNAT4: true, Text: "当前网络为NAT4"}
+		m_nat = NATInfo{Ready: true, IsNAT4: true, Text: "本地网络为NAT4"}
 	} else {
-		m_nat = NATInfo{Ready: true, IsNAT4: false, Text: "当前网络为NAT1-NAT3"}
+		m_nat = NATInfo{Ready: true, IsNAT4: false, Text: "本地网络为NAT1-NAT3"}
 	}
 	stateMu.Unlock()
 	broadcastState()

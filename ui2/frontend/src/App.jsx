@@ -16,7 +16,7 @@ const defaultButton = {
 const defaultNat = {
   ready: false,
   isNAT4: false,
-  text: "正在检测当前网络环境...",
+  text: "正在检测本地网络环境...",
 };
 
 const TUN_PROXY = {
