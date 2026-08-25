@@ -47,7 +47,7 @@ func Help() {
 	Arg_tun_local = flag.Bool("local", false, "启动Local端")
 	Arg_tun_remote = flag.Bool("remote", false, "启动Remote端")
 	flag.StringVar(&Arg_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
-	flag.StringVar(&Arg_transport, "transport", TransportQUIC, "传输协议: quic 或 kcp")
+	flag.StringVar(&Arg_transport, "transport", TransportKCP, "传输协议: quic 或 kcp")
 
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")

@@ -228,7 +228,7 @@ func snapshot(includeLogs bool) UIState {
 	}
 	transport := m_transport
 	if transport == "" {
-		transport = config.TransportQUIC
+		transport = config.TransportKCP
 	}
 	rules := make([]config.UIForwardRule, len(m_forward_rules))
 	copy(rules, m_forward_rules)
@@ -347,7 +347,7 @@ func getTransport() string {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
 	if m_transport == "" {
-		return config.TransportQUIC
+		return config.TransportKCP
 	}
 	return m_transport
 }
@@ -389,7 +389,7 @@ func setLocalModeAndRules(localMode string, rules []config.UIForwardRule) error 
 func setTransport(transport string) {
 	transport = config.NormalizeTransport(transport)
 	if transport != config.TransportQUIC && transport != config.TransportKCP {
-		transport = config.TransportQUIC
+		transport = config.TransportKCP
 	}
 	stateMu.Lock()
 	m_transport = transport

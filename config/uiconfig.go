@@ -38,7 +38,7 @@ func FromUI() bool {
 func LoadUIConfig(path string) (UIConfig, error) {
 	cfg := UIConfig{
 		LocalMode:    LocalModeTUN,
-		Transport:    TransportQUIC,
+		Transport:    TransportKCP,
 		ForwardRules: []UIForwardRule{},
 	}
 	data, err := os.ReadFile(path)
@@ -58,7 +58,7 @@ func LoadUIConfig(path string) (UIConfig, error) {
 		cfg.LocalMode = LocalModeTUN
 	}
 	if cfg.Transport == "" {
-		cfg.Transport = TransportQUIC
+		cfg.Transport = TransportKCP
 	}
 	if cfg.ForwardRules == nil {
 		cfg.ForwardRules = []UIForwardRule{}
@@ -211,11 +211,11 @@ func FormatListenConflicts(conflicts []string) string {
 	return "本地端口已被占用: " + strings.Join(conflicts, "、")
 }
 
-// NormalizeTransport 空值视为 quic，兼容旧配置。
+// NormalizeTransport 空值视为 kcp。
 func NormalizeTransport(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	if s == "" {
-		return TransportQUIC
+		return TransportKCP
 	}
 	return s
 }

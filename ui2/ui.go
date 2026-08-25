@@ -36,7 +36,7 @@ func Init() {
 			cfg.LocalMode = config.LocalModeTUN
 		}
 		if cfg.Transport != config.TransportQUIC && cfg.Transport != config.TransportKCP {
-			cfg.Transport = config.TransportQUIC
+			cfg.Transport = config.TransportKCP
 		}
 	}
 
@@ -49,7 +49,7 @@ func Init() {
 		cfg.WorkType = workTypeLocal
 	}
 	if cfg.Transport == "" {
-		cfg.Transport = config.TransportQUIC
+		cfg.Transport = config.TransportKCP
 	}
 
 	stateMu.Lock()

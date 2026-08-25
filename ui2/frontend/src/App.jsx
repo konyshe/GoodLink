@@ -56,7 +56,7 @@ export default function App() {
   const [workType, setWorkType] = useState("Local");
   const [tunKey, setTunKey] = useState("");
   const [localMode, setLocalMode] = useState("tun");
-  const [transport, setTransport] = useState("quic");
+  const [transport, setTransport] = useState("kcp");
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
   const [adminHint, setAdminHint] = useState(false);
@@ -72,7 +72,7 @@ export default function App() {
       setWorkType(state.workType || "Local");
       setTunKey(state.tunKey || "");
       setLocalMode(state.localMode || "tun");
-      setTransport(state.transport || "quic");
+      setTransport(state.transport || "kcp");
       setRows(rowsFromRules(state.forwardRules));
       initialized.current = true;
       if (needsAdminHint(state.workType || "Local", state.localMode || "tun", state.isAdmin)) {
@@ -86,7 +86,7 @@ export default function App() {
         setTunKey(state.tunKey || "");
       }
       setLocalMode(state.localMode || "tun");
-      setTransport(state.transport || "quic");
+      setTransport(state.transport || "kcp");
     }
   }, [state]);
 
@@ -132,7 +132,7 @@ export default function App() {
       work_type: workType,
       tun_key: tunKey || "",
       local_mode: localMode || "tun",
-      transport: transport || "quic",
+      transport: transport || "kcp",
       forward_rules: rulesFromRows(rows),
     };
     const blob = new Blob([JSON.stringify(cfg, null, 2) + "\n"], { type: "application/json;charset=utf-8" });
@@ -173,7 +173,7 @@ export default function App() {
     setWorkType(nextWorkType);
     setTunKey(next.tunKey || "");
     setLocalMode(nextLocalMode);
-    setTransport(next.transport || "quic");
+    setTransport(next.transport || "kcp");
     setRows(rowsFromRules(next.forwardRules));
     if (needsAdminHint(nextWorkType, nextLocalMode, state?.isAdmin)) {
       setAdminHint(true);
@@ -283,7 +283,7 @@ export default function App() {
               disabled={!othersEnabled}
               onClick={() => setTransport("quic")}
             >
-              QUIC(加密稳定)
+              QUIC(二次加密, 传输稳定, 适合企业)
             </button>
             <span className="vsep"></span>
             <button
@@ -292,7 +292,7 @@ export default function App() {
               disabled={!othersEnabled}
               onClick={() => setTransport("kcp")}
             >
-              KCP(明文更快)
+              KCP(CPU降低40%, 响应提升30%, 适合个人)
             </button>
           </div>
         </section>
