@@ -220,7 +220,7 @@ func NormalizeTransport(s string) string {
 	return s
 }
 
-// GetTransport --ui 从 goodlink.json 读取，否则用 CLI --transport。
+// GetTransport Remote 端选用的传输协议。--ui 从 goodlink.json 读取，否则用 CLI --transport。Local 建连不读此项。
 func GetTransport() string {
 	if FromUI() {
 		cfg, err := LoadUIConfig(UIConfigFileName)

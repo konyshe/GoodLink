@@ -274,28 +274,30 @@ export default function App() {
           </div>
         </section>
 
-        <section className="row">
-          <span className="label">传输协议:</span>
-          <div className="work-type work-type-sm">
-            <button
-              type="button"
-              className={"work-btn" + (transport === "kcp" ? " active" : "")}
-              disabled={!othersEnabled}
-              onClick={() => setTransport("kcp")}
-            >
-              KCP(CPU降低40%, 响应提升30%, 适合个人)
-            </button>
-            <span className="vsep"></span>
-            <button
-              type="button"
-              className={"work-btn" + (transport === "quic" ? " active" : "")}
-              disabled={!othersEnabled}
-              onClick={() => setTransport("quic")}
-            >
-              QUIC(二次加密, 传输稳定, 适合企业)
-            </button>
-          </div>
-        </section>
+        {workType === "Remote" && (
+          <section className="row">
+            <span className="label">传输协议:</span>
+            <div className="work-type work-type-sm">
+              <button
+                type="button"
+                className={"work-btn" + (transport === "kcp" ? " active" : "")}
+                disabled={!othersEnabled}
+                onClick={() => setTransport("kcp")}
+              >
+                KCP(CPU降低40%, 响应提升30%, 适合个人)
+              </button>
+              <span className="vsep"></span>
+              <button
+                type="button"
+                className={"work-btn" + (transport === "quic" ? " active" : "")}
+                disabled={!othersEnabled}
+                onClick={() => setTransport("quic")}
+              >
+                QUIC(二次加密, 传输稳定, 适合企业)
+              </button>
+            </div>
+          </section>
+        )}
 
         {workType === "Local" ? (
           <LocalPanel

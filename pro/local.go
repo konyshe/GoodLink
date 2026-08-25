@@ -84,6 +84,9 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 		UpdateStartButtonStatue(TagStatusConnectingNAT4)
 	}
 
+	transport := sessionTransport(redisJson.Transport)
+	log.Printf("传输协议: %s (跟随Remote端)", transport)
+
 	// 根据连接类型创建 TUN 连接
 	switch conn_type {
 	case 0:
@@ -95,7 +98,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 
 		redisJson.LocalAddr = *addr
 
-		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, redisJson.SendPortCount, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind, transport)
 		(*tun_passive).Start()
 
 		redisJson.State = 2
@@ -109,7 +112,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 		}
 		*tun_passive = nil
 
-		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), conn, &redisJson.LocalAddr, &redisJson.RemoteAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind, transport)
 		(*tun_active).Start()
 
 		redisJson.State = 2
@@ -155,9 +158,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		State:        0,
 		SessionID:    SessionID,
 		ConnectCount: count,
-		Transport:    config.GetTransport(),
 	}
-	log.Printf("传输协议: %s", redisJson.Transport)
 
 	conn_type := 0 // 被动连接
 	if addr.WanPort1 == addr.WanPort2 {
@@ -195,7 +196,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case -2: // Remote端检测到传输协议不一致
 			UpdateStartButtonStatue(TagStatusTransportMismatch)
 			RedisSessionDel(SessionID)
-			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端传输协议不一致: Local: %s", config.GetTransport())
+			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端传输协议不一致: Remote: %s", redisJson.Transport)
 
 		case 1:
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {

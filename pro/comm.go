@@ -103,6 +103,14 @@ type RedisJsonType struct {
 	LocalAddr     tun.AddrType  `bson:"local_addr" json:"local_addr"`
 }
 
+func sessionTransport(s string) string {
+	t := config.NormalizeTransport(s)
+	if t != config.TransportQUIC && t != config.TransportKCP {
+		return config.TransportKCP
+	}
+	return t
+}
+
 // RedisSessionRegister Local端注册新SessionID到Hash
 func RedisSessionRegister(timeout time.Duration, redisJson *RedisJsonType) error {
 	if m_redis_db == nil {

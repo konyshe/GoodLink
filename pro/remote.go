@@ -34,15 +34,9 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		return errors.New("两端版本不兼容")
 	}
 
-	localTransport := config.NormalizeTransport(redisJson.Transport)
 	remoteTransport := config.GetTransport()
-	if localTransport != remoteTransport {
-		log.Printf("会话 %s 两端传输协议不一致: Local: %s => Remote: %s", sessionID, localTransport, remoteTransport)
-		redisJson.State = -2
-		RedisSessionSet(sessionID, redisJson.SocketTimeOut*3, redisJson)
-		return errors.New("两端传输协议不一致")
-	}
-	log.Printf("会话 %s 传输协议: %s", sessionID, remoteTransport)
+	redisJson.Transport = remoteTransport
+	log.Printf("会话 %s 传输协议: %s (由Remote端决定)", sessionID, remoteTransport)
 
 	// 获取 UDP 地址
 	*udp_conn, redisJson.RemoteAddr = GetUDPAddr()
@@ -58,7 +52,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		*conn_type = 0
 		log.Printf("会话 %s Local端未发来IP，使用主动连接", sessionID)
 
-		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
+		*tun_active = tun.CreateTunActive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, time.Duration(tun.Arg_conn_active_send_time)*time.Millisecond, &m_upnp_bind, remoteTransport)
 		*tun_active_chain = (*tun_active).GetChain()
 
 		redisJson.SendPortCount = 0x100
@@ -67,7 +61,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		log.Printf("会话 %s Local端有发来IP: %v，使用被动连接", sessionID, redisJson.LocalAddr)
 		*conn_type = 1
 
-		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind, config.GetTransport())
+		*tun_passive = tun.CreateTunPassive([]byte(redisJson.SessionID), *udp_conn, &redisJson.RemoteAddr, &redisJson.LocalAddr, 0x100, time.Duration(tun.Arg_conn_passive_send_time)*time.Millisecond, &m_upnp_bind, remoteTransport)
 		(*tun_passive).Start()
 
 		*tun_passive_chain = (*tun_passive).GetChain()
