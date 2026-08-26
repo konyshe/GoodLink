@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="200" height="50">
 
-  <p><strong>全网最简单、零成本的内网穿透</strong></p>
+  <p><strong>全网最简单、最快、 免费的内网穿透</strong></p>
 
   <p>
     <a href="https://gitee.com/konyshe/goodlink/releases">
