@@ -22,7 +22,7 @@
             <img src="https://img.shields.io/github/stars/konyshe/GoodLink.svg?style=social&label=Stars" alt="Stars">
           </a>
         </p>
-  <h3><strong>【OSChina推荐项目】【CSDN孵化项目】</strong></h3>
+  <!--h3><strong>【OSChina推荐项目】【CSDN孵化项目】</strong></h3-->
 </div>
 
 外出办公, 对比市面上的远程工具, 无论画质、软件适配, 都不如 windows 自带的远程桌面, 但外出如何使用 windows远程桌面？
