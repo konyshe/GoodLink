@@ -45,6 +45,12 @@ func Init(tun_key string) error {
 		redis_addr = goodlink_config.GetAddr()
 		redis_pass = goodlink_config.GetPasswd()
 		redis_id = goodlink_config.GetID()
+		if goodlink_config.GetTlsAddr() != "" {
+			redis_addr = goodlink_config.GetTlsAddr()
+		} else {
+			redis_addr = goodlink_config.GetAddr()
+			tlsConfig = nil
+		}
 
 	} else if config.Arg_redis_tls_addr != "" {
 		redis_addr = config.Arg_redis_tls_addr
@@ -57,6 +63,8 @@ func Init(tun_key string) error {
 		redis_id = config.Arg_redis_id
 		tlsConfig = nil
 	}
+
+	log.Printf("redis_addr: %s, redis_pass: %s, redis_id: %d，tlsConfig: %v", redis_addr, redis_pass, redis_id, tlsConfig)
 
 	m_redis_db = redis.NewClient(&redis.Options{
 		Addr:         redis_addr,
