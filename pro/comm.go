@@ -64,8 +64,6 @@ func Init(tun_key string) error {
 		tlsConfig = nil
 	}
 
-	log.Printf("redis_addr: %s, redis_pass: %s, redis_id: %d，tlsConfig: %v", redis_addr, redis_pass, redis_id, tlsConfig)
-
 	m_redis_db = redis.NewClient(&redis.Options{
 		Addr:         redis_addr,
 		Password:     redis_pass,
