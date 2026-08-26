@@ -72,7 +72,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 #### UI版本（仅Windows）
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/5.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/5.png "使用说明")
 
 #### 命令行版本
 
@@ -95,7 +95,7 @@ docker run -d --name=goodlink --net=host --restart=always registry.cn-shanghai.a
 
 #### UI版本（仅Windows）
 
-![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/v2/6.png "使用说明")
+![使用说明](https://gitee.com/konyshe/goodlink/raw/master/assert/6.png "使用说明")
 
 #### 命令行版本
 
