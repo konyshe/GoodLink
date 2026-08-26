@@ -16,7 +16,6 @@ debug.sh
 *.dll
 *.syso
 .claude
-tun
 goodlink-windows-amd64
 goodlink.log
 .cursor
