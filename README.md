@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="400" height="100">
+  <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="200" height="50">
 
   <p><strong>全网最简单、零成本的内网穿透</strong></p>
 
@@ -24,6 +24,8 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 **注: 仅用于学习研究, 无商业合作，更无恶意行为。如有广告之类盈利行为，会告知大家。**
 
+**注: 从 v3.3.5 开始，Redis服务已切换到大厂云端，老版本将无法使用，请尽快升级**
+**注: 从 v3.3.5 开始，Redis服务已切换到大厂云端，老版本将无法使用，请尽快升级**
 **注: 从 v3.3.5 开始，Redis服务已切换到大厂云端，老版本将无法使用，请尽快升级**
 
 **郑重声明：严禁用于违法行为！！！**
