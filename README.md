@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="200" height="50">
+  <img src="https://gitee.com/konyshe/goodlink/raw/master/assert/letter-g-2.png" width="250" height="60">
 
   <p><strong>全网最简单、最快、 免费的内网穿透</strong></p>
 
