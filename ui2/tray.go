@@ -68,7 +68,7 @@ func SetupTray(uiURL string) {
 	systray.SetTooltip(M_APP_TITLE + "  v" + config.GetVersion())
 
 	// 创建菜单，确保只有一个退出选项
-	mOpen := systray.AddMenuItem("打开主程序", "在浏览器中打开")
+	mOpen := systray.AddMenuItem("打开控制页面", "打开控制页面")
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("退出", "退出")
 
