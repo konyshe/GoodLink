@@ -41,7 +41,7 @@ windows 自带杀毒软件, 会将所有 go 语言写的程序都默认为病毒
 
 **郑重声明：严禁用于违法行为！！！**
 
-### [>>>>>>> 使用教程 <<<<<<<](https://gitee.com/konyshe/goodlink/wikis/pages)
+### [>>>>>>> 点击查看使用教程 <<<<<<<](https://gitee.com/konyshe/goodlink/wikis/pages)
 
 
 ## 💬 交流方式
