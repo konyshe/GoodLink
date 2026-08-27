@@ -59,6 +59,7 @@ type UpgradeInfo struct {
 	Percent     int    `json:"percent"`
 	Done        bool   `json:"done"`
 	Error       string `json:"error,omitempty"`
+	CheckError  string `json:"checkError,omitempty"`
 }
 
 type ProxyInfo struct {
@@ -418,12 +419,23 @@ func setUpgradeInfo(need bool, latest, body, downloadURL string) {
 	stateMu.Lock()
 	m_upgrade.Need = need
 	m_upgrade.Latest = latest
+	m_upgrade.CheckError = ""
 	if body != "" {
 		m_upgrade.Body = body
 	}
 	if downloadURL != "" {
 		m_upgrade.DownloadURL = downloadURL
 	}
+	st := m_upgrade
+	stateMu.Unlock()
+	broadcastState()
+	broadcastUpgrade(st)
+}
+
+func setUpgradeCheckError(msg string) {
+	stateMu.Lock()
+	m_upgrade.Need = false
+	m_upgrade.CheckError = msg
 	st := m_upgrade
 	stateMu.Unlock()
 	broadcastState()

@@ -118,19 +118,18 @@ func GetUpgradeInfo() (upgradeReleaseInfo, error) {
 }
 
 // checkLatestVersion 请求 Gitee API 获取最新版本号，与当前版本比较。
-// 返回 (需要升级, 最新版本号)。
-func checkLatestVersion(currentVersion string) (bool, string) {
+func checkLatestVersion(currentVersion string) (bool, string, error) {
 	rel, err := fetchLatestRelease()
 	if err != nil {
 		log.Println("检查版本失败:", err)
-		return false, ""
+		return false, "", err
 	}
 
 	info := storeUpgradeCache(rel)
 	if info.Latest != "" && info.Latest != currentVersion {
-		return true, info.Latest
+		return true, info.Latest, nil
 	}
-	return false, info.Latest
+	return false, info.Latest, nil
 }
 
 var (
@@ -162,7 +161,11 @@ func runUpgradeCheck(minInterval time.Duration) {
 			upgradeCheckMu.Unlock()
 		}()
 
-		needUpgrade, latestVer := checkLatestVersion(config.GetVersion())
+		needUpgrade, latestVer, err := checkLatestVersion(config.GetVersion())
+		if err != nil {
+			setUpgradeCheckError("检测更新失败")
+			return
+		}
 		info := getCachedUpgradeInfo()
 		setUpgradeInfo(needUpgrade, latestVer, info.Body, info.DownloadURL)
 	}()

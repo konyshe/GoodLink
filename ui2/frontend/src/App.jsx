@@ -410,17 +410,21 @@ export default function App() {
         <footer className="footer">
           <div className={"nat " + natClass}>{nat.text || ""}</div>
           <div className="footer-links">
-            <button
-              type="button"
-              className={"footer-chip upgrade" + (state?.upgrade?.need ? "" : " hidden")}
-              onClick={openUpgradeModal}
-            >
-              <span className="upgrade-dot" aria-hidden="true"></span>
-              有新版本
-              {state?.upgrade?.need ? (
-                <span className="upgrade-ver">v{state.upgrade.latest}</span>
-              ) : null}
-            </button>
+            {state?.upgrade?.checkError ? (
+              <span className="footer-chip upgrade-fail">{state.upgrade.checkError}</span>
+            ) : (
+              <button
+                type="button"
+                className={"footer-chip upgrade" + (state?.upgrade?.need ? "" : " hidden")}
+                onClick={openUpgradeModal}
+              >
+                <span className="upgrade-dot" aria-hidden="true"></span>
+                有新版本
+                {state?.upgrade?.need ? (
+                  <span className="upgrade-ver">v{state.upgrade.latest}</span>
+                ) : null}
+              </button>
+            )}
             <a
               className="footer-chip feedback"
               href="https://gitee.com/konyshe/goodlink/issues"

@@ -486,6 +486,13 @@ body,
   color: #ffc4bc;
 }
 
+.footer-chip.upgrade-fail {
+  border: 1px solid rgba(230, 168, 23, 0.55);
+  background: rgba(230, 168, 23, 0.16);
+  color: var(--warning);
+  cursor: default;
+}
+
 .upgrade-dot {
   width: 6px;
   height: 6px;
