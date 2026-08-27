@@ -490,7 +490,11 @@ body,
   border: 1px solid rgba(230, 168, 23, 0.55);
   background: rgba(230, 168, 23, 0.16);
   color: var(--warning);
-  cursor: default;
+}
+
+.footer-chip.upgrade-fail:hover {
+  background: rgba(230, 168, 23, 0.28);
+  color: #f0c45a;
 }
 
 .upgrade-dot {

@@ -411,7 +411,14 @@ export default function App() {
           <div className={"nat " + natClass}>{nat.text || ""}</div>
           <div className="footer-links">
             {state?.upgrade?.checkError ? (
-              <span className="footer-chip upgrade-fail">{state.upgrade.checkError}</span>
+              <a
+                className="footer-chip upgrade-fail"
+                href="https://gitee.com/konyshe/goodlink/releases"
+                target="_blank"
+                rel="noopener"
+              >
+                {state.upgrade.checkError}
+              </a>
             ) : (
               <button
                 type="button"
