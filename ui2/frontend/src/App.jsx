@@ -65,6 +65,7 @@ export default function App() {
   const [upgradeBody, setUpgradeBody] = useState("");
   const [upgradeModalError, setUpgradeModalError] = useState("");
   const [applying, setApplying] = useState(false);
+  const [reconnectTimedOut, setReconnectTimedOut] = useState(false);
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -121,6 +122,7 @@ export default function App() {
         }
         await sleep(200);
       }
+      const deadline = Date.now() + 5000;
       for (; ;) {
         if (stopped) return;
         try {
@@ -130,7 +132,12 @@ export default function App() {
             return;
           }
         } catch (_) { }
-        await sleep(500);
+        const remain = deadline - Date.now();
+        if (remain <= 0) {
+          setReconnectTimedOut(true);
+          return;
+        }
+        await sleep(Math.min(500, remain));
       }
     })();
     return () => {
@@ -275,6 +282,7 @@ export default function App() {
   async function onUpgradeApply() {
     if (!upgradeProgress.done || applying) return;
     setUpgradeModalError("");
+    setReconnectTimedOut(false);
     setApplying(true);
     const result = await applyUpgrade();
     if (result.error) {
@@ -468,15 +476,22 @@ export default function App() {
         className={"exit-overlay" + ((applying || (!exited && upgradeOpen)) ? "" : " hidden")}
       >
         {applying ? (
-          <div className="exit-card admin-card upgrade-card upgrade-applying" onClick={(e) => e.stopPropagation()}>
-            <div className="upgrade-loader">
-              <span className="upgrade-ring"></span>
-              <span className="upgrade-ring upgrade-ring-2"></span>
+          reconnectTimedOut ? (
+            <div className="exit-card admin-card upgrade-card upgrade-applying" onClick={(e) => e.stopPropagation()}>
+              <div className="upgrade-applying-title">更新完成</div>
+              <div className="upgrade-applying-tip">超过 5 秒未能连接主程序，请手动重启 Goodlink</div>
             </div>
-            <div className="upgrade-applying-title">正在更新到 v{state?.upgrade?.latest || ""}</div>
-            <div className="upgrade-applying-tip">程序将自动重启，请稍候<span className="dots"><i>.</i><i>.</i><i>.</i></span></div>
-            <div className="upgrade-applying-sub">重启完成后页面会自动恢复，无需手动关闭</div>
-          </div>
+          ) : (
+            <div className="exit-card admin-card upgrade-card upgrade-applying" onClick={(e) => e.stopPropagation()}>
+              <div className="upgrade-loader">
+                <span className="upgrade-ring"></span>
+                <span className="upgrade-ring upgrade-ring-2"></span>
+              </div>
+              <div className="upgrade-applying-title">正在更新到 v{state?.upgrade?.latest || ""}</div>
+              <div className="upgrade-applying-tip">程序将自动重启，请稍候<span className="dots"><i>.</i><i>.</i><i>.</i></span></div>
+              <div className="upgrade-applying-sub">重启完成后页面会自动恢复，无需手动关闭</div>
+            </div>
+          )
         ) : (
           <div className="exit-card admin-card upgrade-card" onClick={(e) => e.stopPropagation()}>
             <div className="upgrade-title">新版本 v{state?.upgrade?.latest || ""}</div>
