@@ -222,7 +222,7 @@ func RunSelfUpdate(zipPath string, waitPid int, target string) {
 		os.Exit(1)
 	}
 
-	cmd := exec.Command(target)
+	cmd := exec.Command(target, "--no-browser")
 	cmd.Dir = filepath.Dir(target)
 	hideChildWindow(cmd)
 	if err := cmd.Start(); err != nil {

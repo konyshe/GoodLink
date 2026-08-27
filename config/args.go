@@ -60,6 +60,7 @@ func Help() {
 	flag.StringVar(&Arg_upgrade_zip, "zip", "", "内部使用: 待解压的升级压缩包路径")
 	flag.IntVar(&Arg_upgrade_waitpid, "wait-pid", 0, "内部使用: 等待退出的主进程PID")
 	flag.StringVar(&Arg_upgrade_target, "target", "", "内部使用: 要覆盖的主程序路径")
+	flag.Bool("no-browser", false, "启动UI但不自动打开浏览器")
 
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")
@@ -118,4 +119,26 @@ func ParseSelfUpdateArgs(args []string) (zipPath string, waitPid int, target str
 		}
 	}
 	return
+}
+
+func isNoBrowserFlag(a string) bool {
+	switch a {
+	case "--no-browser", "-no-browser", "--no-browser=true", "-no-browser=true":
+		return true
+	default:
+		return strings.HasPrefix(a, "--no-browser=") || strings.HasPrefix(a, "-no-browser=")
+	}
+}
+
+// IsNoBrowserLaunch 表示仅带 --no-browser 启动 UI（不自动打开浏览器）。
+func IsNoBrowserLaunch(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	for _, a := range args {
+		if !isNoBrowserFlag(a) {
+			return false
+		}
+	}
+	return true
 }

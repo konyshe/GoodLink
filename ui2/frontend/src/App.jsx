@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyForwards, applyUpgrade, fetchUpgradeInfo, generateKey, importConfig, start, startUpgradeDownload, stop } from "./api";
+import { applyForwards, applyUpgrade, fetchState, fetchUpgradeInfo, generateKey, importConfig, start, startUpgradeDownload, stop } from "./api";
 import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
@@ -106,19 +106,37 @@ export default function App() {
     }
   }, [state?.version]);
 
-  const sawExitRef = useRef(false);
   useEffect(() => {
-    if (!applying) {
-      sawExitRef.current = false;
-      return;
-    }
-    if (exited) {
-      sawExitRef.current = true;
-    } else if (sawExitRef.current) {
-      setApplying(false);
-      setUpgradeOpen(false);
-    }
-  }, [applying, exited]);
+    if (!applying) return;
+    let stopped = false;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      for (; ;) {
+        if (stopped) return;
+        try {
+          const resp = await fetchState();
+          if (!resp.ok) break;
+        } catch (_) {
+          break;
+        }
+        await sleep(200);
+      }
+      for (; ;) {
+        if (stopped) return;
+        try {
+          const resp = await fetchState();
+          if (resp.ok) {
+            window.location.reload();
+            return;
+          }
+        } catch (_) { }
+        await sleep(500);
+      }
+    })();
+    return () => {
+      stopped = true;
+    };
+  }, [applying]);
 
   const button = state?.button || defaultButton;
   const nat = state?.nat || defaultNat;

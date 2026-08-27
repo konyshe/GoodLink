@@ -71,7 +71,7 @@ func main2() {
 	pro.StopRemote()
 }
 
-func runUI() {
+func runUI(openBrowser bool) {
 	// 隐藏 UI 主进程控制台窗口（仅 Windows；从已有终端启动时只脱离本进程）
 	hideUIConsole()
 
@@ -103,7 +103,9 @@ func runUI() {
 		}
 	}()
 
-	ui2.OpenBrowser(uiURL)
+	if openBrowser {
+		ui2.OpenBrowser(uiURL)
+	}
 
 	// Windows：主线程运行托盘消息循环；Linux/macOS：等待信号后退出
 	ui2.RunLoop(uiURL)
@@ -112,12 +114,17 @@ func runUI() {
 func main() {
 	// 无任何参数时启动 UI（Windows/Linux/macOS）
 	if len(os.Args) <= 1 {
-		runUI()
+		runUI(true)
 		return
 	}
 
 	if zipPath, waitPid, target, ok := config.ParseSelfUpdateArgs(os.Args[1:]); ok {
 		ui2.RunSelfUpdate(zipPath, waitPid, target)
+		return
+	}
+
+	if config.IsNoBrowserLaunch(os.Args[1:]) {
+		runUI(false)
 		return
 	}
 
