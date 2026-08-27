@@ -177,5 +177,5 @@ func startUpgradeCheck() {
 
 // TriggerUpgradeCheck 供 UI 连接时调用，每次打开/刷新页面重新检测版本。
 func TriggerUpgradeCheck() {
-	runUpgradeCheck(3 * time.Second)
+	runUpgradeCheck(15 * time.Minute)
 }
