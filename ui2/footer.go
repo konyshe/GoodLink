@@ -105,15 +105,11 @@ func getCachedUpgradeInfo() upgradeReleaseInfo {
 	return cachedUpgrade
 }
 
-// GetUpgradeInfo 返回缓存的更新说明和下载地址；若尚未拉取则即时请求。
+// GetUpgradeInfo 实时请求最新的更新说明和下载地址；网络失败时回退到缓存。
 func GetUpgradeInfo() (upgradeReleaseInfo, error) {
-	cached := getCachedUpgradeInfo()
-	if cached.Latest != "" && cached.DownloadURL != "" {
-		return cached, nil
-	}
 	rel, err := fetchLatestRelease()
 	if err != nil {
-		if cached.Latest != "" {
+		if cached := getCachedUpgradeInfo(); cached.Latest != "" {
 			return cached, nil
 		}
 		return upgradeReleaseInfo{}, err
@@ -137,12 +133,46 @@ func checkLatestVersion(currentVersion string) (bool, string) {
 	return false, info.Latest
 }
 
-func startUpgradeCheck() {
+var (
+	upgradeCheckMu   sync.Mutex
+	upgradeChecking  bool
+	upgradeCheckedAt time.Time
+)
+
+// runUpgradeCheck 拉取最新版本并更新升级状态。minInterval 内的重复请求会被跳过，
+// 避免浏览器多标签或频繁刷新时对 Gitee 造成并发请求。
+func runUpgradeCheck(minInterval time.Duration) {
+	upgradeCheckMu.Lock()
+	if upgradeChecking {
+		upgradeCheckMu.Unlock()
+		return
+	}
+	if minInterval > 0 && !upgradeCheckedAt.IsZero() && time.Since(upgradeCheckedAt) < minInterval {
+		upgradeCheckMu.Unlock()
+		return
+	}
+	upgradeChecking = true
+	upgradeCheckMu.Unlock()
+
 	go func() {
+		defer func() {
+			upgradeCheckMu.Lock()
+			upgradeChecking = false
+			upgradeCheckedAt = time.Now()
+			upgradeCheckMu.Unlock()
+		}()
+
 		needUpgrade, latestVer := checkLatestVersion(config.GetVersion())
-		if needUpgrade {
-			info := getCachedUpgradeInfo()
-			setUpgradeInfo(true, latestVer, info.Body, info.DownloadURL)
-		}
+		info := getCachedUpgradeInfo()
+		setUpgradeInfo(needUpgrade, latestVer, info.Body, info.DownloadURL)
 	}()
+}
+
+func startUpgradeCheck() {
+	runUpgradeCheck(0)
+}
+
+// TriggerUpgradeCheck 供 UI 连接时调用，每次打开/刷新页面重新检测版本。
+func TriggerUpgradeCheck() {
+	runUpgradeCheck(3 * time.Second)
 }

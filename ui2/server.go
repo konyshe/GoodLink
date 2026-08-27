@@ -222,6 +222,9 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	flusher.Flush()
 
+	// 每次浏览器打开/刷新 UI 时重新检测版本（带短防抖，避免多标签并发请求）
+	TriggerUpgradeCheck()
+
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
 
