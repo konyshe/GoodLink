@@ -377,12 +377,23 @@ export default function App() {
           <div className="footer-links">
             <button
               type="button"
-              className={"upgrade" + (state?.upgrade?.need ? "" : " hidden")}
+              className={"footer-chip upgrade" + (state?.upgrade?.need ? "" : " hidden")}
               onClick={openUpgradeModal}
             >
-              有新版本! <span>{state?.upgrade?.need ? "v" + state.upgrade.latest : ""}</span>
+              <span className="upgrade-dot" aria-hidden="true"></span>
+              有新版本
+              {state?.upgrade?.need ? (
+                <span className="upgrade-ver">v{state.upgrade.latest}</span>
+              ) : null}
             </button>
-            <a href="https://gitee.com/konyshe/goodlink/issues" target="_blank" rel="noopener">反馈问题</a>
+            <a
+              className="footer-chip feedback"
+              href="https://gitee.com/konyshe/goodlink/issues"
+              target="_blank"
+              rel="noopener"
+            >
+              反馈问题
+            </a>
           </div>
         </footer>
       </div>

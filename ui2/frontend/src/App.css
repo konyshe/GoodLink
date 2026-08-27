@@ -442,23 +442,77 @@ body,
 .footer-links {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-shrink: 0;
+  gap: 8px;
 }
 
-.footer a {
-  color: #7ec3ff;
-  text-decoration: none;
-}
-
-.footer button.upgrade {
-  background: none;
-  border: 0;
-  padding: 0;
-  color: #ff503c;
-  font-weight: 700;
-  font-size: inherit;
+.footer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
   font-family: inherit;
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.footer-chip.feedback {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.footer-chip.feedback:hover {
+  color: var(--fg);
+  border-color: #7ec3ff;
+  background: rgba(126, 195, 255, 0.1);
+}
+
+.footer-chip.upgrade {
+  border: 1px solid rgba(229, 83, 75, 0.55);
+  background: rgba(229, 83, 75, 0.16);
+  color: #ff8a7a;
+}
+
+.footer-chip.upgrade:hover {
+  background: rgba(229, 83, 75, 0.28);
+  color: #ffc4bc;
+}
+
+.upgrade-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff6b5b;
+  animation: upgrade-pulse 1.6s ease-out infinite;
+}
+
+.upgrade-ver {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #ffe8e4;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@keyframes upgrade-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 91, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(255, 107, 91, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 91, 0);
+  }
 }
 
 .upgrade-card {
