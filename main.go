@@ -116,6 +116,11 @@ func main() {
 		return
 	}
 
+	if zipPath, waitPid, target, ok := config.ParseSelfUpdateArgs(os.Args[1:]); ok {
+		ui2.RunSelfUpdate(zipPath, waitPid, target)
+		return
+	}
+
 	config.Help()
 
 	if config.Arg_stun_svr_ip != "" && config.Arg_stun_svr_port > 0 {

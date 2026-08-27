@@ -52,3 +52,30 @@ export async function importConfig(cfg) {
   }
   return { error: null, state: data };
 }
+
+export async function fetchUpgradeInfo() {
+  const resp = await fetch("/api/upgrade/info", { cache: "no-store" });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    return { error: data.error || "获取更新信息失败" };
+  }
+  return { error: null, version: data.version || "", body: data.body || "", downloadUrl: data.downloadUrl || "" };
+}
+
+export async function startUpgradeDownload() {
+  const resp = await fetch("/api/upgrade/download", { method: "POST" });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    return { error: data.error || "开始下载失败" };
+  }
+  return { error: null };
+}
+
+export async function applyUpgrade() {
+  const resp = await fetch("/api/upgrade/apply", { method: "POST" });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    return { error: data.error || "更新失败" };
+  }
+  return { error: null };
+}

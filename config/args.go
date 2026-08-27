@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"go2"
 	"os"
+	"strconv"
+	"strings"
 )
 
 // TunKeyByteLen 连接密钥固定字节长度（Local/Remote 必须一致）
@@ -27,6 +29,11 @@ var (
 	Arg_stun_svr_ip    string
 	Arg_stun_svr_port  int
 	Arg_transport      string
+
+	Arg_self_update     bool
+	Arg_upgrade_zip     string
+	Arg_upgrade_waitpid int
+	Arg_upgrade_target  string
 )
 
 func Help() {
@@ -49,6 +56,11 @@ func Help() {
 	flag.StringVar(&Arg_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
 	flag.StringVar(&Arg_transport, "transport", TransportKCP, "传输协议: quic 或 kcp（仅 Remote 端生效，Local 自适应 Remote）")
 
+	flag.BoolVar(&Arg_self_update, "self-update", false, "内部使用: 更新进程, 覆盖程序后重启")
+	flag.StringVar(&Arg_upgrade_zip, "zip", "", "内部使用: 待解压的升级压缩包路径")
+	flag.IntVar(&Arg_upgrade_waitpid, "wait-pid", 0, "内部使用: 等待退出的主进程PID")
+	flag.StringVar(&Arg_upgrade_target, "target", "", "内部使用: 要覆盖的主程序路径")
+
 	/* 没有用到的参数 */
 	flag.Bool("fork", false, "子进程")
 
@@ -65,4 +77,45 @@ func Help() {
 		fmt.Print(go2.BuildVersion())
 		os.Exit(0)
 	}
+}
+
+// ParseSelfUpdateArgs 从命令行解析 --self-update 及相关参数, 不走全局 flag。
+func ParseSelfUpdateArgs(args []string) (zipPath string, waitPid int, target string, ok bool) {
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--self-update" || a == "-self-update":
+			ok = true
+		case strings.HasPrefix(a, "--self-update=") || strings.HasPrefix(a, "-self-update="):
+			ok = true
+		case a == "--zip" || a == "-zip":
+			if i+1 < len(args) {
+				i++
+				zipPath = args[i]
+			}
+		case strings.HasPrefix(a, "--zip="):
+			zipPath = strings.TrimPrefix(a, "--zip=")
+		case strings.HasPrefix(a, "-zip="):
+			zipPath = strings.TrimPrefix(a, "-zip=")
+		case a == "--wait-pid" || a == "-wait-pid":
+			if i+1 < len(args) {
+				i++
+				waitPid, _ = strconv.Atoi(args[i])
+			}
+		case strings.HasPrefix(a, "--wait-pid="):
+			waitPid, _ = strconv.Atoi(strings.TrimPrefix(a, "--wait-pid="))
+		case strings.HasPrefix(a, "-wait-pid="):
+			waitPid, _ = strconv.Atoi(strings.TrimPrefix(a, "-wait-pid="))
+		case a == "--target" || a == "-target":
+			if i+1 < len(args) {
+				i++
+				target = args[i]
+			}
+		case strings.HasPrefix(a, "--target="):
+			target = strings.TrimPrefix(a, "--target=")
+		case strings.HasPrefix(a, "-target="):
+			target = strings.TrimPrefix(a, "-target=")
+		}
+	}
+	return
 }

@@ -450,9 +450,104 @@ body,
   text-decoration: none;
 }
 
-.upgrade {
+.footer button.upgrade {
+  background: none;
+  border: 0;
+  padding: 0;
   color: #ff503c;
   font-weight: 700;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.upgrade-card {
+  width: min(560px, calc(100vw - 48px));
+  max-height: min(80vh, 640px);
+  align-items: stretch;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.upgrade-title {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.upgrade-body {
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #262626;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.upgrade-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: #1f1f1f;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.2s ease;
+}
+
+.progress-pct {
+  min-width: 42px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.upgrade-error {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.upgrade-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.upgrade-actions button {
+  min-width: 96px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.upgrade-actions button.upgrade-back {
+  background: var(--btn);
+}
+
+.upgrade-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .exit-overlay {
@@ -495,4 +590,18 @@ body,
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.admin-card.upgrade-card {
+  width: min(560px, calc(100vw - 48px));
+  max-width: 560px;
+  max-height: min(80vh, 640px);
+  align-items: stretch;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.upgrade-card .upgrade-actions button.upgrade-back {
+  background: var(--btn);
 }

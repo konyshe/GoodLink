@@ -43,6 +43,9 @@ func StartServer() (string, error) {
 	mux.HandleFunc("/api/key/generate", handleGenerateKey)
 	mux.HandleFunc("/api/config", handleConfig)
 	mux.HandleFunc("/api/events", handleEvents)
+	mux.HandleFunc("/api/upgrade/info", handleUpgradeInfo)
+	mux.HandleFunc("/api/upgrade/download", handleUpgradeDownload)
+	mux.HandleFunc("/api/upgrade/apply", handleUpgradeApply)
 	mux.Handle("/", http.FileServer(http.FS(webContent)))
 
 	go func() {
@@ -161,6 +164,43 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func handleUpgradeInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	info, err := HandleUpgradeInfo()
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, info)
+}
+
+func handleUpgradeDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := HandleUpgradeDownload(); err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func handleUpgradeApply(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := HandleUpgradeApply(); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func handleEvents(w http.ResponseWriter, r *http.Request) {

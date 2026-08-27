@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyForwards, generateKey, importConfig, start, stop } from "./api";
+import { applyForwards, applyUpgrade, fetchUpgradeInfo, generateKey, importConfig, start, startUpgradeDownload, stop } from "./api";
 import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
@@ -52,7 +52,7 @@ function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
 const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
 
 export default function App() {
-  const { state, logs, exited } = useUIEvents();
+  const { state, logs, exited, upgradeProgress } = useUIEvents();
   const [workType, setWorkType] = useState("Local");
   const [tunKey, setTunKey] = useState("");
   const [localMode, setLocalMode] = useState("tun");
@@ -61,6 +61,9 @@ export default function App() {
   const [formError, setFormError] = useState("");
   const [adminHint, setAdminHint] = useState(false);
   const [conflictHint, setConflictHint] = useState("");
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeBody, setUpgradeBody] = useState("");
+  const [upgradeModalError, setUpgradeModalError] = useState("");
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -215,6 +218,36 @@ export default function App() {
     await stop();
   }
 
+  async function openUpgradeModal() {
+    setUpgradeOpen(true);
+    setUpgradeModalError("");
+    setUpgradeBody(state?.upgrade?.body || "");
+    const info = await fetchUpgradeInfo();
+    if (info.error) {
+      setUpgradeModalError(info.error);
+      return;
+    }
+    setUpgradeBody(info.body || "");
+  }
+
+  async function onUpgradeDownload() {
+    if (upgradeProgress.downloading) return;
+    setUpgradeModalError("");
+    const result = await startUpgradeDownload();
+    if (result.error) {
+      setUpgradeModalError(result.error);
+    }
+  }
+
+  async function onUpgradeApply() {
+    if (!upgradeProgress.done) return;
+    setUpgradeModalError("");
+    const result = await applyUpgrade();
+    if (result.error) {
+      setUpgradeModalError(result.error);
+    }
+  }
+
   function onExportLogs() {
     if (!logs.length) return;
     const pad = (n) => String(n).padStart(2, "0");
@@ -342,14 +375,13 @@ export default function App() {
         <footer className="footer">
           <div className={"nat " + natClass}>{nat.text || ""}</div>
           <div className="footer-links">
-            <a
+            <button
+              type="button"
               className={"upgrade" + (state?.upgrade?.need ? "" : " hidden")}
-              href="https://gitee.com/konyshe/goodlink/releases"
-              target="_blank"
-              rel="noopener"
+              onClick={openUpgradeModal}
             >
               有新版本! <span>{state?.upgrade?.need ? "v" + state.upgrade.latest : ""}</span>
-            </a>
+            </button>
             <a href="https://gitee.com/konyshe/goodlink/issues" target="_blank" rel="noopener">反馈问题</a>
           </div>
         </footer>
@@ -373,6 +405,32 @@ export default function App() {
         <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
           <div>{conflictHint}</div>
           <button type="button" onClick={() => setConflictHint("")}>确定</button>
+        </div>
+      </div>
+      <div
+        className={"exit-overlay" + (!exited && upgradeOpen ? "" : " hidden")}
+      >
+        <div className="exit-card admin-card upgrade-card" onClick={(e) => e.stopPropagation()}>
+          <div className="upgrade-title">新版本 v{state?.upgrade?.latest || ""}</div>
+          <pre className="upgrade-body">{upgradeBody || "暂无更新说明"}</pre>
+          <div className="upgrade-progress">
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: Math.max(0, Math.min(100, upgradeProgress.percent || 0)) + "%" }}></div>
+            </div>
+            <span className="progress-pct">{upgradeProgress.percent || 0}%</span>
+          </div>
+          {upgradeModalError ? <div className="upgrade-error">{upgradeModalError}</div> : null}
+          {upgradeProgress.error ? <div className="upgrade-error">{upgradeProgress.error}</div> : null}
+          <div className="upgrade-actions">
+            <button type="button" className="upgrade-back" onClick={() => setUpgradeOpen(false)}>返回</button>
+            {upgradeProgress.done ? (
+              <button type="button" onClick={onUpgradeApply}>更新</button>
+            ) : (
+              <button type="button" disabled={upgradeProgress.downloading} onClick={onUpgradeDownload}>
+                {upgradeProgress.downloading ? "下载中..." : "下载"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </>

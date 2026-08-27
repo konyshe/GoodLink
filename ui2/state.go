@@ -51,8 +51,14 @@ type NATInfo struct {
 }
 
 type UpgradeInfo struct {
-	Need   bool   `json:"need"`
-	Latest string `json:"latest"`
+	Need        bool   `json:"need"`
+	Latest      string `json:"latest"`
+	Body        string `json:"body,omitempty"`
+	DownloadURL string `json:"downloadUrl,omitempty"`
+	Downloading bool   `json:"downloading"`
+	Percent     int    `json:"percent"`
+	Done        bool   `json:"done"`
+	Error       string `json:"error,omitempty"`
 }
 
 type ProxyInfo struct {
@@ -408,9 +414,48 @@ func SetNATHint(isNAT4 bool) {
 	broadcastState()
 }
 
-func setUpgradeInfo(need bool, latest string) {
+func setUpgradeInfo(need bool, latest, body, downloadURL string) {
 	stateMu.Lock()
-	m_upgrade = UpgradeInfo{Need: need, Latest: latest}
+	m_upgrade.Need = need
+	m_upgrade.Latest = latest
+	if body != "" {
+		m_upgrade.Body = body
+	}
+	if downloadURL != "" {
+		m_upgrade.DownloadURL = downloadURL
+	}
+	st := m_upgrade
 	stateMu.Unlock()
 	broadcastState()
+	broadcastUpgrade(st)
+}
+
+func snapshotUpgrade() UpgradeInfo {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	return m_upgrade
+}
+
+func setUpgradeProgress(downloading bool, percent int, done bool, errStr string) {
+	if percent < 0 {
+		percent = 0
+	}
+	if percent > 100 {
+		percent = 100
+	}
+	stateMu.Lock()
+	m_upgrade.Downloading = downloading
+	m_upgrade.Percent = percent
+	m_upgrade.Done = done
+	m_upgrade.Error = errStr
+	st := m_upgrade
+	stateMu.Unlock()
+	broadcastUpgrade(st)
+	if !downloading || done || errStr != "" {
+		broadcastState()
+	}
+}
+
+func broadcastUpgrade(info UpgradeInfo) {
+	sseHubInst.broadcast(sseMessage("upgrade", info))
 }
