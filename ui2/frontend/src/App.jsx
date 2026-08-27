@@ -64,6 +64,7 @@ export default function App() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeBody, setUpgradeBody] = useState("");
   const [upgradeModalError, setUpgradeModalError] = useState("");
+  const [applying, setApplying] = useState(false);
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -104,6 +105,20 @@ export default function App() {
       document.title = "Goodlink v" + state.version;
     }
   }, [state?.version]);
+
+  const sawExitRef = useRef(false);
+  useEffect(() => {
+    if (!applying) {
+      sawExitRef.current = false;
+      return;
+    }
+    if (exited) {
+      sawExitRef.current = true;
+    } else if (sawExitRef.current) {
+      setApplying(false);
+      setUpgradeOpen(false);
+    }
+  }, [applying, exited]);
 
   const button = state?.button || defaultButton;
   const nat = state?.nat || defaultNat;
@@ -240,10 +255,12 @@ export default function App() {
   }
 
   async function onUpgradeApply() {
-    if (!upgradeProgress.done) return;
+    if (!upgradeProgress.done || applying) return;
     setUpgradeModalError("");
+    setApplying(true);
     const result = await applyUpgrade();
     if (result.error) {
+      setApplying(false);
       setUpgradeModalError(result.error);
     }
   }
@@ -397,7 +414,7 @@ export default function App() {
           </div>
         </footer>
       </div>
-      <div className={"exit-overlay" + (exited ? "" : " hidden")}>
+      <div className={"exit-overlay" + (exited && !applying ? "" : " hidden")}>
         <div className="exit-card">程序已退出，请重新启动 Goodlink</div>
       </div>
       <div
@@ -419,30 +436,42 @@ export default function App() {
         </div>
       </div>
       <div
-        className={"exit-overlay" + (!exited && upgradeOpen ? "" : " hidden")}
+        className={"exit-overlay" + ((applying || (!exited && upgradeOpen)) ? "" : " hidden")}
       >
-        <div className="exit-card admin-card upgrade-card" onClick={(e) => e.stopPropagation()}>
-          <div className="upgrade-title">新版本 v{state?.upgrade?.latest || ""}</div>
-          <pre className="upgrade-body">{upgradeBody || "暂无更新说明"}</pre>
-          <div className="upgrade-progress">
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: Math.max(0, Math.min(100, upgradeProgress.percent || 0)) + "%" }}></div>
+        {applying ? (
+          <div className="exit-card admin-card upgrade-card upgrade-applying" onClick={(e) => e.stopPropagation()}>
+            <div className="upgrade-loader">
+              <span className="upgrade-ring"></span>
+              <span className="upgrade-ring upgrade-ring-2"></span>
             </div>
-            <span className="progress-pct">{upgradeProgress.percent || 0}%</span>
+            <div className="upgrade-applying-title">正在更新到 v{state?.upgrade?.latest || ""}</div>
+            <div className="upgrade-applying-tip">程序将自动重启，请稍候<span className="dots"><i>.</i><i>.</i><i>.</i></span></div>
+            <div className="upgrade-applying-sub">重启完成后页面会自动恢复，无需手动关闭</div>
           </div>
-          {upgradeModalError ? <div className="upgrade-error">{upgradeModalError}</div> : null}
-          {upgradeProgress.error ? <div className="upgrade-error">{upgradeProgress.error}</div> : null}
-          <div className="upgrade-actions">
-            <button type="button" className="upgrade-back" onClick={() => setUpgradeOpen(false)}>返回</button>
-            {upgradeProgress.done ? (
-              <button type="button" onClick={onUpgradeApply}>更新</button>
-            ) : (
-              <button type="button" disabled={upgradeProgress.downloading} onClick={onUpgradeDownload}>
-                {upgradeProgress.downloading ? "下载中..." : "下载"}
-              </button>
-            )}
+        ) : (
+          <div className="exit-card admin-card upgrade-card" onClick={(e) => e.stopPropagation()}>
+            <div className="upgrade-title">新版本 v{state?.upgrade?.latest || ""}</div>
+            <pre className="upgrade-body">{upgradeBody || "暂无更新说明"}</pre>
+            <div className="upgrade-progress">
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: Math.max(0, Math.min(100, upgradeProgress.percent || 0)) + "%" }}></div>
+              </div>
+              <span className="progress-pct">{upgradeProgress.percent || 0}%</span>
+            </div>
+            {upgradeModalError ? <div className="upgrade-error">{upgradeModalError}</div> : null}
+            {upgradeProgress.error ? <div className="upgrade-error">{upgradeProgress.error}</div> : null}
+            <div className="upgrade-actions">
+              <button type="button" className="upgrade-back" onClick={() => setUpgradeOpen(false)}>返回</button>
+              {upgradeProgress.done ? (
+                <button type="button" onClick={onUpgradeApply}>更新</button>
+              ) : (
+                <button type="button" disabled={upgradeProgress.downloading} onClick={onUpgradeDownload}>
+                  {upgradeProgress.downloading ? "下载中..." : "下载"}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );
