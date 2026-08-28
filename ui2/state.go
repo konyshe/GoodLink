@@ -407,9 +407,9 @@ func setTransport(transport string) {
 func SetNATHint(isNAT4 bool) {
 	stateMu.Lock()
 	if isNAT4 {
-		m_nat = NATInfo{Ready: true, IsNAT4: true, Text: "本地网络为NAT4"}
+		m_nat = NATInfo{Ready: true, IsNAT4: true, Text: "本地网络为NAT4，如果对端也是NAT4，则无法直连"}
 	} else {
-		m_nat = NATInfo{Ready: true, IsNAT4: false, Text: "本地网络为NAT1-NAT3"}
+		m_nat = NATInfo{Ready: true, IsNAT4: false, Text: "本地网络为NAT1-3"}
 	}
 	stateMu.Unlock()
 	broadcastState()
