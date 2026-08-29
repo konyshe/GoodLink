@@ -96,7 +96,7 @@ var (
 	}
 	buttonStateIdle = buttonState{
 		kind:          kindIdle,
-		text:          "点击启动",
+		text:          "点击连接",
 		importance:    "high",
 		enabled:       true,
 		activity:      false,
