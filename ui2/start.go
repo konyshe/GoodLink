@@ -267,9 +267,9 @@ func tryAutoStart() {
 	if !getAutoStart() {
 		return
 	}
-	UILogPrintF("已配置自动启动, 正在启动%s端...", GetWorkType())
+	UILogPrintF("已配置自动连接, 正在启动%s端...", GetWorkType())
 	if err := HandleStart(GetWorkType(), getTunKey(), getLocalMode(), getTransport(), getForwardRules()); err != nil {
-		UILogPrintF("自动启动失败: %v", err)
+		UILogPrintF("自动连接失败: %v", err)
 	}
 }
 

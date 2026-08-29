@@ -414,13 +414,13 @@ export default function App() {
         {formError && <div className="form-error">{formError}</div>}
 
         <section className="row">
-          <span className="label">自动启动:</span>
+          <span className="label">自动连接:</span>
           <button
             type="button"
             className={"switch" + (autoStart ? " on" : "")}
             disabled={exited}
             role="switch"
-            aria-label="自动启动"
+            aria-label="自动连接"
             aria-checked={autoStart}
             onClick={() => onAutoStartToggle(!autoStart)}
           >
