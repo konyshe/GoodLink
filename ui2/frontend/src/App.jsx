@@ -503,6 +503,22 @@ export default function App() {
             )}
             <a
               className="footer-chip feedback"
+              href="https://goodlink.kony.vip"
+              target="_blank"
+              rel="noopener"
+            >
+              官方网站
+            </a>
+            <a
+              className="footer-chip feedback"
+              href="https://gitee.com/konyshe/goodlink/wikis/pages"
+              target="_blank"
+              rel="noopener"
+            >
+              使用教程
+            </a>
+            <a
+              className="footer-chip feedback"
               href="https://gitee.com/konyshe/goodlink/issues"
               target="_blank"
               rel="noopener"
