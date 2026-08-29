@@ -32,7 +32,7 @@ type TUN struct {
 	// 使用读写锁替代互斥锁，允许并发读取
 	rMutex sync.RWMutex // 读取读写锁，优化并发读取性能
 	wMutex sync.Mutex   // 写入互斥锁，保护并发写入操作
-	
+
 	// 为每个goroutine分配独立的缓冲区池避免竞争
 	rBuffPool sync.Pool // 读取缓冲区池
 	wBuffPool sync.Pool // 写入缓冲区池
@@ -48,7 +48,9 @@ type TUN struct {
 //   - Device: 实现了Device接口的TUN设备
 //   - error: 创建过程中的错误信息
 func Open(name string, mtu uint32) (_ Device, err error) {
-	InitWintunDll()
+	if err := InitWintunDll(); err != nil {
+		return nil, err
+	}
 
 	// 使用defer和recover处理可能的panic，确保错误被正确捕获和包装
 	defer func() {
@@ -59,11 +61,11 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 
 	// 初始化 TUN 结构体，设置基本参数
 	t := &TUN{
-		name:   name,              // 设置设备名称
-		mtu:    mtu,               // 设置MTU值
-		offset: offset,            // 设置数据包偏移量
+		name:   name,   // 设置设备名称
+		mtu:    mtu,    // 设置MTU值
+		offset: offset, // 设置数据包偏移量
 	}
-	
+
 	// 初始化缓冲区池
 	t.rBuffPool.New = func() interface{} {
 		return &struct {
@@ -74,7 +76,7 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 			sizes: make([]int, 1),
 		}
 	}
-	
+
 	t.wBuffPool.New = func() interface{} {
 		return make([][]byte, 1)
 	}
@@ -124,10 +126,10 @@ func (t *TUN) Read(packet []byte) (int, error) {
 		sizes []int
 	})
 	defer t.rBuffPool.Put(bufStruct)
-	
-	bufStruct.buffs[0] = packet                                   // 设置接收缓冲区
+
+	bufStruct.buffs[0] = packet                                     // 设置接收缓冲区
 	_, err := t.nt.Read(bufStruct.buffs, bufStruct.sizes, t.offset) // 从TUN设备读取数据
-	return bufStruct.sizes[0], err                                // 返回读取的字节数和错误
+	return bufStruct.sizes[0], err                                  // 返回读取的字节数和错误
 }
 
 // Name 返回 TUN 设备的名称
@@ -158,8 +160,8 @@ func (t *TUN) Write(packet []byte) (int, error) {
 	// 从池中获取写入缓冲区
 	buffs := t.wBuffPool.Get().([][]byte)
 	defer t.wBuffPool.Put(buffs)
-	
-	buffs[0] = packet                 // 设置发送缓冲区
+
+	buffs[0] = packet                  // 设置发送缓冲区
 	return t.nt.Write(buffs, t.offset) // 向TUN设备写入数据
 }
 

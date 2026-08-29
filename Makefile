@@ -3,14 +3,16 @@ BINDIR=bin
 # 获取源码最近一次 git commit log，包含 commit sha 值，以及 commit message
 GitCommitLog=$(shell git log --pretty=oneline -n 1)
 BuildTime=$(shell date +'%Y-%m-%d %H:%M:%S')
-GOBUILD=GO111MODULE=on \
+GO_ENV=GO111MODULE=on \
 		GOPROXY="https://goproxy.cn,direct" \
-		GOEXPERIMENT=jsonv2,loopvar \
-		go build -trimpath -ldflags \
-		'-X "go2.GitCommitLog=$(GitCommitLog)" \
+		GOEXPERIMENT=jsonv2,loopvar
+LD_COMMON=-X "go2.GitCommitLog=$(GitCommitLog)" \
     	-X "go2.GitStatus=$(GitStatus)" \
     	-X "go2.BuildTime=$(BuildTime)" \
-		-w -s -buildid='
+		-w -s -buildid=
+GOBUILD=$(GO_ENV) go build -trimpath -ldflags '$(LD_COMMON)'
+GOBUILD_WIN=$(GO_ENV) go build -trimpath -ldflags '$(LD_COMMON) -H windowsgui'
+GOVERSIONINFO ?= $(shell go env GOPATH)/bin/goversioninfo
 LINUX_PLATFORM_LIST = \
 	linux-386 \
 	linux-amd64 \
@@ -43,7 +45,7 @@ debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64
 
 macos: $(DARWIN_PLATFORM_LIST) strip
 
-windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac strip
+windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac
 
 # linux-build 只产出二进制，不调用 upx；packet.sh 在 glibc 2.17 容器中使用该目标
 linux-build: $(LINUX_PLATFORM_LIST)
@@ -90,18 +92,18 @@ darwin-arm64:
 	GOARCH=arm64 GOOS=darwin $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 windows-amd64:
-	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=amd64 GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-arm64:
-	GOARCH=arm64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=arm64 GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-386:
-	GOARCH=386 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=386 GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-arm:
-	GOARCH=arm GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
+	GOARCH=arm GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
 create_nac:
-	rsrc -manifest nac.manifest -ico ui2/frontend/public/favicon.ico -o nac.syso
+	$(GOVERSIONINFO) -64 -o nac.syso -icon ui2/frontend/public/favicon.ico -manifest nac.manifest versioninfo.json
 
 rm_nac:
 	rm -rf nac.syso

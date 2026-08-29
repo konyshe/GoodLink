@@ -3,15 +3,20 @@
 package ui2
 
 import (
-	"os/exec"
-	"syscall"
+	"golang.org/x/sys/windows"
 )
 
 func OpenBrowser(url string) {
-	cmd := exec.Command("cmd", "/c", "start", "", url)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow:    true,
-		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+	if url == "" {
+		return
 	}
-	_ = cmd.Start()
+	file, err := windows.UTF16PtrFromString(url)
+	if err != nil {
+		return
+	}
+	verb, err := windows.UTF16PtrFromString("open")
+	if err != nil {
+		return
+	}
+	_ = windows.ShellExecute(0, verb, file, nil, nil, windows.SW_SHOWNORMAL)
 }

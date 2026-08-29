@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+func WriteWorkerPid(pid int) {}
+
 func KillProcess(pid int) {
 	if pid == os.Getpid() {
 		return

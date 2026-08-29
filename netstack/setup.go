@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/netip"
+	"strings"
 	"sync"
 	"time"
 
@@ -84,6 +85,9 @@ func initStack() error {
 
 	dev, err := Open(NetStackName, 0)
 	if err != nil {
+		if strings.Contains(err.Error(), "wintun.dll") {
+			return err
+		}
 		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
 	}
 	currentDevice = dev

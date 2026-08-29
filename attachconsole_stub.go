@@ -2,4 +2,4 @@
 
 package main
 
-func hideUIConsole() {}
+func attachParentConsoleIfCLI() {}

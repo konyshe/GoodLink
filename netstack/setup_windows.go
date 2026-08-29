@@ -4,12 +4,11 @@ package netstack
 
 import (
 	"fmt"
-	go2http "go2/http"
 	"goodlink/winipcfg"
 	"log"
 	"net/netip"
 	"os"
-	"runtime"
+	"path/filepath"
 
 	"golang.org/x/sys/windows"
 	"golang.zx2c4.com/wintun"
@@ -102,73 +101,42 @@ func SetTunIP2(wintunEP *Device, ip string, mask int) error {
 	return nil
 }
 
-// CleanupOldAdapter 清理之前可能残留的虚拟网卡
+// CleanupOldAdapter 清理之前可能残留的虚拟网卡（仅关闭本适配器，不卸载驱动）
 func CleanupOldAdapter(name string) {
-	// 尝试打开并删除之前创建的适配器
+	if err := InitWintunDll(); err != nil {
+		return
+	}
 	adapter, err := wintun.OpenAdapter(name)
 	if err != nil {
-		// 适配器不存在，无需清理
 		return
 	}
 
 	log.Printf("发现残留的虚拟网卡 %s，正在清理...", name)
-
-	// 强制关闭适配器
 	adapter.Close()
-
-	// 使用 Uninstall 方法尝试完全卸载
-	err = wintun.Uninstall()
-	if err != nil {
-		log.Printf("清理虚拟网卡警告: %v", err)
-	} else {
-		log.Printf("虚拟网卡 %s 已清理", name)
-	}
+	log.Printf("虚拟网卡 %s 已清理", name)
 }
 
-// DeleteAdapterByGUID 通过 GUID 删除适配器（备用方法）
-func DeleteAdapterByGUID(guid *windows.GUID) error {
-	adapter, err := wintun.OpenAdapter("")
+const wintunDllName = "wintun.dll"
+
+func wintunDllPath() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(exe), wintunDllName), nil
+}
+
+// InitWintunDll 确认 exe 同目录存在 wintun.dll，并从该目录加载。不从网络下载。
+func InitWintunDll() error {
+	p, err := wintunDllPath()
 	if err != nil {
 		return err
 	}
-	adapter.Close()
-	return nil
-}
-
-const (
-	// wintunDllURL wintun.dll 下载地址
-	wintunDllURL = "https://gitee.com/konyshe/goodlink_conf/raw/master/wintun-0.14.1"
-	// wintunDllName wintun.dll 文件名
-	wintunDllName = "wintun.dll"
-)
-
-// InitWintunDll 初始化 wintun.dll，如果文件不存在则从网络下载
-func InitWintunDll() error {
-	// 检查文件是否已存在
-	if _, err := os.Stat(wintunDllName); err == nil {
-		log.Printf("%s 已存在，跳过下载", wintunDllName)
-		return nil
+	if _, err := os.Stat(p); err != nil {
+		return fmt.Errorf("请将 wintun.dll 放在程序同目录: %s", p)
 	}
-
-	url := fmt.Sprintf("%s/%s/%s", wintunDllURL, runtime.GOARCH, wintunDllName)
-
-	/*
-		// 带进度监控的下载
-		err := go2http.DownloadWithProgress(wintunDllURL, wintunDllName,
-		    func(downloaded, total int64) {
-		        if total > 0 {
-		            percent := float64(downloaded) / float64(total) * 100
-		            log.Printf("下载进度: %.2f%% (%d/%d 字节)", percent, downloaded, total)
-		        }
-		    })
-
-		// 自定义配置下载
-		config := go2http.DefaultDownloadConfig("https://example.com/file.zip", "file.zip")
-		config.MaxRetries = 5
-		config.RetryDelay = 3 * time.Second
-		config.Timeout = 60 * time.Second
-		err := go2http.Download(config)
-	*/
-
-	return go2http.DownloadSimple(url, wintunDllName)
+	if err := windows.SetDllDirectory(filepath.Dir(p)); err != nil {
+		return fmt.Errorf("SetDllDirectory: %w", err)
+	}
+	return nil
 }

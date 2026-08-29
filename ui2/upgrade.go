@@ -2,6 +2,8 @@ package ui2
 
 import (
 	"archive/zip"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -188,7 +190,6 @@ func HandleUpgradeApply() error {
 		"--wait-pid", strconv.Itoa(os.Getpid()),
 		"--target", exe,
 	)
-	hideChildWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("启动更新进程失败: %v", err)
 	}
@@ -209,8 +210,13 @@ func RunSelfUpdate(zipPath string, waitPid int, target string) {
 	}
 	time.Sleep(400 * time.Millisecond)
 
+	self := utils.GetCmdExePath()
 	if target == "" {
-		target = utils.GetCmdExePath()
+		target = self
+	}
+	if !sameFilePath(target, self) {
+		log.Println("self-update: 目标路径无效")
+		os.Exit(1)
 	}
 	if zipPath == "" {
 		log.Println("self-update: 缺少 zip 路径")
@@ -224,7 +230,6 @@ func RunSelfUpdate(zipPath string, waitPid int, target string) {
 
 	cmd := exec.Command(target, "--no-browser")
 	cmd.Dir = filepath.Dir(target)
-	hideChildWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		log.Println("self-update restart failed:", err)
 		os.Exit(1)
@@ -235,6 +240,54 @@ func RunSelfUpdate(zipPath string, waitPid int, target string) {
 	os.Exit(0)
 }
 
+func sameFilePath(a, b string) bool {
+	aa, err1 := filepath.Abs(a)
+	bb, err2 := filepath.Abs(b)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	aa, bb = filepath.Clean(aa), filepath.Clean(bb)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(aa, bb)
+	}
+	return aa == bb
+}
+
+func zipEntryBase(name string) (string, error) {
+	n := strings.ReplaceAll(name, "\\", "/")
+	if n == "" || strings.HasPrefix(n, "/") || strings.Contains(n, ":") {
+		return "", fmt.Errorf("非法路径: %s", name)
+	}
+	for _, p := range strings.Split(n, "/") {
+		if p == ".." {
+			return "", fmt.Errorf("非法路径: %s", name)
+		}
+	}
+	base := filepath.Base(n)
+	if base == "." || base == string(filepath.Separator) || base == "" {
+		return "", fmt.Errorf("非法路径: %s", name)
+	}
+	return base, nil
+}
+
+func parseMd5sumFile(s string) map[string]string {
+	out := make(map[string]string)
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		name := strings.ToLower(filepath.Base(fields[len(fields)-1]))
+		name = strings.TrimPrefix(name, "*")
+		out[name] = fields[0]
+	}
+	return out
+}
+
 func applyZip(zipPath, target string) error {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
@@ -242,32 +295,77 @@ func applyZip(zipPath, target string) error {
 	}
 	defer r.Close()
 
-	var exeSrc, dllSrc *zip.File
+	destDir := filepath.Dir(target)
+	var exeSrc, dllSrc, md5Src *zip.File
 	for i := range r.File {
-		name := strings.ToLower(filepath.Base(r.File[i].Name))
-		switch {
-		case strings.HasSuffix(name, ".exe"):
-			exeSrc = r.File[i]
-		case name == "wintun.dll":
+		if r.File[i].FileInfo().IsDir() {
+			continue
+		}
+		base, err := zipEntryBase(r.File[i].Name)
+		if err != nil {
+			return err
+		}
+		switch strings.ToLower(base) {
+		case "md5sum.txt":
+			md5Src = r.File[i]
+		case "wintun.dll":
 			dllSrc = r.File[i]
+		default:
+			if strings.HasSuffix(strings.ToLower(base), ".exe") {
+				exeSrc = r.File[i]
+			}
 		}
 	}
 	if exeSrc == nil {
 		return fmt.Errorf("压缩包中未找到可执行文件")
 	}
-	if err := extractReplace(exeSrc, target); err != nil {
+
+	var hashes map[string]string
+	if md5Src != nil {
+		rc, err := md5Src.Open()
+		if err != nil {
+			return fmt.Errorf("读取 md5sum.txt 失败: %w", err)
+		}
+		data, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			return fmt.Errorf("读取 md5sum.txt 失败: %w", err)
+		}
+		hashes = parseMd5sumFile(string(data))
+		if len(hashes) == 0 {
+			return fmt.Errorf("md5sum.txt 为空或格式无效")
+		}
+	}
+
+	exeBase := strings.ToLower(filepath.Base(exeSrc.Name))
+	if err := extractReplace(exeSrc, target, hashFor(hashes, exeBase)); err != nil {
 		return fmt.Errorf("覆盖程序失败: %w", err)
 	}
 	if dllSrc != nil {
-		dllDest := filepath.Join(filepath.Dir(target), "wintun.dll")
-		if err := extractReplace(dllSrc, dllDest); err != nil {
+		dllDest := filepath.Join(destDir, "wintun.dll")
+		if err := extractReplace(dllSrc, dllDest, hashFor(hashes, "wintun.dll")); err != nil {
 			return fmt.Errorf("覆盖 wintun.dll 失败: %w", err)
 		}
 	}
 	return nil
 }
 
-func extractReplace(f *zip.File, dest string) error {
+func hashFor(hashes map[string]string, base string) string {
+	if hashes == nil {
+		return ""
+	}
+	h, ok := hashes[strings.ToLower(base)]
+	if !ok {
+		return "-"
+	}
+	return h
+}
+
+func extractReplace(f *zip.File, dest string, wantMD5 string) error {
+	if wantMD5 == "-" {
+		return fmt.Errorf("md5sum.txt 缺少 %s", filepath.Base(dest))
+	}
+
 	rc, err := f.Open()
 	if err != nil {
 		return err
@@ -279,7 +377,8 @@ func extractReplace(f *zip.File, dest string) error {
 	if err != nil {
 		return err
 	}
-	_, copyErr := io.Copy(out, rc)
+	h := md5.New()
+	_, copyErr := io.Copy(out, io.TeeReader(rc, h))
 	closeErr := out.Close()
 	if copyErr != nil {
 		_ = os.Remove(tmp)
@@ -288,6 +387,13 @@ func extractReplace(f *zip.File, dest string) error {
 	if closeErr != nil {
 		_ = os.Remove(tmp)
 		return closeErr
+	}
+	if wantMD5 != "" {
+		got := hex.EncodeToString(h.Sum(nil))
+		if !strings.EqualFold(got, wantMD5) {
+			_ = os.Remove(tmp)
+			return fmt.Errorf("%s 校验失败", filepath.Base(dest))
+		}
 	}
 
 	old := dest + ".old"

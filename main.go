@@ -72,9 +72,6 @@ func main2() {
 }
 
 func runUI(openBrowser bool) {
-	// 隐藏 UI 主进程控制台窗口（仅 Windows；从已有终端启动时只脱离本进程）
-	hideUIConsole()
-
 	// 检查单实例，如果不是第一个实例则退出
 	// 必须在创建任何UI资源之前检查，避免影响已运行的实例
 	if !utils.CheckSingleInstance() {
@@ -112,6 +109,8 @@ func runUI(openBrowser bool) {
 }
 
 func main() {
+	attachParentConsoleIfCLI()
+
 	// 无任何参数时启动 UI（Windows/Linux/macOS）
 	if len(os.Args) <= 1 {
 		runUI(true)

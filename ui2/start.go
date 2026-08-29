@@ -143,9 +143,6 @@ func startCmdProcess() error {
 	m_cmd_mutex.Lock()
 	m_cmd_process = exec.Command(cmdPath, args...)
 
-	// 隐藏子进程窗口（仅 Windows）
-	hideChildWindow(m_cmd_process)
-
 	// 获取输出管道
 	stdout, err := m_cmd_process.StdoutPipe()
 	if err != nil {
@@ -165,6 +162,9 @@ func startCmdProcess() error {
 		m_cmd_mutex.Unlock()
 		UILogPrintF("启动失败: %v", err)
 		return err
+	}
+	if m_cmd_process.Process != nil {
+		utils.WriteWorkerPid(m_cmd_process.Process.Pid)
 	}
 	m_cmd_mutex.Unlock()
 

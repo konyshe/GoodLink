@@ -1,0 +1,41 @@
+{
+	"FixedFileInfo": {
+		"FileVersion": {
+			"Major": 3,
+			"Minor": 3,
+			"Patch": 7,
+			"Build": 0
+		},
+		"ProductVersion": {
+			"Major": 3,
+			"Minor": 3,
+			"Patch": 7,
+			"Build": 0
+		},
+		"FileFlagsMask": "3f",
+		"FileFlags ": "00",
+		"FileOS": "040004",
+		"FileType": "01",
+		"FileSubType": "00"
+	},
+	"StringFileInfo": {
+		"Comments": "https://gitee.com/konyshe/goodlink",
+		"CompanyName": "Goodlink",
+		"FileDescription": "Goodlink 内网穿透",
+		"FileVersion": "3.3.7.0",
+		"InternalName": "goodlink",
+		"LegalCopyright": "Copyright (c) Goodlink. MIT License.",
+		"LegalTrademarks": "",
+		"OriginalFilename": "goodlink-windows-amd64.exe",
+		"PrivateBuild": "",
+		"ProductName": "Goodlink",
+		"ProductVersion": "3.3.7.0",
+		"SpecialBuild": ""
+	},
+	"VarFileInfo": {
+		"Translation": {
+			"LangID": "0804",
+			"CharsetID": "04B0"
+		}
+	}
+}

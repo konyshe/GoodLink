@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-go install github.com/akavel/rsrc@latest
+go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 
 set -x
 
