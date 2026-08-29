@@ -87,7 +87,7 @@ func detectNAT() {
 		conn.Close()
 
 		SetNATHint(wanPort1 != wanPort2)
-		updateButtonState(buttonStateIdle)
+		updateButtonState(idleButtonState())
 		tryAutoStart()
 		return
 	}

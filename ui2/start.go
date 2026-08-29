@@ -232,6 +232,13 @@ func HandleForwards(localMode string, rules []config.UIForwardRule) error {
 	return nil
 }
 
+func autoConnectVerb() string {
+	if GetWorkType() == workTypeRemote {
+		return "启动"
+	}
+	return "连接"
+}
+
 func HandleSetAutoStart(autoStart bool, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
 	if othersEnabled() {
 		wt := strings.TrimSpace(workType)
@@ -260,6 +267,24 @@ func HandleSetAutoStart(autoStart bool, workType, tunKey, localMode, transport s
 		return err
 	}
 	broadcastState()
+
+	if !autoStart {
+		return nil
+	}
+	stateMu.RLock()
+	idle := currentButton.kind == kindIdle
+	stateMu.RUnlock()
+	if !idle {
+		return nil
+	}
+	UILogPrintF("已开启自动%s, 正在启动%s端...", autoConnectVerb(), GetWorkType())
+	if err := HandleStart(GetWorkType(), getTunKey(), getLocalMode(), getTransport(), getForwardRules()); err != nil {
+		msg := err.Error()
+		if msg == "already started" || msg == "busy" {
+			return nil
+		}
+		return err
+	}
 	return nil
 }
 
@@ -267,9 +292,9 @@ func tryAutoStart() {
 	if !getAutoStart() {
 		return
 	}
-	UILogPrintF("已配置自动连接, 正在启动%s端...", GetWorkType())
+	UILogPrintF("已配置自动%s, 正在启动%s端...", autoConnectVerb(), GetWorkType())
 	if err := HandleStart(GetWorkType(), getTunKey(), getLocalMode(), getTransport(), getForwardRules()); err != nil {
-		UILogPrintF("自动连接失败: %v", err)
+		UILogPrintF("自动%s失败: %v", autoConnectVerb(), err)
 	}
 }
 
@@ -336,7 +361,7 @@ func HandleStart(workType, tunKey, localMode, transport string, rules []config.U
 		m_start_button_state = 0
 		m_auto_restart_enabled = false
 		resetProxyListen()
-		updateButtonState(buttonStateIdle)
+		updateButtonState(idleButtonState())
 		return err
 	}
 
@@ -363,7 +388,7 @@ func HandleStop() {
 		StopCmdProcess()
 		m_start_button_state = 0
 		resetProxyListen()
-		updateButtonState(buttonStateIdle)
+		updateButtonState(idleButtonState())
 	}()
 }
 
@@ -395,7 +420,7 @@ func waitForProcessAndHandleExit() {
 		// 正常停止，恢复 UI
 		m_start_button_state = 0
 		resetProxyListen()
-		updateButtonState(buttonStateIdle)
+		updateButtonState(idleButtonState())
 	}
 }
 
@@ -420,7 +445,7 @@ func autoRestartProcess() {
 		UILogPrintF("启动失败: %v", err)
 		m_start_button_state = 0
 		resetProxyListen()
-		updateButtonState(buttonStateIdle)
+		updateButtonState(idleButtonState())
 		return
 	}
 

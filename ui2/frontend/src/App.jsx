@@ -154,6 +154,10 @@ export default function App() {
   const startEnabled = !exited && !!button.enabled;
   const mappingEnabled = !exited && workType === "Local" && localMode === "forward";
   const natClass = nat.ready ? (nat.isNAT4 ? "warn" : "ok") : "detecting";
+  const autoLabel = workType === "Remote" ? "自动启动" : "自动连接";
+  const startText = button.kind === "idle"
+    ? (workType === "Remote" ? "点击启动" : "点击连接")
+    : (button.text || "");
 
   async function onGenerate() {
     const key = await generateKey();
@@ -266,11 +270,20 @@ export default function App() {
   async function onAutoStartToggle(enabled) {
     if (exited) return;
     setFormError("");
+    setConflictHint("");
     setAutoStart(enabled);
     const result = await saveAutoStart(enabled, workType, tunKey, localMode, rulesFromRows(rows), transport);
     if (result.error) {
-      setAutoStart(!enabled);
+      if (String(result.error).includes("端口已被占用")) {
+        setConflictHint(result.error);
+        return;
+      }
       setFormError(result.error);
+      if (String(result.error).includes("管理员权限")) {
+        setAdminHint(true);
+        return;
+      }
+      setAutoStart(!enabled);
     }
   }
 
@@ -414,13 +427,13 @@ export default function App() {
         {formError && <div className="form-error">{formError}</div>}
 
         <section className="row">
-          <span className="label">自动连接:</span>
+          <span className="label">{autoLabel}:</span>
           <button
             type="button"
             className={"switch" + (autoStart ? " on" : "")}
             disabled={exited}
             role="switch"
-            aria-label="自动连接"
+            aria-label={autoLabel}
             aria-checked={autoStart}
             onClick={() => onAutoStartToggle(!autoStart)}
           >
@@ -435,7 +448,7 @@ export default function App() {
           onClick={onStart}
         >
           <span className={"spinner" + (button.activity ? "" : " hidden")}></span>
-          <span>{button.text || ""}</span>
+          <span>{startText}</span>
         </button>
 
         <section className="logs">

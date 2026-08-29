@@ -328,6 +328,14 @@ func updateButtonState(state buttonState) {
 	broadcastState()
 }
 
+func idleButtonState() buttonState {
+	st := buttonStateIdle
+	if GetWorkType() == workTypeRemote {
+		st.text = "点击启动"
+	}
+	return st
+}
+
 func othersEnabled() bool {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
