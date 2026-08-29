@@ -21,10 +21,11 @@ func SetExtraLogSink(f func(string)) { extraLogSink = f }
 
 func stunLogf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	log.Printf(format, args...)
 	if extraLogSink != nil {
 		extraLogSink(msg)
+		return
 	}
+	log.Printf("%s", msg)
 }
 
 func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magicCookie []byte, transactionID []byte) (string, int, error) {

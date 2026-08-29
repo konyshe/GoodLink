@@ -2,6 +2,7 @@ package ui2
 
 import (
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -15,19 +16,18 @@ var (
 	m_log_mutex   sync.RWMutex
 )
 
-// appendLogEntry 追加日志条目到列表
+// appendLogEntry 追加日志条目到列表，同时输出到终端（子进程日志经管道进来后原本不会出现在启动 UI 的终端）
 func appendLogEntry(content string) {
-	// 先添加日志条目
+	fmt.Fprintln(os.Stderr, content)
+
 	m_log_mutex.Lock()
 	m_log_entries = append(m_log_entries, content)
 
-	// 限制日志数量
 	if len(m_log_entries) > maxLogEntries {
 		m_log_entries = m_log_entries[len(m_log_entries)-maxLogEntries:]
 	}
 	m_log_mutex.Unlock()
 
-	// 通过 SSE 推送到浏览器（UILogPrintF 可能从 goroutine 调用）
 	broadcastLog(content)
 }
 
