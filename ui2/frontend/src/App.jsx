@@ -174,7 +174,7 @@ export default function App() {
   const startEnabled = !exited && !!view.enabled;
   const mappingEnabled = !exited && workType === "Local" && localMode === "forward";
   const natClass = nat.ready ? (nat.isNAT4 ? "warn" : "ok") : "detecting";
-  const autoLabel = workType === "Remote" ? "自动启动" : "自动连接";
+  const autoLabel = workType === "Remote" ? "程序启动后，自动启动服务端" : "程序启动后，自动连接Remote端";
 
   async function onGenerate() {
     const key = await generateKey();
