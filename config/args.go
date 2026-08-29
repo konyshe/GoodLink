@@ -51,9 +51,6 @@ func Help() {
 	flag.StringVar(&Arg_upgrade_target, "target", "", "内部使用: 要覆盖的主程序路径")
 	flag.Bool("no-browser", false, "启动UI但不自动打开浏览器")
 
-	/* 没有用到的参数 */
-	flag.Bool("fork", false, "子进程")
-
 	flag.Parse()
 
 	if *v {

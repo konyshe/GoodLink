@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	go2log "go2/log"
 	go2pool "go2/pool"
 	"goodlink/config"
 	"goodlink/pro"
@@ -20,7 +19,6 @@ import (
 	"runtime/debug"
 	"strings"
 	"syscall"
-	"time"
 )
 
 func main2() {
@@ -149,11 +147,5 @@ func main() {
 		os.Exit(0)
 	}
 
-	utils.GuardStart(main2, 500*time.Millisecond, func(err error) {
-		// if 0: err==nil; -1: err==255; -2: err==254; err==1: 1; err==2
-		if err != nil {
-			log.Printf("异常退出: %v", err)
-			go2log.Dingf("error: %v", err)
-		}
-	})
+	main2()
 }
