@@ -15,13 +15,14 @@ const (
 )
 
 var (
+	Arg_stun_svr_ip   string
+	Arg_stun_svr_port int
+
 	Arg_pprof_addr     string
 	Arg_redis_addr     string
 	Arg_redis_tls_addr string
 	Arg_redis_pass     string
 	Arg_redis_id       int
-	Arg_stun_svr_ip    string
-	Arg_stun_svr_port  int
 
 	Arg_ui              *bool
 	Arg_self_update     bool
@@ -36,6 +37,7 @@ func Help() {
 
 	flag.StringVar(&Arg_stun_svr_ip, "stun_svr_ip", "", "启动STUN服务，监听IP地址")
 	flag.IntVar(&Arg_stun_svr_port, "stun_svr_port", 3478, "启动STUN服务，监听端口")
+
 	flag.StringVar(&Arg_redis_addr, "redis_addr", "", "Redis服务地址, 例如: 1.2.3.4:6379")
 	flag.StringVar(&Arg_redis_tls_addr, "redis_tls_addr", "", "Redis服务TLS地址, 例如: 1.2.3.4:16378")
 	flag.StringVar(&Arg_redis_pass, "redis_pass", "", "Redis服务密码, 例如: 123456")
