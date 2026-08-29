@@ -14,40 +14,19 @@ import (
 )
 
 const (
-	kindInitializing         = "initializing"
-	kindIdle                 = "idle"
-	kindStarting             = "starting"
-	kindConnecting           = "connecting"
-	kindConnectingNat4       = "connecting_nat4"
-	kindConnectingNat4ToNat4 = "connecting_nat4_to_nat4"
-	kindConnected            = "connected"
-	kindRunning              = "running"
-	kindStopping             = "stopping"
+	StatusDetecting      = 0
+	StatusIdle           = 1
+	StatusStarting       = 2
+	StatusConnecting     = 3
+	StatusConnectingNAT4 = 4
+	StatusConnected      = 5
+	StatusRunning        = 6
+	StatusStopping       = 7
 )
 
-// 按钮状态类型
-type buttonState struct {
-	kind          string
-	text          string
-	importance    string
-	enabled       bool
-	activity      bool
-	other_enabled bool
-}
-
-type ButtonInfo struct {
-	Kind          string `json:"kind"`
-	Text          string `json:"text"`
-	Importance    string `json:"importance"`
-	Enabled       bool   `json:"enabled"`
-	Activity      bool   `json:"activity"`
-	OthersEnabled bool   `json:"othersEnabled"`
-}
-
 type NATInfo struct {
-	Ready  bool   `json:"ready"`
-	IsNAT4 bool   `json:"isNAT4"`
-	Text   string `json:"text"`
+	Ready  bool `json:"ready"`
+	IsNAT4 bool `json:"isNAT4"`
 }
 
 type UpgradeInfo struct {
@@ -77,88 +56,12 @@ type UIState struct {
 	AutoStart    bool                   `json:"autoStart"`
 	ForwardRules []config.UIForwardRule `json:"forwardRules"`
 	IsAdmin      bool                   `json:"isAdmin"`
-	Button       ButtonInfo             `json:"button"`
+	Status       int                    `json:"status"`
 	NAT          NATInfo                `json:"nat"`
 	Upgrade      UpgradeInfo            `json:"upgrade"`
 	Proxy        ProxyInfo              `json:"proxy"`
 	Logs         []string               `json:"logs,omitempty"`
 }
-
-// 预定义的按钮状态
-var (
-	buttonStateInitializing = buttonState{
-		kind:          kindInitializing,
-		text:          "检测网络中...",
-		importance:    "high",
-		enabled:       false,
-		activity:      false,
-		other_enabled: true,
-	}
-	buttonStateIdle = buttonState{
-		kind:          kindIdle,
-		text:          "点击连接",
-		importance:    "high",
-		enabled:       true,
-		activity:      false,
-		other_enabled: true,
-	}
-	buttonStateStarting = buttonState{
-		kind:          kindStarting,
-		text:          "启动中...",
-		importance:    "warning",
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnecting = buttonState{
-		kind:          kindConnecting,
-		text:          "连接中...",
-		importance:    "warning",
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnectingNat4 = buttonState{
-		kind:          kindConnectingNat4,
-		text:          "本地网络是NAT4, 连接中...",
-		importance:    "warning",
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnectingNat4ToNat4 = buttonState{
-		kind:          kindConnectingNat4ToNat4,
-		text:          "两端网络都是NAT4, 连接中...",
-		importance:    "danger",
-		enabled:       true,
-		activity:      true,
-		other_enabled: false,
-	}
-	buttonStateConnected = buttonState{
-		kind:          kindConnected,
-		text:          "连接成功, 点击停止",
-		importance:    "success",
-		enabled:       true,
-		activity:      false,
-		other_enabled: false,
-	}
-	buttonStateRunning = buttonState{
-		kind:          kindRunning,
-		text:          "启动成功, 点击停止",
-		importance:    "success",
-		enabled:       true,
-		activity:      false,
-		other_enabled: false,
-	}
-	buttonStateStopping = buttonState{
-		kind:          kindStopping,
-		text:          "停止中...",
-		importance:    "warning",
-		enabled:       false,
-		activity:      false,
-		other_enabled: false,
-	}
-)
 
 var (
 	stateMu         sync.RWMutex
@@ -168,8 +71,8 @@ var (
 	m_transport     string
 	m_auto_start    bool
 	m_forward_rules []config.UIForwardRule
-	currentButton   buttonState
-	m_nat           = NATInfo{Text: "正在检测本地网络环境..."}
+	m_status        int
+	m_nat           NATInfo
 	m_upgrade       UpgradeInfo
 	m_proxy_host    string
 	m_proxy_port    int
@@ -250,17 +153,10 @@ func snapshot(includeLogs bool) UIState {
 		AutoStart:    m_auto_start,
 		ForwardRules: rules,
 		IsAdmin:      utils.IsAdmin(),
-		Button: ButtonInfo{
-			Kind:          currentButton.kind,
-			Text:          currentButton.text,
-			Importance:    currentButton.importance,
-			Enabled:       currentButton.enabled,
-			Activity:      currentButton.activity,
-			OthersEnabled: currentButton.other_enabled,
-		},
-		NAT:     m_nat,
-		Upgrade: m_upgrade,
-		Proxy:   proxyInfoLocked(localMode),
+		Status:       m_status,
+		NAT:          m_nat,
+		Upgrade:      m_upgrade,
+		Proxy:        proxyInfoLocked(localMode),
 	}
 	stateMu.RUnlock()
 	if includeLogs {
@@ -319,27 +215,23 @@ func resetProxyListen() {
 	broadcastState()
 }
 
-// updateButtonState 更新启动按钮的状态，同时同步托盘图标
-func updateButtonState(state buttonState) {
+func setStatus(status int) {
 	stateMu.Lock()
-	currentButton = state
+	m_status = status
 	stateMu.Unlock()
-	UpdateTrayIcon(state)
+	UpdateTrayIcon(status)
 	broadcastState()
 }
 
-func idleButtonState() buttonState {
-	st := buttonStateIdle
-	if GetWorkType() == workTypeRemote {
-		st.text = "点击启动"
-	}
-	return st
+func getStatus() int {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	return m_status
 }
 
 func othersEnabled() bool {
-	stateMu.RLock()
-	defer stateMu.RUnlock()
-	return currentButton.other_enabled
+	s := getStatus()
+	return s == StatusDetecting || s == StatusIdle
 }
 
 // 获取当前工作类型
@@ -429,11 +321,7 @@ func setAutoStart(enabled bool) {
 // SetNATHint 根据 STUN 检测结果显示 NAT 类型提示
 func SetNATHint(isNAT4 bool) {
 	stateMu.Lock()
-	if isNAT4 {
-		m_nat = NATInfo{Ready: true, IsNAT4: true, Text: "本地网络为NAT4，如果对端也是NAT4，则无法直连"}
-	} else {
-		m_nat = NATInfo{Ready: true, IsNAT4: false, Text: "本地网络为NAT1-3"}
-	}
+	m_nat = NATInfo{Ready: true, IsNAT4: isNAT4}
 	stateMu.Unlock()
 	broadcastState()
 }

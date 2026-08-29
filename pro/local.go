@@ -74,14 +74,14 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 	// 版本兼容性检查（主版本.次版本一致即可）
 	if !config.VersionsCompatible(config.GetVersion(), redisJson.RemoteVersion) {
 		log.Printf("两端版本不兼容: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
-		UpdateStartButtonStatue(TagStatusVersionMismatch)
+		UpdateStartButtonStatue(StatusVersionMismatch)
 		RedisSessionDel(sessionID)
 		return errors.New("两端版本不兼容")
 	}
 
 	if (addr.WanPort1 != addr.WanPort2) && (redisJson.RemoteAddr.WanPort1 != redisJson.RemoteAddr.WanPort2) {
 		log.Println("*** local端和remote端都是NAT4 ***")
-		UpdateStartButtonStatue(TagStatusConnectingNAT4)
+		UpdateStartButtonStatue(StatusConnectingNAT4)
 	}
 
 	transport := sessionTransport(redisJson.Transport)
@@ -128,11 +128,11 @@ func handleLocalState3_ConnectionSuccess(tun_active *tun.TunActive, tun_passive 
 	log.Printf("State 3: 连接成功")
 
 	if tun_passive != nil && tun_passive.TunConn != nil {
-		UpdateStartButtonStatue(TagStatusConnected)
+		UpdateStartButtonStatue(StatusConnected)
 		return tun_passive.TunConn, tun_passive.TunHealthStream, true
 	}
 	if tun_active != nil && tun_active.TunConn != nil {
-		UpdateStartButtonStatue(TagStatusConnected)
+		UpdateStartButtonStatue(StatusConnected)
 		return tun_active.TunConn, tun_active.TunHealthStream, true
 	}
 
@@ -189,12 +189,12 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		// 根据状态进行处理
 		switch redisJson.State {
 		case -1: // Remote端检测到版本不一致
-			UpdateStartButtonStatue(TagStatusVersionMismatch)
+			UpdateStartButtonStatue(StatusVersionMismatch)
 			RedisSessionDel(SessionID)
 			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
 
 		case -2: // Remote端检测到传输协议不一致
-			UpdateStartButtonStatue(TagStatusTransportMismatch)
+			UpdateStartButtonStatue(StatusTransportMismatch)
 			RedisSessionDel(SessionID)
 			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端传输协议不一致: Remote: %s", redisJson.Transport)
 
@@ -354,7 +354,7 @@ func RunLocal() error {
 		if !useForward && !g_netstack_started {
 			if err := netstack.Start(); err != nil {
 				if strings.Contains(err.Error(), "管理员权限") {
-					UpdateStartButtonStatue(TagStatusNeedAdmin)
+					UpdateStartButtonStatue(StatusNeedAdmin)
 					time.Sleep(1 * time.Second) // 保证 UI 读到状态并关闭自动重启后再退出
 				}
 				return err
@@ -390,7 +390,7 @@ func RunLocal() error {
 		tun.ProcessHealth(health, sessionID)
 		if m_local_state != 0 {
 			m_local_state = 1
-			UpdateStartButtonStatue(TagStatusConnecting)
+			UpdateStartButtonStatue(StatusConnecting)
 		}
 		log.Printf("释放连接: %v", quic_conn.LocalAddr())
 		Release(tun_active, tun_passive, nil)

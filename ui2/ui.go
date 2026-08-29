@@ -62,7 +62,7 @@ func Init() {
 	stateMu.Unlock()
 
 	m_start_button_state = 0
-	updateButtonState(buttonStateInitializing)
+	setStatus(StatusDetecting)
 
 	// UI客户端自身的日志输出
 	stun2.SetExtraLogSink(func(s string) {
@@ -87,7 +87,7 @@ func detectNAT() {
 		conn.Close()
 
 		SetNATHint(wanPort1 != wanPort2)
-		updateButtonState(idleButtonState())
+		setStatus(StatusIdle)
 		tryAutoStart()
 		return
 	}

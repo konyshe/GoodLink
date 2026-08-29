@@ -26,27 +26,26 @@ func applyTrayIcons(idle, warning, danger, success []byte) {
 	trayIconSuccess = success
 }
 
-// iconBytesForState returns the tray icon bytes for the given button state.
-func iconBytesForState(state buttonState) []byte {
-	switch state.kind {
-	case kindIdle, kindInitializing:
+func iconBytesForStatus(status int) []byte {
+	switch status {
+	case StatusIdle, StatusDetecting:
 		return trayIconIdle
-	case kindStarting, kindConnecting, kindConnectingNat4, kindStopping:
+	case StatusStarting, StatusConnecting, StatusStopping:
 		return trayIconWarning
-	case kindConnectingNat4ToNat4:
+	case StatusConnectingNAT4:
 		return trayIconDanger
-	case kindConnected, kindRunning:
+	case StatusConnected, StatusRunning:
 		return trayIconSuccess
 	default:
 		return trayIconIdle
 	}
 }
 
-func UpdateTrayIcon(state buttonState) {
+func UpdateTrayIcon(status int) {
 	if !trayReady.Load() {
 		return
 	}
-	data := iconBytesForState(state)
+	data := iconBytesForStatus(status)
 	if len(data) > 0 {
 		systray.SetIcon(data)
 	}
@@ -60,11 +59,11 @@ func RunLoop(uiURL string) {
 
 func SetupTray(uiURL string) {
 	stateMu.RLock()
-	btn := currentButton
+	st := m_status
 	stateMu.RUnlock()
 
 	trayReady.Store(true)
-	UpdateTrayIcon(btn)
+	UpdateTrayIcon(st)
 	systray.SetTooltip(M_APP_TITLE + "  v" + config.GetVersion())
 
 	// 创建菜单，确保只有一个退出选项

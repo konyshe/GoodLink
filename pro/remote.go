@@ -255,7 +255,7 @@ func StopRemote() error {
 func RunRemote() error {
 	m_remote_stats = 1
 
-	UpdateStartButtonStatue(TagStatusRunning)
+	UpdateStartButtonStatue(StatusRunning)
 	log.Printf("Remote端已启动，等待Local端连接...")
 
 	// 主循环扫描待处理的会话

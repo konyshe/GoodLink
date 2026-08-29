@@ -4,20 +4,38 @@ import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
 
-const defaultButton = {
-  kind: "initializing",
-  text: "检测网络中...",
-  importance: "high",
-  enabled: false,
-  activity: false,
-  othersEnabled: true,
-};
+const STATUS_DETECTING = 0;
+const STATUS_IDLE = 1;
 
-const defaultNat = {
-  ready: false,
-  isNAT4: false,
-  text: "正在检测本地网络环境...",
-};
+function viewFromStatus(status, workType) {
+  const remote = workType === "Remote";
+  switch (status) {
+    case 0:
+      return { text: "检测网络中...", importance: "high", enabled: false, activity: false, othersEnabled: true };
+    case 1:
+      return { text: remote ? "点击启动" : "点击连接", importance: "high", enabled: true, activity: false, othersEnabled: true };
+    case 2:
+      return { text: "启动中...", importance: "warning", enabled: true, activity: true, othersEnabled: false };
+    case 3:
+      return { text: "连接中...", importance: "warning", enabled: true, activity: true, othersEnabled: false };
+    case 4:
+      return { text: "两端网络都是NAT4, 连接中...", importance: "danger", enabled: true, activity: true, othersEnabled: false };
+    case 5:
+      return { text: "连接成功, 点击停止", importance: "success", enabled: true, activity: false, othersEnabled: false };
+    case 6:
+      return { text: "启动成功, 点击停止", importance: "success", enabled: true, activity: false, othersEnabled: false };
+    case 7:
+      return { text: "停止中...", importance: "warning", enabled: false, activity: false, othersEnabled: false };
+    default:
+      return { text: "检测网络中...", importance: "high", enabled: false, activity: false, othersEnabled: true };
+  }
+}
+
+function natHint(nat) {
+  if (!nat?.ready) return "正在检测本地网络环境...";
+  if (nat.isNAT4) return "本地网络为NAT4，如果对端也是NAT4，则无法直连";
+  return "本地网络为NAT1-3";
+}
 
 const TUN_PROXY = {
   socks: "socks5://192.17.19.1:1080",
@@ -88,7 +106,8 @@ export default function App() {
       return;
     }
     setAutoStart(!!state.autoStart);
-    if (!state.button.othersEnabled) {
+    const st = state.status ?? STATUS_DETECTING;
+    if (st !== STATUS_DETECTING && st !== STATUS_IDLE) {
       setWorkType(state.workType || "Local");
       if (document.activeElement !== keyInputRef.current) {
         setTunKey(state.tunKey || "");
@@ -148,16 +167,14 @@ export default function App() {
     };
   }, [applying]);
 
-  const button = state?.button || defaultButton;
-  const nat = state?.nat || defaultNat;
-  const othersEnabled = !exited && !!button.othersEnabled;
-  const startEnabled = !exited && !!button.enabled;
+  const status = state?.status ?? STATUS_DETECTING;
+  const view = viewFromStatus(status, workType);
+  const nat = state?.nat || {};
+  const othersEnabled = !exited && !!view.othersEnabled;
+  const startEnabled = !exited && !!view.enabled;
   const mappingEnabled = !exited && workType === "Local" && localMode === "forward";
   const natClass = nat.ready ? (nat.isNAT4 ? "warn" : "ok") : "detecting";
   const autoLabel = workType === "Remote" ? "自动启动" : "自动连接";
-  const startText = button.kind === "idle"
-    ? (workType === "Remote" ? "点击启动" : "点击连接")
-    : (button.text || "");
 
   async function onGenerate() {
     const key = await generateKey();
@@ -248,7 +265,7 @@ export default function App() {
 
   async function onStart() {
     if (!startEnabled) return;
-    if (button.kind === "idle") {
+    if (status === STATUS_IDLE) {
       setFormError("");
       setConflictHint("");
       const result = await start(workType, tunKey, localMode, rulesFromRows(rows), transport);
@@ -443,12 +460,12 @@ export default function App() {
 
         <button
           type="button"
-          className={"start-btn " + (button.importance || "high")}
+          className={"start-btn " + (view.importance || "high")}
           disabled={!startEnabled}
           onClick={onStart}
         >
-          <span className={"spinner" + (button.activity ? "" : " hidden")}></span>
-          <span>{startText}</span>
+          <span className={"spinner" + (view.activity ? "" : " hidden")}></span>
+          <span>{view.text}</span>
         </button>
 
         <section className="logs">
@@ -460,7 +477,7 @@ export default function App() {
         </section>
 
         <footer className="footer">
-          <div className={"nat " + natClass}>{nat.text || ""}</div>
+          <div className={"nat " + natClass}>{natHint(nat)}</div>
           <div className="footer-links">
             {state?.upgrade?.checkError ? (
               <a

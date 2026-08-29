@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -42,20 +43,23 @@ func StopCmdProcess() {
 	utils.CleanupOrphanedCmdProcesses()
 }
 
-// parseStatusMessage 解析状态消息，返回状态值（connecting/connected/waiting）和是否成功解析
-// 支持带时间戳前缀的日志格式，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]connected"
-func parseStatusMessage(line string) (string, bool) {
-	// 查找前缀在行中的位置（可能不在行首，因为有时间戳）
+// parseStatusMessage 解析子进程状态行，返回整数状态。
+// 支持带时间戳前缀，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]3"
+func parseStatusMessage(line string) (int, bool) {
 	idx := strings.Index(line, pro.TagStatusPrefix)
 	if idx == -1 {
-		return "", false
+		return 0, false
 	}
-	// 提取状态值（去除前缀后的内容，可能包含空格）
-	status := strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):])
-	if status == pro.TagStatusConnecting || status == pro.TagStatusConnected || status == pro.TagStatusRunning || status == pro.TagStatusConnectingNAT4 || status == pro.TagStatusVersionMismatch || status == pro.TagStatusTransportMismatch || status == pro.TagStatusNeedAdmin {
-		return status, true
+	n, err := strconv.Atoi(strings.TrimSpace(line[idx+len(pro.TagStatusPrefix):]))
+	if err != nil {
+		return 0, false
 	}
-	return "", false
+	switch n {
+	case pro.StatusConnecting, pro.StatusConnectingNAT4, pro.StatusConnected, pro.StatusRunning,
+		pro.StatusVersionMismatch, pro.StatusTransportMismatch, pro.StatusNeedAdmin:
+		return n, true
+	}
+	return 0, false
 }
 
 func parseProxyMessage(line string) (string, bool) {
@@ -70,47 +74,36 @@ func parseProxyMessage(line string) (string, bool) {
 	return addr, true
 }
 
-// updateConnectionStatus 根据连接状态更新按钮（Local端直接映射，Remote端在连接成功后才切换为运行状态）
-// 由 handleProcessOutput goroutine 调用，状态通过 SSE 推送到浏览器
-func updateConnectionStatus(status string) {
-	switch GetWorkType() {
-	case workTypeLocal:
-		switch status {
-		case pro.TagStatusConnecting:
-			updateButtonState(buttonStateConnecting)
-		case pro.TagStatusConnected:
-			updateButtonState(buttonStateConnected)
-		case pro.TagStatusConnectingNAT4:
-			updateButtonState(buttonStateConnectingNat4ToNat4)
-		case pro.TagStatusVersionMismatch:
-			// 版本不一致，禁用自动重启并停止进程
-			m_start_button_lock.Lock()
-			m_auto_restart_enabled = false
-			m_start_button_lock.Unlock()
-			go func() {
-				time.Sleep(500 * time.Millisecond) // 短暂延迟，确保日志已输出
-				StopCmdProcess()
-			}()
-		case pro.TagStatusTransportMismatch:
-			// 传输协议不一致，禁用自动重启并停止进程
-			m_start_button_lock.Lock()
-			m_auto_restart_enabled = false
-			m_start_button_lock.Unlock()
-			go func() {
-				time.Sleep(500 * time.Millisecond)
-				StopCmdProcess()
-			}()
-		case pro.TagStatusNeedAdmin:
-			// 需要管理员权限，禁用自动重启（进程会自行退出）
-			m_start_button_lock.Lock()
-			m_auto_restart_enabled = false
-			m_start_button_lock.Unlock()
+func updateConnectionStatus(status int) {
+	switch status {
+	case pro.StatusConnecting:
+		if GetWorkType() == workTypeLocal {
+			setStatus(StatusConnecting)
 		}
-	case workTypeRemote:
-		switch status {
-		case pro.TagStatusRunning:
-			updateButtonState(buttonStateRunning)
+	case pro.StatusConnected:
+		if GetWorkType() == workTypeLocal {
+			setStatus(StatusConnected)
 		}
+	case pro.StatusConnectingNAT4:
+		if GetWorkType() == workTypeLocal {
+			setStatus(StatusConnectingNAT4)
+		}
+	case pro.StatusRunning:
+		if GetWorkType() == workTypeRemote {
+			setStatus(StatusRunning)
+		}
+	case pro.StatusVersionMismatch, pro.StatusTransportMismatch:
+		m_start_button_lock.Lock()
+		m_auto_restart_enabled = false
+		m_start_button_lock.Unlock()
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			StopCmdProcess()
+		}()
+	case pro.StatusNeedAdmin:
+		m_start_button_lock.Lock()
+		m_auto_restart_enabled = false
+		m_start_button_lock.Unlock()
 	}
 }
 
@@ -271,10 +264,7 @@ func HandleSetAutoStart(autoStart bool, workType, tunKey, localMode, transport s
 	if !autoStart {
 		return nil
 	}
-	stateMu.RLock()
-	idle := currentButton.kind == kindIdle
-	stateMu.RUnlock()
-	if !idle {
+	if getStatus() != StatusIdle {
 		return nil
 	}
 	UILogPrintF("已开启自动%s, 正在启动%s端...", autoConnectVerb(), GetWorkType())
@@ -306,10 +296,8 @@ func HandleStart(workType, tunKey, localMode, transport string, rules []config.U
 		return fmt.Errorf("already started")
 	}
 
-	stateMu.RLock()
-	busy := currentButton.kind == kindInitializing || currentButton.kind == kindStopping
-	stateMu.RUnlock()
-	if busy {
+	s := getStatus()
+	if s == StatusDetecting || s == StatusStopping {
 		return fmt.Errorf("busy")
 	}
 
@@ -345,9 +333,9 @@ func HandleStart(workType, tunKey, localMode, transport string, rules []config.U
 
 	resetProxyListen()
 	if GetWorkType() == workTypeLocal {
-		updateButtonState(buttonStateConnecting)
+		setStatus(StatusConnecting)
 	} else {
-		updateButtonState(buttonStateStarting)
+		setStatus(StatusStarting)
 	}
 
 	m_start_button_state = 1
@@ -361,7 +349,7 @@ func HandleStart(workType, tunKey, localMode, transport string, rules []config.U
 		m_start_button_state = 0
 		m_auto_restart_enabled = false
 		resetProxyListen()
-		updateButtonState(idleButtonState())
+		setStatus(StatusIdle)
 		return err
 	}
 
@@ -378,7 +366,7 @@ func HandleStop() {
 		return
 	}
 
-	updateButtonState(buttonStateStopping)
+	setStatus(StatusStopping)
 
 	// 设置自动重启标志为false，防止误触发重启
 	m_auto_restart_enabled = false
@@ -388,7 +376,7 @@ func HandleStop() {
 		StopCmdProcess()
 		m_start_button_state = 0
 		resetProxyListen()
-		updateButtonState(idleButtonState())
+		setStatus(StatusIdle)
 	}()
 }
 
@@ -420,7 +408,7 @@ func waitForProcessAndHandleExit() {
 		// 正常停止，恢复 UI
 		m_start_button_state = 0
 		resetProxyListen()
-		updateButtonState(idleButtonState())
+		setStatus(StatusIdle)
 	}
 }
 
@@ -445,7 +433,7 @@ func autoRestartProcess() {
 		UILogPrintF("启动失败: %v", err)
 		m_start_button_state = 0
 		resetProxyListen()
-		updateButtonState(idleButtonState())
+		setStatus(StatusIdle)
 		return
 	}
 

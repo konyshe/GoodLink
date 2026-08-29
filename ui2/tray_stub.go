@@ -10,7 +10,7 @@ import (
 
 func applyTrayIcons(_, _, _, _ []byte) {}
 
-func UpdateTrayIcon(_ buttonState) {}
+func UpdateTrayIcon(_ int) {}
 
 func RunLoop(_ string) {
 	ch := make(chan os.Signal, 1)
