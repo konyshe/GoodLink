@@ -3,7 +3,7 @@ package config
 import "strings"
 
 func GetVersion() string {
-	return "3.3.6"
+	return "3.3.7"
 }
 
 // VersionsCompatible reports whether two X.Y.Z style version strings are
