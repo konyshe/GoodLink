@@ -80,8 +80,11 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 	}
 
 	if (addr.WanPort1 != addr.WanPort2) && (redisJson.RemoteAddr.WanPort1 != redisJson.RemoteAddr.WanPort2) {
-		log.Println("*** local端和remote端都是NAT4 ***")
+		log.Println("*** local端和remote端都是NAT4，无法直连 ***")
 		UpdateStartButtonStatue(StatusConnectingNAT4)
+		RedisSessionDel(sessionID)
+		time.Sleep(1 * time.Second) // 保证 UI 读到状态并关闭自动重启后再退出
+		return errors.New("两端都是NAT4，无法直连")
 	}
 
 	transport := sessionTransport(redisJson.Transport)

@@ -88,6 +88,14 @@ func updateConnectionStatus(status int) {
 		if GetWorkType() == workTypeLocal {
 			setStatus(StatusConnectingNAT4)
 		}
+		m_start_button_lock.Lock()
+		m_auto_restart_enabled = false
+		m_start_button_lock.Unlock()
+		UILogPrintF("两端网络都是NAT4，无法直连，已停止连接")
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			StopCmdProcess()
+		}()
 	case pro.StatusRunning:
 		if GetWorkType() == workTypeRemote {
 			setStatus(StatusRunning)

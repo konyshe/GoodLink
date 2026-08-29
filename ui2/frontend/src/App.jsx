@@ -6,6 +6,7 @@ import { useUIEvents } from "./useUIEvents";
 
 const STATUS_DETECTING = 0;
 const STATUS_IDLE = 1;
+const STATUS_CONNECTING_NAT4 = 4;
 
 function viewFromStatus(status, workType) {
   const remote = workType === "Remote";
@@ -19,7 +20,7 @@ function viewFromStatus(status, workType) {
     case 3:
       return { text: "连接中...", importance: "warning", enabled: true, activity: true, othersEnabled: false };
     case 4:
-      return { text: "两端网络都是NAT4, 连接中...", importance: "danger", enabled: true, activity: true, othersEnabled: false };
+      return { text: "两端网络都是NAT4, 无法直连", importance: "danger", enabled: false, activity: false, othersEnabled: false };
     case 5:
       return { text: "连接成功, 点击断开", importance: "success", enabled: true, activity: false, othersEnabled: false };
     case 6:
@@ -68,6 +69,7 @@ function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
 }
 
 const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
+const NAT4_HINT = "两端网络都是NAT4，无法直连，已停止连接。请将其中一端切换到NAT1-3网络后再试。";
 
 export default function App() {
   const { state, logs, exited, upgradeProgress } = useUIEvents();
@@ -79,6 +81,7 @@ export default function App() {
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
   const [adminHint, setAdminHint] = useState(false);
+  const [nat4Hint, setNat4Hint] = useState(false);
   const [conflictHint, setConflictHint] = useState("");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeBody, setUpgradeBody] = useState("");
@@ -128,6 +131,12 @@ export default function App() {
       document.title = "Goodlink v" + state.version;
     }
   }, [state?.version]);
+
+  useEffect(() => {
+    if ((state?.status ?? STATUS_DETECTING) !== STATUS_CONNECTING_NAT4) return;
+    setNat4Hint(true);
+    stop();
+  }, [state?.status]);
 
   useEffect(() => {
     if (!applying) return;
@@ -541,6 +550,15 @@ export default function App() {
         <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
           <div>{ADMIN_HINT}</div>
           <button type="button" onClick={() => setAdminHint(false)}>确定</button>
+        </div>
+      </div>
+      <div
+        className={"exit-overlay" + (!exited && nat4Hint ? "" : " hidden")}
+        onClick={() => setNat4Hint(false)}
+      >
+        <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
+          <div>{NAT4_HINT}</div>
+          <button type="button" onClick={() => setNat4Hint(false)}>确定</button>
         </div>
       </div>
       <div
