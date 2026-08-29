@@ -515,39 +515,69 @@ body,
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  border: 1px solid #ffd24a;
-  background: linear-gradient(135deg, #ff5a1f 0%, #ff8a12 48%, #ffc107 100%);
-  color: #1a1000;
+  border: 1px solid rgba(90, 230, 130, 0.95);
+  background: linear-gradient(120deg, #067a42, #0c9d54, #14b862, #067a42);
+  background-size: 240% 240%;
+  color: #fff;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  -webkit-text-stroke: 0.35px rgba(0, 40, 16, 0.55);
+  text-shadow:
+    0 1px 1px rgba(0, 30, 12, 0.85),
+    0 0 8px rgba(0, 40, 16, 0.55);
   box-shadow:
-    0 0 0 1px rgba(255, 210, 74, 0.35),
-    0 0 12px rgba(255, 140, 20, 0.55);
-  animation: upgrade-glow 1.8s ease-in-out infinite;
+    0 0 8px rgba(20, 170, 80, 0.75),
+    0 0 18px rgba(40, 210, 100, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  animation:
+    upgrade-glow 1.5s ease-in-out infinite,
+    upgrade-shift 2.8s linear infinite;
 }
 
 .footer-chip.upgrade:hover {
-  background: linear-gradient(135deg, #ff6a2e 0%, #ff9a22 48%, #ffd54a 100%);
-  color: #140c00;
+  filter: brightness(1.08);
   box-shadow:
-    0 0 0 1px rgba(255, 230, 120, 0.55),
-    0 0 18px rgba(255, 176, 40, 0.75);
+    0 0 10px rgba(30, 190, 90, 0.9),
+    0 0 24px rgba(50, 230, 120, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.upgrade-aura,
+.upgrade-shine,
+.upgrade-spark {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.upgrade-aura {
+  inset: -40%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.28) 0%, transparent 62%);
+  animation: upgrade-aura 1.8s ease-in-out infinite;
 }
 
 .upgrade-shine {
-  position: absolute;
   inset: 0;
-  z-index: 0;
-  pointer-events: none;
   background: linear-gradient(110deg,
-      transparent 20%,
-      rgba(255, 255, 255, 0.45) 45%,
-      transparent 70%);
-  transform: translateX(-120%);
-  animation: upgrade-shine 2.4s ease-in-out infinite;
+      transparent 18%,
+      rgba(255, 255, 255, 0.28) 48%,
+      transparent 72%);
+  transform: translateX(-130%);
+  animation: upgrade-shine 2s ease-in-out infinite;
 }
 
-.footer-chip.upgrade> :not(.upgrade-shine) {
+.upgrade-spark {
+  top: 4px;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 4px #fff);
+  animation: upgrade-spark 1.2s ease-in-out infinite;
+}
+
+.footer-chip.upgrade> :not(.upgrade-aura):not(.upgrade-shine):not(.upgrade-spark) {
   position: relative;
   z-index: 1;
 }
@@ -568,26 +598,37 @@ body,
   height: 7px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
-  animation: upgrade-pulse 1.4s ease-out infinite;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.95);
+  animation: upgrade-pulse 1.2s ease-out infinite;
+}
+
+.upgrade-label {
+  color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow:
+    0 1px 1px rgba(0, 30, 12, 0.9),
+    0 0 6px rgba(0, 40, 16, 0.45);
 }
 
 .upgrade-ver {
   padding: 3px 7px;
   border-radius: 999px;
-  background: rgba(26, 16, 0, 0.38);
-  color: #fff8e0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 40, 16, 0.38);
+  color: #fff;
   font-size: 11px;
   font-weight: 800;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 1px 1px rgba(0, 20, 8, 0.8);
 }
 
 @keyframes upgrade-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8);
   }
 
   70% {
-    box-shadow: 0 0 0 7px rgba(255, 255, 255, 0);
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
   }
 
   100% {
@@ -600,27 +641,67 @@ body,
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(255, 210, 74, 0.35),
-      0 0 10px rgba(255, 140, 20, 0.45);
+      0 0 8px rgba(30, 190, 80, 0.65),
+      0 0 16px rgba(140, 255, 80, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   50% {
     box-shadow:
-      0 0 0 1px rgba(255, 230, 120, 0.6),
-      0 0 18px rgba(255, 176, 40, 0.8);
+      0 0 14px rgba(50, 230, 110, 0.95),
+      0 0 28px rgba(190, 255, 90, 0.75),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes upgrade-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 100% 50%;
   }
 }
 
 @keyframes upgrade-shine {
 
   0%,
-  55% {
-    transform: translateX(-120%);
+  35% {
+    transform: translateX(-130%);
   }
 
-  80%,
+  70%,
   100% {
-    transform: translateX(120%);
+    transform: translateX(130%);
+  }
+}
+
+@keyframes upgrade-aura {
+
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes upgrade-spark {
+
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.6) rotate(0deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.25) rotate(45deg);
   }
 }
 

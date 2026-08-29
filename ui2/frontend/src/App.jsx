@@ -494,9 +494,11 @@ export default function App() {
                 className={"footer-chip upgrade" + (state?.upgrade?.need ? "" : " hidden")}
                 onClick={openUpgradeModal}
               >
+                <span className="upgrade-aura" aria-hidden="true"></span>
                 <span className="upgrade-shine" aria-hidden="true"></span>
+                <span className="upgrade-spark" aria-hidden="true"></span>
                 <span className="upgrade-dot" aria-hidden="true"></span>
-                有新版本
+                <span className="upgrade-label">有新版本</span>
                 {state?.upgrade?.need ? (
                   <span className="upgrade-ver">v{state.upgrade.latest}</span>
                 ) : null}
