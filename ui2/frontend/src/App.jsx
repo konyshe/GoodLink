@@ -69,7 +69,8 @@ function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
 }
 
 const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
-const NAT4_HINT = "两端网络都是NAT4，无法直连，已停止连接。请将其中一端切换到NAT1-3网络后再试。";
+const NAT4_HINT = "两端网络都是NAT4，无法直连，已停止连接。";
+const NAT4_HELP_URL = "https://gitee.com/konyshe/goodlink/wikis/%E4%B8%BA%E4%BD%95%E6%97%A0%E6%B3%95%E8%BF%9E%E6%8E%A5";
 
 export default function App() {
   const { state, logs, exited, upgradeProgress } = useUIEvents();
@@ -558,6 +559,9 @@ export default function App() {
       >
         <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
           <div>{NAT4_HINT}</div>
+          <a className="admin-help" href={NAT4_HELP_URL} target="_blank" rel="noopener">
+            查看解决方法
+          </a>
           <button type="button" onClick={() => setNat4Hint(false)}>确定</button>
         </div>
       </div>

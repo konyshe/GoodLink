@@ -901,6 +901,18 @@ body,
   word-break: break-all;
 }
 
+.admin-card a.admin-help {
+  color: var(--primary-hi);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  word-break: keep-all;
+}
+
+.admin-card a.admin-help:hover {
+  color: #7ec3ff;
+}
+
 .admin-card button {
   min-width: 96px;
   padding: 8px 16px;
