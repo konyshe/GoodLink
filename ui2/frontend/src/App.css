@@ -512,14 +512,44 @@ body,
 }
 
 .footer-chip.upgrade {
-  border: 1px solid rgba(229, 83, 75, 0.55);
-  background: rgba(229, 83, 75, 0.16);
-  color: #ff8a7a;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid #ffd24a;
+  background: linear-gradient(135deg, #ff5a1f 0%, #ff8a12 48%, #ffc107 100%);
+  color: #1a1000;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 74, 0.35),
+    0 0 12px rgba(255, 140, 20, 0.55);
+  animation: upgrade-glow 1.8s ease-in-out infinite;
 }
 
 .footer-chip.upgrade:hover {
-  background: rgba(229, 83, 75, 0.28);
-  color: #ffc4bc;
+  background: linear-gradient(135deg, #ff6a2e 0%, #ff9a22 48%, #ffd54a 100%);
+  color: #140c00;
+  box-shadow:
+    0 0 0 1px rgba(255, 230, 120, 0.55),
+    0 0 18px rgba(255, 176, 40, 0.75);
+}
+
+.upgrade-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.45) 45%,
+      transparent 70%);
+  transform: translateX(-120%);
+  animation: upgrade-shine 2.4s ease-in-out infinite;
+}
+
+.footer-chip.upgrade> :not(.upgrade-shine) {
+  position: relative;
+  z-index: 1;
 }
 
 .footer-chip.upgrade-fail {
@@ -534,33 +564,63 @@ body,
 }
 
 .upgrade-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #ff6b5b;
-  animation: upgrade-pulse 1.6s ease-out infinite;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+  animation: upgrade-pulse 1.4s ease-out infinite;
 }
 
 .upgrade-ver {
-  padding: 3px 6px;
+  padding: 3px 7px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.28);
-  color: #ffe8e4;
+  background: rgba(26, 16, 0, 0.38);
+  color: #fff8e0;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 @keyframes upgrade-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 91, 0.55);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
   }
 
   70% {
-    box-shadow: 0 0 0 6px rgba(255, 107, 91, 0);
+    box-shadow: 0 0 0 7px rgba(255, 255, 255, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 91, 0);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+@keyframes upgrade-glow {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 210, 74, 0.35),
+      0 0 10px rgba(255, 140, 20, 0.45);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 230, 120, 0.6),
+      0 0 18px rgba(255, 176, 40, 0.8);
+  }
+}
+
+@keyframes upgrade-shine {
+
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+
+  80%,
+  100% {
+    transform: translateX(120%);
   }
 }
 
