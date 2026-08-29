@@ -39,7 +39,6 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     echo "构建 glibc 2.17 编译镜像: $IMAGE"
     docker build \
         --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
-        --build-context hostgo=/usr/local/go \
         -t "$IMAGE" \
         -f "$ROOT/Dockerfile.glibc217" \
         "$ROOT"
@@ -55,6 +54,7 @@ docker run --rm \
     -e GOCACHE=/tmp/go-build \
     -e GOMODCACHE=/tmp/go-mod \
     -v "$PARENT":/src \
+    -v /usr/local/go:/usr/local/go \
     -w /src/goodlink \
     "$IMAGE" \
     make linux-build
