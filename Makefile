@@ -101,7 +101,7 @@ windows-386:
 windows-arm:
 	GOARCH=arm GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 create_nac:
-	rsrc -manifest nac.manifest -ico assert/favicon.ico -o nac.syso
+	rsrc -manifest nac.manifest -ico ui2/icons/favicon.ico -o nac.syso
 
 rm_nac:
 	rm -rf nac.syso
