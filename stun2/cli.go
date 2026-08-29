@@ -246,11 +246,3 @@ func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_
 		time.Sleep(5 * time.Second)
 	}
 }
-
-func TestStun() {
-	conn4, _ := net.ListenUDP("udp4", nil)
-	defer conn4.Close()
-
-	wan_ip, wan_port1, wan_port2, wan_port3 := GetStunIpPort(conn4)
-	log.Printf("wan_ip: %s, wan_port1: %d, wan_port2: %d, wan_port3: %d", wan_ip, wan_port1, wan_port2, wan_port3)
-}

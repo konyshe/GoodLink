@@ -20,12 +20,10 @@ var (
 	Arg_redis_tls_addr string
 	Arg_redis_pass     string
 	Arg_redis_id       int
-	Arg_stun_test      *bool
-	Arg_conn_type      int
-	Arg_ui             *bool
 	Arg_stun_svr_ip    string
 	Arg_stun_svr_port  int
 
+	Arg_ui              *bool
 	Arg_self_update     bool
 	Arg_upgrade_zip     string
 	Arg_upgrade_waitpid int
@@ -34,7 +32,6 @@ var (
 
 func Help() {
 	v := flag.Bool("v", false, "查看版本信息")
-	Arg_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
 	flag.StringVar(&Arg_pprof_addr, "pprof_addr", "", "如果CPU/内存/网络异常, 可监测运行, 例如: 0.0.0.0:6060")
 
 	flag.StringVar(&Arg_stun_svr_ip, "stun_svr_ip", "", "STUN服务IP地址")

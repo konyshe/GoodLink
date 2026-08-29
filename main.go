@@ -137,11 +137,6 @@ func main() {
 
 	goodlink_config.Init()
 
-	if *config.Arg_stun_test { // 测试stun节点，开发使用选项
-		stun2.TestStun()
-		os.Exit(0)
-	}
-
 	if !config.FromUI() || config.GetTunKey() == "" {
 		flag.Usage()
 		os.Exit(0)
