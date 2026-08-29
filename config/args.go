@@ -16,19 +16,15 @@ const (
 
 var (
 	Arg_pprof_addr     string
-	Arg_tun_local      *bool
-	Arg_tun_remote     *bool
 	Arg_redis_addr     string
 	Arg_redis_tls_addr string
 	Arg_redis_pass     string
 	Arg_redis_id       int
-	Arg_tun_key        string
 	Arg_stun_test      *bool
 	Arg_conn_type      int
 	Arg_ui             *bool
 	Arg_stun_svr_ip    string
 	Arg_stun_svr_port  int
-	Arg_transport      string
 
 	Arg_self_update     bool
 	Arg_upgrade_zip     string
@@ -51,11 +47,6 @@ func Help() {
 	flag.IntVar(&Arg_redis_id, "redis_id", 15, "Redis服务可使用的表ID")
 	Arg_stun_test = flag.Bool("stun_test", false, "检测STUN列表是否可用")
 
-	Arg_tun_local = flag.Bool("local", false, "启动Local端")
-	Arg_tun_remote = flag.Bool("remote", false, "启动Remote端")
-	flag.StringVar(&Arg_tun_key, "key", "", "自定义, 必须客户端和服务端一致。建议: {name}_{YYYYMMDDHHMM}, 例如: kony_202412140928")
-	flag.StringVar(&Arg_transport, "transport", TransportKCP, "传输协议: quic 或 kcp（仅 Remote 端生效，Local 自适应 Remote）")
-
 	flag.BoolVar(&Arg_self_update, "self-update", false, "内部使用: 更新进程, 覆盖程序后重启")
 	flag.StringVar(&Arg_upgrade_zip, "zip", "", "内部使用: 待解压的升级压缩包路径")
 	flag.IntVar(&Arg_upgrade_waitpid, "wait-pid", 0, "内部使用: 等待退出的主进程PID")
@@ -66,12 +57,6 @@ func Help() {
 	flag.Bool("fork", false, "子进程")
 
 	flag.Parse()
-
-	Arg_transport = NormalizeTransport(Arg_transport)
-	if Arg_transport != TransportQUIC && Arg_transport != TransportKCP {
-		fmt.Printf("无效的传输协议: %s（仅支持 quic 或 kcp）\n", Arg_transport)
-		os.Exit(1)
-	}
 
 	if *v {
 		fmt.Printf("Version: %s\n", GetVersion())

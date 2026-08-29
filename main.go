@@ -18,6 +18,7 @@ import (
 	"os/signal"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -45,20 +46,21 @@ func main2() {
 
 	// 第三方集成, 关注以下代码即可
 	go func() {
-		if err := pro.Init(config.Arg_tun_key); err != nil {
+		if err := pro.Init(config.GetTunKey()); err != nil {
 			log.Println(err)
 			return
 		}
 
-		if *config.Arg_tun_local {
+		switch strings.ToLower(config.GetWorkType()) {
+		case "local":
 			if err := pro.RunLocal(); err != nil {
 				log.Println(err)
 				os.Exit(0)
 			}
-		} else if *config.Arg_tun_remote {
+		case "remote":
 			pro.RunRemote()
-		} else {
-			log.Println("参数错误")
+		default:
+			log.Println("无效的工作端侧")
 			os.Exit(0)
 		}
 	}()
@@ -142,7 +144,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if config.Arg_tun_key == "" {
+	if !config.FromUI() || config.GetTunKey() == "" {
 		flag.Usage()
 		os.Exit(0)
 	}

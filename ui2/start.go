@@ -117,9 +117,7 @@ func startCmdProcess() error {
 		return fmt.Errorf("文件不存在: %s", filepath.Base(cmdPath))
 	}
 
-	// 构建命令行参数
-	workType := GetWorkType()
-	args := []string{"--fork", "--" + strings.ToLower(workType), "--key=" + getTunKey(), "--ui"}
+	args := []string{"--fork", "--ui"}
 
 	// 创建子进程
 	m_cmd_mutex.Lock()

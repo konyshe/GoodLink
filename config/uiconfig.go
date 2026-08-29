@@ -242,17 +242,29 @@ func NormalizeTransport(s string) string {
 	return s
 }
 
-// GetTransport Remote 端选用的传输协议。--ui 从 goodlink.json 读取，否则用 CLI --transport。Local 建连不读此项。
-func GetTransport() string {
-	if FromUI() {
-		cfg, err := LoadUIConfig(UIConfigPath())
-		if err == nil {
-			_ = NormalizeAndValidate(&cfg)
-			t := NormalizeTransport(cfg.Transport)
-			if t == TransportQUIC || t == TransportKCP {
-				return t
-			}
-		}
+func loadUIConfigFile() UIConfig {
+	cfg, err := LoadUIConfig(UIConfigPath())
+	if err == nil {
+		_ = NormalizeAndValidate(&cfg)
 	}
-	return NormalizeTransport(Arg_transport)
+	return cfg
+}
+
+// GetTunKey 连接密钥，从 goodlink.json 读取。
+func GetTunKey() string {
+	return strings.TrimSpace(loadUIConfigFile().TunKey)
+}
+
+// GetWorkType 工作端侧（Local/Remote），从 goodlink.json 读取。
+func GetWorkType() string {
+	return strings.TrimSpace(loadUIConfigFile().WorkType)
+}
+
+// GetTransport Remote 端选用的传输协议，从 goodlink.json 读取。Local 建连不读此项。
+func GetTransport() string {
+	t := NormalizeTransport(loadUIConfigFile().Transport)
+	if t == TransportQUIC || t == TransportKCP {
+		return t
+	}
+	return TransportKCP
 }
