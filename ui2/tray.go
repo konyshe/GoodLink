@@ -32,7 +32,7 @@ func iconBytesForStatus(status int) []byte {
 		return trayIconIdle
 	case StatusStarting, StatusConnecting, StatusStopping:
 		return trayIconWarning
-	case StatusConnectingNAT4:
+	case StatusConnectingNAT4, StatusConnectFailed:
 		return trayIconDanger
 	case StatusConnected, StatusRunning:
 		return trayIconSuccess

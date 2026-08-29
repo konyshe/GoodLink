@@ -56,7 +56,7 @@ func parseStatusMessage(line string) (int, bool) {
 	}
 	switch n {
 	case pro.StatusConnecting, pro.StatusConnectingNAT4, pro.StatusConnected, pro.StatusRunning,
-		pro.StatusVersionMismatch, pro.StatusTransportMismatch, pro.StatusNeedAdmin:
+		pro.StatusVersionMismatch, pro.StatusTransportMismatch, pro.StatusNeedAdmin, pro.StatusConnectFailed:
 		return n, true
 	}
 	return 0, false
@@ -92,6 +92,18 @@ func updateConnectionStatus(status int) {
 		m_auto_restart_enabled = false
 		m_start_button_lock.Unlock()
 		UILogPrintF("两端网络都是NAT4，无法直连，已停止连接")
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			StopCmdProcess()
+		}()
+	case pro.StatusConnectFailed:
+		if GetWorkType() == workTypeLocal {
+			setStatus(StatusConnectFailed)
+		}
+		m_start_button_lock.Lock()
+		m_auto_restart_enabled = false
+		m_start_button_lock.Unlock()
+		UILogPrintF("已尝试15次仍无法连接，已停止")
 		go func() {
 			time.Sleep(500 * time.Millisecond)
 			StopCmdProcess()

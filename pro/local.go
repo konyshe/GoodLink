@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+const (
+	maxConnectAttempts = 15
+)
+
 var (
 	m_local_state      = 0 //0: 停止, 1: 启动, 2: 连接成功
 	m_tun_active       *tun.TunActive
@@ -374,6 +378,12 @@ func RunLocal() error {
 		}
 		if quic_conn == nil {
 			Release(tun_active, tun_passive, nil)
+			if count >= maxConnectAttempts {
+				log.Printf("已尝试%d次仍无法连接，已停止。", count)
+				UpdateStartButtonStatue(StatusConnectFailed)
+				time.Sleep(1 * time.Second) // 保证 UI 读到状态并关闭自动重启后再退出
+				return errors.New("已尝试15次仍无法连接")
+			}
 			continue
 		}
 

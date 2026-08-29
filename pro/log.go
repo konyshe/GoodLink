@@ -13,6 +13,7 @@ const (
 	StatusVersionMismatch   = 5
 	StatusTransportMismatch = 6
 	StatusNeedAdmin         = 7
+	StatusConnectFailed     = 8
 )
 
 // UpdateStartButtonStatue 输出带 TagStatusPrefix 的整数状态，供 UI 解析。

@@ -22,6 +22,7 @@ const (
 	StatusConnected      = 5
 	StatusRunning        = 6
 	StatusStopping       = 7
+	StatusConnectFailed  = 8
 )
 
 type NATInfo struct {

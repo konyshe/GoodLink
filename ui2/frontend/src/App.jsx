@@ -7,6 +7,7 @@ import { useUIEvents } from "./useUIEvents";
 const STATUS_DETECTING = 0;
 const STATUS_IDLE = 1;
 const STATUS_CONNECTING_NAT4 = 4;
+const STATUS_CONNECT_FAILED = 8;
 
 function viewFromStatus(status, workType) {
   const remote = workType === "Remote";
@@ -27,6 +28,8 @@ function viewFromStatus(status, workType) {
       return { text: "启动成功, 点击停止", importance: "success", enabled: true, activity: false, othersEnabled: false };
     case 7:
       return { text: "停止中...", importance: "warning", enabled: false, activity: false, othersEnabled: false };
+    case 8:
+      return { text: "多次尝试仍无法连接", importance: "danger", enabled: false, activity: false, othersEnabled: false };
     default:
       return { text: "检测网络中...", importance: "high", enabled: false, activity: false, othersEnabled: true };
   }
@@ -70,7 +73,8 @@ function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
 
 const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
 const NAT4_HINT = "两端网络都是NAT4，无法直连，已停止连接。";
-const NAT4_HELP_URL = "https://gitee.com/konyshe/goodlink/wikis/%E4%B8%BA%E4%BD%95%E6%97%A0%E6%B3%95%E8%BF%9E%E6%8E%A5";
+const RETRY_FAIL_HINT = "已尝试15次仍无法连接，已停止。";
+const CONNECT_FAIL_HELP_URL = "https://gitee.com/konyshe/goodlink/wikis/%E4%B8%BA%E4%BD%95%E6%97%A0%E6%B3%95%E8%BF%9E%E6%8E%A5";
 
 export default function App() {
   const { state, logs, exited, upgradeProgress } = useUIEvents();
@@ -82,7 +86,7 @@ export default function App() {
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
   const [adminHint, setAdminHint] = useState(false);
-  const [nat4Hint, setNat4Hint] = useState(false);
+  const [failHint, setFailHint] = useState("");
   const [conflictHint, setConflictHint] = useState("");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeBody, setUpgradeBody] = useState("");
@@ -134,9 +138,16 @@ export default function App() {
   }, [state?.version]);
 
   useEffect(() => {
-    if ((state?.status ?? STATUS_DETECTING) !== STATUS_CONNECTING_NAT4) return;
-    setNat4Hint(true);
-    stop();
+    const st = state?.status ?? STATUS_DETECTING;
+    if (st === STATUS_CONNECTING_NAT4) {
+      setFailHint(NAT4_HINT);
+      stop();
+      return;
+    }
+    if (st === STATUS_CONNECT_FAILED) {
+      setFailHint(RETRY_FAIL_HINT);
+      stop();
+    }
   }, [state?.status]);
 
   useEffect(() => {
@@ -554,15 +565,15 @@ export default function App() {
         </div>
       </div>
       <div
-        className={"exit-overlay" + (!exited && nat4Hint ? "" : " hidden")}
-        onClick={() => setNat4Hint(false)}
+        className={"exit-overlay" + (!exited && failHint ? "" : " hidden")}
+        onClick={() => setFailHint("")}
       >
         <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
-          <div>{NAT4_HINT}</div>
-          <a className="admin-help" href={NAT4_HELP_URL} target="_blank" rel="noopener">
+          <div>{failHint}</div>
+          <a className="admin-help" href={CONNECT_FAIL_HELP_URL} target="_blank" rel="noopener">
             查看解决方法
           </a>
-          <button type="button" onClick={() => setNat4Hint(false)}>确定</button>
+          <button type="button" onClick={() => setFailHint("")}>确定</button>
         </div>
       </div>
       <div
