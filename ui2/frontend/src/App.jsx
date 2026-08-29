@@ -21,7 +21,7 @@ function viewFromStatus(status, workType) {
     case 4:
       return { text: "两端网络都是NAT4, 连接中...", importance: "danger", enabled: true, activity: true, othersEnabled: false };
     case 5:
-      return { text: "连接成功, 点击停止", importance: "success", enabled: true, activity: false, othersEnabled: false };
+      return { text: "连接成功, 点击断开", importance: "success", enabled: true, activity: false, othersEnabled: false };
     case 6:
       return { text: "启动成功, 点击停止", importance: "success", enabled: true, activity: false, othersEnabled: false };
     case 7:
