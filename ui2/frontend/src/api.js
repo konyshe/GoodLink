@@ -35,6 +35,19 @@ export async function applyForwards(localMode, forwardRules) {
   return { error: null };
 }
 
+export async function saveAutoStart(autoStart, workType, tunKey, localMode, forwardRules, transport) {
+  const resp = await fetch("/api/autostart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ autoStart, workType, tunKey, localMode, transport, forwardRules }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    return { error: data.error || "保存失败" };
+  }
+  return { error: null };
+}
+
 export async function fetchState() {
   const resp = await fetch("/api/state", { cache: "no-store" });
   return resp;

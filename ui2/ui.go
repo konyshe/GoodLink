@@ -57,6 +57,7 @@ func Init() {
 	m_tun_key = cfg.TunKey
 	m_local_mode = cfg.LocalMode
 	m_transport = cfg.Transport
+	m_auto_start = cfg.AutoStart
 	m_forward_rules = cfg.ForwardRules
 	stateMu.Unlock()
 
@@ -87,6 +88,7 @@ func detectNAT() {
 
 		SetNATHint(wanPort1 != wanPort2)
 		updateButtonState(buttonStateIdle)
+		tryAutoStart()
 		return
 	}
 }
@@ -106,6 +108,7 @@ func currentUIConfig() config.UIConfig {
 		TunKey:       getTunKey(),
 		LocalMode:    getLocalMode(),
 		Transport:    getTransport(),
+		AutoStart:    getAutoStart(),
 		ForwardRules: getForwardRules(),
 	}
 }
@@ -138,6 +141,7 @@ func HandleImportConfig(cfg config.UIConfig) error {
 		return err
 	}
 	setTransport(cfg.Transport)
+	setAutoStart(cfg.AutoStart)
 	if err := saveConfig(); err != nil {
 		return err
 	}

@@ -74,6 +74,7 @@ type UIState struct {
 	TunKey       string                 `json:"tunKey"`
 	LocalMode    string                 `json:"localMode"`
 	Transport    string                 `json:"transport"`
+	AutoStart    bool                   `json:"autoStart"`
 	ForwardRules []config.UIForwardRule `json:"forwardRules"`
 	IsAdmin      bool                   `json:"isAdmin"`
 	Button       ButtonInfo             `json:"button"`
@@ -165,6 +166,7 @@ var (
 	m_tun_key       string
 	m_local_mode    string
 	m_transport     string
+	m_auto_start    bool
 	m_forward_rules []config.UIForwardRule
 	currentButton   buttonState
 	m_nat           = NATInfo{Text: "正在检测本地网络环境..."}
@@ -245,6 +247,7 @@ func snapshot(includeLogs bool) UIState {
 		TunKey:       m_tun_key,
 		LocalMode:    localMode,
 		Transport:    transport,
+		AutoStart:    m_auto_start,
 		ForwardRules: rules,
 		IsAdmin:      utils.IsAdmin(),
 		Button: ButtonInfo{
@@ -400,6 +403,18 @@ func setTransport(transport string) {
 	}
 	stateMu.Lock()
 	m_transport = transport
+	stateMu.Unlock()
+}
+
+func getAutoStart() bool {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	return m_auto_start
+}
+
+func setAutoStart(enabled bool) {
+	stateMu.Lock()
+	m_auto_start = enabled
 	stateMu.Unlock()
 }
 

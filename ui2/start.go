@@ -186,6 +186,7 @@ func saveConfig() error {
 		TunKey:       getTunKey(),
 		LocalMode:    getLocalMode(),
 		Transport:    getTransport(),
+		AutoStart:    getAutoStart(),
 		ForwardRules: getForwardRules(),
 	}
 	log.Println(cfg)
@@ -229,6 +230,47 @@ func HandleForwards(localMode string, rules []config.UIForwardRule) error {
 	broadcastState()
 	UILogPrintF("端口映射已保存")
 	return nil
+}
+
+func HandleSetAutoStart(autoStart bool, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
+	if othersEnabled() {
+		wt := strings.TrimSpace(workType)
+		if wt == "" {
+			wt = GetWorkType()
+		}
+		if wt != workTypeLocal && wt != workTypeRemote {
+			return fmt.Errorf("无效的工作端侧: %s", wt)
+		}
+		cfg := config.UIConfig{
+			LocalMode:    localMode,
+			Transport:    transport,
+			ForwardRules: rules,
+		}
+		if err := config.NormalizeAndValidate(&cfg); err != nil {
+			return err
+		}
+		setWorkTypeAndKey(wt, tunKey)
+		if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
+			return err
+		}
+		setTransport(cfg.Transport)
+	}
+	setAutoStart(autoStart)
+	if err := saveConfig(); err != nil {
+		return err
+	}
+	broadcastState()
+	return nil
+}
+
+func tryAutoStart() {
+	if !getAutoStart() {
+		return
+	}
+	UILogPrintF("已配置自动启动, 正在启动%s端...", GetWorkType())
+	if err := HandleStart(GetWorkType(), getTunKey(), getLocalMode(), getTransport(), getForwardRules()); err != nil {
+		UILogPrintF("自动启动失败: %v", err)
+	}
 }
 
 func HandleStart(workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyForwards, applyUpgrade, fetchState, fetchUpgradeInfo, generateKey, importConfig, start, startUpgradeDownload, stop } from "./api";
+import { applyForwards, applyUpgrade, fetchState, fetchUpgradeInfo, generateKey, importConfig, saveAutoStart, start, startUpgradeDownload, stop } from "./api";
 import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
@@ -57,6 +57,7 @@ export default function App() {
   const [tunKey, setTunKey] = useState("");
   const [localMode, setLocalMode] = useState("tun");
   const [transport, setTransport] = useState("kcp");
+  const [autoStart, setAutoStart] = useState(false);
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
   const [adminHint, setAdminHint] = useState(false);
@@ -78,6 +79,7 @@ export default function App() {
       setTunKey(state.tunKey || "");
       setLocalMode(state.localMode || "tun");
       setTransport(state.transport || "kcp");
+      setAutoStart(!!state.autoStart);
       setRows(rowsFromRules(state.forwardRules));
       initialized.current = true;
       if (needsAdminHint(state.workType || "Local", state.localMode || "tun", state.isAdmin)) {
@@ -85,6 +87,7 @@ export default function App() {
       }
       return;
     }
+    setAutoStart(!!state.autoStart);
     if (!state.button.othersEnabled) {
       setWorkType(state.workType || "Local");
       if (document.activeElement !== keyInputRef.current) {
@@ -176,6 +179,7 @@ export default function App() {
       tun_key: tunKey || "",
       local_mode: localMode || "tun",
       transport: transport || "kcp",
+      auto_start: autoStart,
       forward_rules: rulesFromRows(rows),
     };
     const blob = new Blob([JSON.stringify(cfg, null, 2) + "\n"], { type: "application/json;charset=utf-8" });
@@ -217,6 +221,7 @@ export default function App() {
     setTunKey(next.tunKey || "");
     setLocalMode(nextLocalMode);
     setTransport(next.transport || "kcp");
+    setAutoStart(!!next.autoStart);
     setRows(rowsFromRules(next.forwardRules));
     if (needsAdminHint(nextWorkType, nextLocalMode, state?.isAdmin)) {
       setAdminHint(true);
@@ -256,6 +261,17 @@ export default function App() {
       return;
     }
     await stop();
+  }
+
+  async function onAutoStartToggle(enabled) {
+    if (exited) return;
+    setFormError("");
+    setAutoStart(enabled);
+    const result = await saveAutoStart(enabled, workType, tunKey, localMode, rulesFromRows(rows), transport);
+    if (result.error) {
+      setAutoStart(!enabled);
+      setFormError(result.error);
+    }
   }
 
   async function openUpgradeModal() {
@@ -396,6 +412,21 @@ export default function App() {
         )}
 
         {formError && <div className="form-error">{formError}</div>}
+
+        <section className="row">
+          <span className="label">自动启动:</span>
+          <button
+            type="button"
+            className={"switch" + (autoStart ? " on" : "")}
+            disabled={exited}
+            role="switch"
+            aria-label="自动启动"
+            aria-checked={autoStart}
+            onClick={() => onAutoStartToggle(!autoStart)}
+          >
+            <span className="switch-knob"></span>
+          </button>
+        </section>
 
         <button
           type="button"

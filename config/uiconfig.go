@@ -28,6 +28,7 @@ type UIConfig struct {
 	TunKey       string          `json:"tun_key"`
 	LocalMode    string          `json:"local_mode"`
 	Transport    string          `json:"transport"`
+	AutoStart    bool            `json:"auto_start"`
 	ForwardRules []UIForwardRule `json:"forward_rules"`
 }
 

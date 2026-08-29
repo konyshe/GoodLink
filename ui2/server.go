@@ -40,6 +40,7 @@ func StartServer() (string, error) {
 	mux.HandleFunc("/api/start", handleStart)
 	mux.HandleFunc("/api/stop", handleStop)
 	mux.HandleFunc("/api/forwards", handleForwards)
+	mux.HandleFunc("/api/autostart", handleAutoStart)
 	mux.HandleFunc("/api/key/generate", handleGenerateKey)
 	mux.HandleFunc("/api/config", handleConfig)
 	mux.HandleFunc("/api/events", handleEvents)
@@ -119,6 +120,30 @@ func handleStop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	HandleStop()
+	writeJSON(w, http.StatusOK, snapshot(false))
+}
+
+func handleAutoStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		AutoStart    bool                   `json:"autoStart"`
+		WorkType     string                 `json:"workType"`
+		TunKey       string                 `json:"tunKey"`
+		LocalMode    string                 `json:"localMode"`
+		Transport    string                 `json:"transport"`
+		ForwardRules []config.UIForwardRule `json:"forwardRules"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
+		return
+	}
+	if err := HandleSetAutoStart(req.AutoStart, req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
 	writeJSON(w, http.StatusOK, snapshot(false))
 }
 
