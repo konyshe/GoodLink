@@ -247,7 +247,7 @@ func watchUIForwardConfig(mgr *proxy.ForwardManager, last string) {
 		if m_local_state == 0 {
 			return
 		}
-		cfg, err := config.LoadUIConfig(config.UIConfigFileName)
+		cfg, err := config.LoadUIConfig(config.UIConfigPath())
 		if err != nil {
 			continue
 		}
@@ -293,7 +293,7 @@ func setupForwardMode() (bool, error) {
 	if !config.FromUI() {
 		return false, nil
 	}
-	cfg, err := config.LoadUIConfig(config.UIConfigFileName)
+	cfg, err := config.LoadUIConfig(config.UIConfigPath())
 	if err != nil {
 		return false, err
 	}

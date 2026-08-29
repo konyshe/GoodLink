@@ -183,7 +183,7 @@ func saveConfig() error {
 		ForwardRules: getForwardRules(),
 	}
 	log.Println(cfg)
-	if err := config.SaveUIConfig(goodlinkFileName, cfg); err != nil {
+	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
 		log.Println("保存 goodlink.json 失败:", err)
 		return err
 	}

@@ -13,16 +13,15 @@ import (
 )
 
 const (
-	goodlinkFileName = config.UIConfigFileName
-	M_APP_TITLE      = "Goodlink"
-	workTypeLocal    = "Local"
-	workTypeRemote   = "Remote"
+	M_APP_TITLE    = "Goodlink"
+	workTypeLocal  = "Local"
+	workTypeRemote = "Remote"
 )
 
 func Init() {
 	m_log_entries = make([]string, 0, maxLogEntries)
 
-	cfg, err := config.LoadUIConfig(goodlinkFileName)
+	cfg, err := config.LoadUIConfig(config.UIConfigPath())
 	if err != nil {
 		log.Println("读取 goodlink.json 失败:", err)
 	} else {

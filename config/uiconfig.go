@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const (
@@ -34,6 +36,25 @@ type UIConfig struct {
 
 func FromUI() bool {
 	return Arg_ui != nil && *Arg_ui
+}
+
+var uiConfigPathOnce sync.Once
+var uiConfigPath string
+
+// UIConfigPath 返回程序所在目录下的 goodlink.json 完整路径。
+func UIConfigPath() string {
+	uiConfigPathOnce.Do(func() {
+		exe, err := os.Executable()
+		if err != nil {
+			uiConfigPath = UIConfigFileName
+			return
+		}
+		if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = resolved
+		}
+		uiConfigPath = filepath.Join(filepath.Dir(exe), UIConfigFileName)
+	})
+	return uiConfigPath
 }
 
 func LoadUIConfig(path string) (UIConfig, error) {
@@ -224,7 +245,7 @@ func NormalizeTransport(s string) string {
 // GetTransport Remote 端选用的传输协议。--ui 从 goodlink.json 读取，否则用 CLI --transport。Local 建连不读此项。
 func GetTransport() string {
 	if FromUI() {
-		cfg, err := LoadUIConfig(UIConfigFileName)
+		cfg, err := LoadUIConfig(UIConfigPath())
 		if err == nil {
 			_ = NormalizeAndValidate(&cfg)
 			t := NormalizeTransport(cfg.Transport)
