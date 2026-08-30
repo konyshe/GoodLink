@@ -273,9 +273,13 @@ body {
 }
 
 .gl-proxy-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.gl-proxy-list>.ant-alert {
+  grid-column: 1 / -1;
 }
 
 .gl-proxy-row {
@@ -283,6 +287,7 @@ body {
   align-items: center;
   gap: 10px;
   min-height: 38px;
+  min-width: 0;
   padding: 6px 10px;
   border-radius: 10px;
   background: rgba(8, 13, 24, 0.55);
@@ -291,7 +296,6 @@ body {
 
 .gl-proxy-label {
   flex: none;
-  width: 58px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -440,7 +444,8 @@ body {
     padding: 14px 12px 20px;
   }
 
-  .gl-choices {
+  .gl-choices,
+  .gl-proxy-list {
     grid-template-columns: 1fr;
   }
 
