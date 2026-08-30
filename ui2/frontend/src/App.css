@@ -340,6 +340,11 @@ body {
   border-radius: 12px;
 }
 
+.gl-start-btn.is-busy.ant-btn {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .gl-start-btn.gl-start-high.ant-btn-variant-solid:not(:disabled) {
   box-shadow: 0 8px 24px rgba(45, 212, 191, 0.22);
 }

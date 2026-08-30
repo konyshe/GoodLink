@@ -242,7 +242,7 @@ export default function LocalPanel({
       </Form.Item>
 
       {localMode === "forward" && (
-        <Form.Item label="端口转发" extra="点击确认立即生效，无需重新连接">
+        <Form.Item label="端口转发">
           <Flex vertical gap={10}>
             <div className="gl-fwd-toolbar">
               <Button
@@ -263,7 +263,9 @@ export default function LocalPanel({
               rowKey="id"
               dataSource={rows}
               columns={columns}
-              locale={{ emptyText: "暂无转发规则" }}
+              locale={{
+                emptyText: "点击确认立即生效，无需重新连接"
+              }}
             />
           </Flex>
         </Form.Item>

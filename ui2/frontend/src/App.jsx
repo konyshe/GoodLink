@@ -6,6 +6,7 @@ import {
   DesktopOutlined,
   ExportOutlined,
   GlobalOutlined,
+  LoadingOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   SafetyCertificateOutlined,
@@ -50,9 +51,9 @@ function viewFromStatus(status, workType) {
     case 1:
       return { text: remote ? "点击启动" : "点击连接", importance: "high", enabled: true, activity: false, othersEnabled: true };
     case 2:
-      return { text: "启动中...", importance: "warning", enabled: true, activity: true, othersEnabled: false };
+      return { text: "启动中, 点击停止", importance: "warning", enabled: true, activity: true, othersEnabled: false };
     case 3:
-      return { text: "连接中...", importance: "warning", enabled: true, activity: true, othersEnabled: false };
+      return { text: "连接中, 点击停止", importance: "warning", enabled: true, activity: true, othersEnabled: false };
     case 4:
       return { text: "两端网络都是NAT4, 无法直连", importance: "danger", enabled: false, activity: false, othersEnabled: false };
     case 5:
@@ -633,10 +634,9 @@ export default function App() {
           <Button
             size="large"
             block
-            className={`gl-start-btn gl-start-${view.importance}`}
+            className={`gl-start-btn gl-start-${view.importance}${view.activity ? " is-busy" : ""}`}
             disabled={!startEnabled}
-            loading={view.activity}
-            icon={view.activity ? undefined : running ? <PauseCircleOutlined /> : startEnabled ? <PlayCircleOutlined /> : undefined}
+            icon={view.activity ? <LoadingOutlined /> : running ? <PauseCircleOutlined /> : startEnabled ? <PlayCircleOutlined /> : undefined}
             onClick={onStart}
             {...startBtnTone(view.importance)}
           >
