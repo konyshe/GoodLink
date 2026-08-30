@@ -103,7 +103,7 @@ windows-386:
 windows-arm:
 	GOARCH=arm GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
 create_nac:
-	$(GOVERSIONINFO) -64 -o nac.syso -icon ui2/frontend/public/favicon.ico -manifest nac.manifest versioninfo.json
+	$(GOVERSIONINFO) -64 -o nac.syso -icon ui2/frontend/public/favicon.ico -manifest nac.manifest config/versioninfo.json
 
 rm_nac:
 	rm -rf nac.syso
