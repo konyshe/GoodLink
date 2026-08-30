@@ -1,50 +1,67 @@
+import {
+  CopyOutlined,
+  DownloadOutlined,
+  KeyOutlined,
+  SnippetsOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
+import { Button, Form, Input, Upload } from "antd";
+
 export default function KeySection({
   tunKey,
   setTunKey,
   keyInputRef,
-  fileInputRef,
   othersEnabled,
   onGenerate,
   onCopy,
   onPaste,
   onExportConfig,
-  onImportClick,
   onImportFile,
 }) {
   return (
-    <>
-      <section className="row">
-        <span className="label">连接密钥:</span>
-        <input
+    <Form.Item label="连接密钥">
+      <div className="gl-key-block">
+        <Input
           ref={keyInputRef}
-          className="key-input"
-          type="text"
-          placeholder="16-64字节长度"
+          size="large"
+          variant="filled"
+          prefix={<KeyOutlined />}
+          placeholder="16-64 字节长度"
           autoComplete="off"
-          spellCheck="false"
+          spellCheck={false}
           value={tunKey}
           disabled={!othersEnabled}
+          allowClear={othersEnabled}
           onChange={(e) => setTunKey(e.target.value)}
         />
-      </section>
-
-      <section className="key-actions">
-        <button type="button" disabled={!othersEnabled} onClick={onGenerate}>生成密钥</button>
-        <button type="button" onClick={onCopy}>复制密钥</button>
-        <button type="button" disabled={!othersEnabled} onClick={onPaste}>粘贴密钥</button>
-      </section>
-
-      <section className="key-actions config-actions">
-        <button type="button" onClick={onExportConfig}>导出配置</button>
-        <button type="button" disabled={!othersEnabled} onClick={onImportClick}>导入配置</button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          hidden
-          onChange={onImportFile}
-        />
-      </section>
-    </>
+        <div className="gl-key-actions">
+          <Button type="primary" icon={<KeyOutlined />} disabled={!othersEnabled} onClick={onGenerate}>
+            生成密钥
+          </Button>
+          <Button icon={<CopyOutlined />} onClick={onCopy}>
+            复制密钥
+          </Button>
+          <Button icon={<SnippetsOutlined />} disabled={!othersEnabled} onClick={onPaste}>
+            粘贴密钥
+          </Button>
+          <Button icon={<DownloadOutlined />} onClick={onExportConfig}>
+            导出配置
+          </Button>
+          <Upload
+            accept=".json,application/json"
+            showUploadList={false}
+            disabled={!othersEnabled}
+            beforeUpload={(file) => {
+              onImportFile(file);
+              return false;
+            }}
+          >
+            <Button icon={<UploadOutlined />} disabled={!othersEnabled}>
+              导入配置
+            </Button>
+          </Upload>
+        </div>
+      </div>
+    </Form.Item>
   );
 }

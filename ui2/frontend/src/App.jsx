@@ -1,5 +1,36 @@
+import {
+  BookOutlined,
+  CloudDownloadOutlined,
+  CloudServerOutlined,
+  CommentOutlined,
+  DesktopOutlined,
+  ExportOutlined,
+  GlobalOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  SafetyCertificateOutlined,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
+  App as AntdApp,
+  Badge,
+  Button,
+  Card,
+  Flex,
+  Form,
+  Modal,
+  Progress,
+  Result,
+  Space,
+  Spin,
+  Switch,
+  Tag,
+  Typography,
+} from "antd";
 import { useEffect, useRef, useState } from "react";
 import { applyForwards, applyUpgrade, fetchUpgradeInfo, generateKey, importConfig, probeState, saveAutoStart, start, startUpgradeDownload, stop } from "./api";
+import ChoiceGroup from "./ChoiceGroup";
 import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
@@ -8,6 +39,8 @@ const STATUS_DETECTING = 0;
 const STATUS_IDLE = 1;
 const STATUS_CONNECTING_NAT4 = 4;
 const STATUS_CONNECT_FAILED = 8;
+const STATUS_CONNECTED = 5;
+const STATUS_STARTED = 6;
 
 function viewFromStatus(status, workType) {
   const remote = workType === "Remote";
@@ -39,6 +72,74 @@ function natHint(nat) {
   if (!nat?.ready) return "正在检测本地网络环境...";
   if (nat.isNAT4) return "本地网络为NAT4，如果对端也是NAT4，则无法直连";
   return "本地网络为NAT1-3";
+}
+
+function natTagColor(nat) {
+  if (!nat?.ready) return "default";
+  return nat.isNAT4 ? "warning" : "success";
+}
+
+function startBtnTone(importance) {
+  switch (importance) {
+    case "warning":
+      return { color: "gold", variant: "solid" };
+    case "danger":
+      return { color: "danger", variant: "solid" };
+    case "success":
+      return { color: "green", variant: "solid" };
+    default:
+      return { color: "primary", variant: "solid" };
+  }
+}
+
+function shortStatus(status) {
+  switch (status) {
+    case STATUS_IDLE:
+      return "待启动";
+    case 2:
+      return "启动中";
+    case 3:
+      return "连接中";
+    case STATUS_CONNECTING_NAT4:
+      return "无法直连";
+    case STATUS_CONNECTED:
+      return "已连接";
+    case STATUS_STARTED:
+      return "运行中";
+    case 7:
+      return "停止中";
+    case STATUS_CONNECT_FAILED:
+      return "连接失败";
+    case STATUS_DETECTING:
+    default:
+      return "检测中";
+  }
+}
+
+function BrandMark() {
+  return (
+    <svg className="gl-logo" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="gl-logo-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#2dd4bf" />
+          <stop offset="100%" stopColor="#38bdf8" />
+        </linearGradient>
+      </defs>
+      <rect x="1.5" y="1.5" width="29" height="29" rx="9" fill="url(#gl-logo-g)" opacity="0.16" />
+      <rect x="1.5" y="1.5" width="29" height="29" rx="9" fill="none" stroke="url(#gl-logo-g)" strokeWidth="1.4" />
+      <path d="M12.2 16a3.8 3.8 0 0 1 3.8-3.8h4.2" fill="none" stroke="url(#gl-logo-g)" strokeWidth="2.3" strokeLinecap="round" />
+      <path d="M19.8 16a3.8 3.8 0 0 1-3.8 3.8h-4.2" fill="none" stroke="url(#gl-logo-g)" strokeWidth="2.3" strokeLinecap="round" />
+      <circle cx="10.4" cy="16" r="2.1" fill="#2dd4bf" />
+      <circle cx="21.6" cy="16" r="2.1" fill="#38bdf8" />
+    </svg>
+  );
+}
+
+function isKeyInputFocused(ref) {
+  const cur = ref?.current;
+  if (!cur) return false;
+  const el = cur.input || cur.nativeElement || cur;
+  return document.activeElement === el;
 }
 
 const TUN_PROXY = {
@@ -88,6 +189,7 @@ function isRestartedVersion(fromVersion, version) {
 }
 
 export default function App() {
+  const { message } = AntdApp.useApp();
   const { state, logs, exited, upgradeProgress } = useUIEvents();
   const [workType, setWorkType] = useState("Local");
   const [tunKey, setTunKey] = useState("");
@@ -106,7 +208,6 @@ export default function App() {
   const [reconnectTimedOut, setReconnectTimedOut] = useState(false);
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
-  const fileInputRef = useRef(null);
   const logRef = useRef(null);
   const applyFromVersionRef = useRef("");
 
@@ -129,7 +230,7 @@ export default function App() {
     const st = state.status ?? STATUS_DETECTING;
     if (st !== STATUS_DETECTING && st !== STATUS_IDLE) {
       setWorkType(state.workType || "Local");
-      if (document.activeElement !== keyInputRef.current) {
+      if (!isKeyInputFocused(keyInputRef)) {
         setTunKey(state.tunKey || "");
       }
       setLocalMode(state.localMode || "tun");
@@ -218,25 +319,40 @@ export default function App() {
   const othersEnabled = !exited && !!view.othersEnabled;
   const startEnabled = !exited && !!view.enabled;
   const mappingEnabled = !exited && workType === "Local" && localMode === "forward";
-  const natClass = nat.ready ? (nat.isNAT4 ? "warn" : "ok") : "detecting";
   const autoLabel = workType === "Remote" ? "程序启动后，自动启动服务端" : "程序启动后，自动连接Remote端";
+  const running = status === STATUS_CONNECTED || status === STATUS_STARTED;
 
   async function onGenerate() {
-    const key = await generateKey();
-    if (key) setTunKey(key);
+    try {
+      const key = await generateKey();
+      if (key) {
+        setTunKey(key);
+        message.success("已生成密钥");
+        return;
+      }
+    } catch (_) { }
+    message.error("生成密钥失败");
   }
 
   async function onCopy() {
     try {
       await navigator.clipboard.writeText(tunKey || "");
-    } catch (_) { }
+      message.success("已复制密钥");
+    } catch (_) {
+      message.error("复制失败");
+    }
   }
 
   async function onPaste() {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) setTunKey(text);
-    } catch (_) { }
+      if (text) {
+        setTunKey(text);
+        message.success("已粘贴密钥");
+      }
+    } catch (_) {
+      message.error("粘贴失败");
+    }
   }
 
   function onExportConfig() {
@@ -255,16 +371,10 @@ export default function App() {
     a.download = "goodlink.json";
     a.click();
     URL.revokeObjectURL(url);
+    message.success("已导出配置");
   }
 
-  function onImportClick() {
-    if (!othersEnabled) return;
-    fileInputRef.current?.click();
-  }
-
-  async function onImportFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
+  async function onImportFile(file) {
     if (!file) return;
     setFormError("");
     setConflictHint("");
@@ -292,6 +402,7 @@ export default function App() {
     if (needsAdminHint(nextWorkType, nextLocalMode, state?.isAdmin)) {
       setAdminHint(true);
     }
+    message.success("已导入配置");
   }
 
   async function onConfirm() {
@@ -305,7 +416,9 @@ export default function App() {
         return;
       }
       setFormError(result.error);
+      return;
     }
+    message.success("端口转发已生效");
   }
 
   async function onStart() {
@@ -395,266 +508,333 @@ export default function App() {
     a.download = name;
     a.click();
     URL.revokeObjectURL(url);
+    message.success("已导出日志");
   }
 
   const keyProps = {
     tunKey,
     setTunKey,
     keyInputRef,
-    fileInputRef,
     othersEnabled,
     onGenerate,
     onCopy,
     onPaste,
     onExportConfig,
-    onImportClick,
     onImportFile,
   };
 
+  const upgradeErrorText = upgradeModalError || upgradeProgress.error;
+  const progressStatus = upgradeProgress.error ? "exception" : upgradeProgress.done ? "success" : upgradeProgress.downloading ? "active" : "normal";
+
   return (
-    <>
-      <div className="app">
-        <section className="row">
-          <span className="label">工作端侧:</span>
-          <div className="work-type">
-            <button
-              type="button"
-              className={"work-btn" + (workType === "Local" ? " active" : "")}
+    <div className="gl-shell">
+      <header className="gl-header">
+        <div className="gl-brand">
+          <BrandMark />
+          <div className="gl-brand-text">
+            <span className="gl-brand-name">Goodlink</span>
+            <span className="gl-brand-meta">{state?.version ? `v${state.version}` : "点对点安全连接"}</span>
+          </div>
+        </div>
+        <div className="gl-header-aside">
+          <span className={`gl-status gl-status-${view.importance}${view.activity ? " is-busy" : ""}`}>
+            <span className="gl-status-dot" />
+            {shortStatus(status)}
+          </span>
+        </div>
+      </header>
+
+      <Form component="div" layout="vertical" requiredMark={false}>
+        <Card className="gl-panel" title="连接配置" size="small">
+          <Form.Item label="工作端侧">
+            <ChoiceGroup
+              value={workType}
               disabled={!othersEnabled}
-              onClick={() => {
-                setWorkType("Local");
-                if (needsAdminHint("Local", localMode, state?.isAdmin)) {
+              onChange={(next) => {
+                setWorkType(next);
+                if (needsAdminHint(next, localMode, state?.isAdmin)) {
                   setAdminHint(true);
                 }
               }}
-            >
-              Local端(本地客户端)
-            </button>
-            <span className="vsep"></span>
-            <button
-              type="button"
-              className={"work-btn" + (workType === "Remote" ? " active" : "")}
-              disabled={!othersEnabled}
-              onClick={() => setWorkType("Remote")}
-            >
-              Remote端(被连接服务端)
-            </button>
-          </div>
-        </section>
+              options={[
+                {
+                  value: "Local",
+                  icon: <DesktopOutlined />,
+                  label: "Local 端",
+                  desc: "本地客户端，主动发起连接",
+                },
+                {
+                  value: "Remote",
+                  icon: <CloudServerOutlined />,
+                  label: "Remote 端",
+                  desc: "被连接服务端，等待对端接入",
+                },
+              ]}
+            />
+          </Form.Item>
 
-        {workType === "Remote" && (
-          <section className="row">
-            <span className="label">传输协议:</span>
-            <div className="work-type work-type-sm">
-              <button
-                type="button"
-                className={"work-btn" + (transport === "kcp" ? " active" : "")}
+          {workType === "Remote" && (
+            <Form.Item label="传输协议">
+              <ChoiceGroup
+                value={transport}
                 disabled={!othersEnabled}
-                onClick={() => setTransport("kcp")}
-              >
-                KCP(CPU降低40%, 响应提升30%, 适合个人)
-              </button>
-              <span className="vsep"></span>
-              <button
-                type="button"
-                className={"work-btn" + (transport === "quic" ? " active" : "")}
-                disabled={!othersEnabled}
-                onClick={() => setTransport("quic")}
-              >
-                QUIC(二次加密, 传输稳定, 适合企业)
-              </button>
+                onChange={(next) => setTransport(next)}
+                options={[
+                  {
+                    value: "kcp",
+                    icon: <ThunderboltOutlined />,
+                    label: "KCP",
+                    desc: "CPU 降低约 40%，适合个人使用",
+                  },
+                  {
+                    value: "quic",
+                    icon: <SafetyCertificateOutlined />,
+                    label: "QUIC",
+                    desc: "二次加密，传输更稳，适合企业",
+                  },
+                ]}
+              />
+            </Form.Item>
+          )}
+
+          {workType === "Local" ? (
+            <LocalPanel
+              {...keyProps}
+              localMode={localMode}
+              setLocalMode={setLocalMode}
+              rows={rows}
+              setRows={setRows}
+              mappingEnabled={mappingEnabled}
+              onConfirm={onConfirm}
+              onNeedAdminHint={() => {
+                if (needsAdminHint(workType, "tun", state?.isAdmin)) {
+                  setAdminHint(true);
+                }
+              }}
+              proxy={resolveProxy(localMode, state?.proxy)}
+            />
+          ) : (
+            <RemotePanel {...keyProps} />
+          )}
+        </Card>
+      </Form>
+
+      {formError ? <Alert type="error" showIcon message={formError} /> : null}
+
+      <Card className="gl-panel" title="连接控制" size="small">
+        <div className="gl-start-wrap">
+          <div className="gl-auto">
+            <div className="gl-auto-copy">
+              <span className="gl-auto-title">自动启动</span>
+              <span className="gl-auto-desc">{autoLabel}</span>
             </div>
-          </section>
-        )}
-
-        {workType === "Local" ? (
-          <LocalPanel
-            {...keyProps}
-            localMode={localMode}
-            setLocalMode={setLocalMode}
-            rows={rows}
-            setRows={setRows}
-            mappingEnabled={mappingEnabled}
-            onConfirm={onConfirm}
-            onNeedAdminHint={() => {
-              if (needsAdminHint(workType, "tun", state?.isAdmin)) {
-                setAdminHint(true);
-              }
-            }}
-            proxy={resolveProxy(localMode, state?.proxy)}
-          />
-        ) : (
-          <RemotePanel {...keyProps} />
-        )}
-
-        {formError && <div className="form-error">{formError}</div>}
-
-        <section className="row">
-          <span className="label">{autoLabel}:</span>
-          <button
-            type="button"
-            className={"switch" + (autoStart ? " on" : "")}
-            disabled={exited}
-            role="switch"
-            aria-label={autoLabel}
-            aria-checked={autoStart}
-            onClick={() => onAutoStartToggle(!autoStart)}
-          >
-            <span className="switch-knob"></span>
-          </button>
-        </section>
-
-        <button
-          type="button"
-          className={"start-btn " + (view.importance || "high")}
-          disabled={!startEnabled}
-          onClick={onStart}
-        >
-          <span className={"spinner" + (view.activity ? "" : " hidden")}></span>
-          <span>{view.text}</span>
-        </button>
-
-        <section className="logs">
-          <div className="logs-head">
-            <div className="label">运行日志:</div>
-            <button type="button" disabled={!logs.length} onClick={onExportLogs}>导出日志</button>
+            <Switch checked={autoStart} disabled={exited} onChange={onAutoStartToggle} />
           </div>
-          <pre id="log-list" ref={logRef}>{logs.join("\n")}</pre>
-        </section>
+          <Button
+            size="large"
+            block
+            className={`gl-start-btn gl-start-${view.importance}`}
+            disabled={!startEnabled}
+            loading={view.activity}
+            icon={view.activity ? undefined : running ? <PauseCircleOutlined /> : startEnabled ? <PlayCircleOutlined /> : undefined}
+            onClick={onStart}
+            {...startBtnTone(view.importance)}
+          >
+            {view.text}
+          </Button>
+        </div>
+      </Card>
 
-        <footer className="footer">
-          <div className={"nat " + natClass}>{natHint(nat)}</div>
-          <div className="footer-links">
-            {state?.upgrade?.checkError ? (
-              <a
-                className="footer-chip upgrade-fail"
-                href="https://gitee.com/konyshe/goodlink/releases"
-                target="_blank"
-                rel="noopener"
-              >
-                {state.upgrade.checkError}
-              </a>
-            ) : (
-              <button
-                type="button"
-                className={"footer-chip upgrade" + (state?.upgrade?.need ? "" : " hidden")}
+      <Card
+        className="gl-panel"
+        title="运行日志"
+        size="small"
+        extra={
+          <Button size="small" icon={<ExportOutlined />} disabled={!logs.length} onClick={onExportLogs}>
+            导出日志
+          </Button>
+        }
+      >
+        <pre ref={logRef} className={"gl-log" + (logs.length ? "" : " is-empty")}>{logs.join("\n")}</pre>
+      </Card>
+
+      <footer className="gl-footer">
+        <Tag className="gl-nat" color={natTagColor(nat)}>{natHint(nat)}</Tag>
+        <Space wrap size={4}>
+          {state?.upgrade?.checkError ? (
+            <Button
+              type="link"
+              href="https://gitee.com/konyshe/goodlink/releases"
+              target="_blank"
+              rel="noopener"
+            >
+              {state.upgrade.checkError}
+            </Button>
+          ) : state?.upgrade?.need ? (
+            <Badge dot>
+              <Button
+                color="green"
+                variant="solid"
+                size="small"
+                icon={<CloudDownloadOutlined />}
                 onClick={openUpgradeModal}
               >
-                <span className="upgrade-aura" aria-hidden="true"></span>
-                <span className="upgrade-shine" aria-hidden="true"></span>
-                <span className="upgrade-spark" aria-hidden="true"></span>
-                <span className="upgrade-dot" aria-hidden="true"></span>
-                <span className="upgrade-label">有新版本</span>
-                {state?.upgrade?.need ? (
-                  <span className="upgrade-ver">v{state.upgrade.latest}</span>
-                ) : null}
-              </button>
-            )}
-            <a
-              className="footer-chip feedback"
-              href="https://goodlink.kony.vip"
-              target="_blank"
-              rel="noopener"
-            >
-              官方网站
-            </a>
-            <a
-              className="footer-chip feedback"
-              href="https://gitee.com/konyshe/goodlink/wikis/pages"
-              target="_blank"
-              rel="noopener"
-            >
-              使用教程
-            </a>
-            <a
-              className="footer-chip feedback"
-              href="https://gitee.com/konyshe/goodlink/issues"
-              target="_blank"
-              rel="noopener"
-            >
-              反馈问题
-            </a>
-          </div>
-        </footer>
-      </div>
-      <div className={"exit-overlay" + (exited && !applying ? "" : " hidden")}>
-        <div className="exit-card">程序已退出，请重新启动 Goodlink</div>
-      </div>
-      <div
-        className={"exit-overlay" + (!exited && adminHint ? "" : " hidden")}
-        onClick={() => setAdminHint(false)}
+                有新版本 v{state.upgrade.latest}
+              </Button>
+            </Badge>
+          ) : null}
+          <Button type="link" icon={<GlobalOutlined />} href="https://goodlink.kony.vip" target="_blank" rel="noopener">
+            官方网站
+          </Button>
+          <Button
+            type="link"
+            icon={<BookOutlined />}
+            href="https://gitee.com/konyshe/goodlink/wikis/pages"
+            target="_blank"
+            rel="noopener"
+          >
+            使用教程
+          </Button>
+          <Button
+            type="link"
+            icon={<CommentOutlined />}
+            href="https://gitee.com/konyshe/goodlink/issues"
+            target="_blank"
+            rel="noopener"
+          >
+            反馈问题
+          </Button>
+        </Space>
+      </footer>
+
+      <Modal
+        open={exited && !applying}
+        footer={null}
+        closable={false}
+        keyboard={false}
+        mask={{ closable: false }}
+        centered
+        destroyOnHidden
       >
-        <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
-          <div>{ADMIN_HINT}</div>
-          <button type="button" onClick={() => setAdminHint(false)}>确定</button>
-        </div>
-      </div>
-      <div
-        className={"exit-overlay" + (!exited && failHint ? "" : " hidden")}
-        onClick={() => setFailHint("")}
+        <Result status="warning" title="程序已退出" subTitle="请重新启动 Goodlink" />
+      </Modal>
+
+      <Modal
+        title="需要管理员权限"
+        open={!exited && adminHint}
+        onCancel={() => setAdminHint(false)}
+        mask={{ closable: true }}
+        centered
+        destroyOnHidden
+        footer={[
+          <Button key="ok" type="primary" onClick={() => setAdminHint(false)}>
+            确定
+          </Button>,
+        ]}
       >
-        <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
-          <div>{failHint}</div>
-          <a className="admin-help" href={CONNECT_FAIL_HELP_URL} target="_blank" rel="noopener">
+        {ADMIN_HINT}
+      </Modal>
+
+      <Modal
+        title="连接失败"
+        open={!exited && !!failHint}
+        onCancel={() => setFailHint("")}
+        mask={{ closable: true }}
+        centered
+        destroyOnHidden
+        footer={[
+          <Button key="help" href={CONNECT_FAIL_HELP_URL} target="_blank" rel="noopener">
             查看解决方法
-          </a>
-          <button type="button" onClick={() => setFailHint("")}>确定</button>
-        </div>
-      </div>
-      <div
-        className={"exit-overlay" + (!exited && conflictHint ? "" : " hidden")}
-        onClick={() => setConflictHint("")}
+          </Button>,
+          <Button key="ok" type="primary" onClick={() => setFailHint("")}>
+            确定
+          </Button>,
+        ]}
       >
-        <div className="exit-card admin-card" onClick={(e) => e.stopPropagation()}>
-          <div>{conflictHint}</div>
-          <button type="button" onClick={() => setConflictHint("")}>确定</button>
-        </div>
-      </div>
-      <div
-        className={"exit-overlay" + ((applying || (!exited && upgradeOpen)) ? "" : " hidden")}
+        {failHint}
+      </Modal>
+
+      <Modal
+        title="端口冲突"
+        open={!exited && !!conflictHint}
+        onCancel={() => setConflictHint("")}
+        mask={{ closable: true }}
+        centered
+        destroyOnHidden
+        footer={[
+          <Button key="ok" type="primary" onClick={() => setConflictHint("")}>
+            确定
+          </Button>,
+        ]}
       >
-        {applying ? (
-          reconnectTimedOut ? (
-            <div className="exit-card admin-card upgrade-card upgrade-applying" onClick={(e) => e.stopPropagation()}>
-              <div className="upgrade-applying-title">更新完成</div>
-              <div className="upgrade-applying-tip">超过 5 秒未能连接主程序，请手动重启 Goodlink</div>
-            </div>
+        {conflictHint}
+      </Modal>
+
+      <Modal
+        title={`新版本 v${state?.upgrade?.latest || ""}`}
+        open={upgradeOpen && !applying && !exited}
+        onCancel={() => setUpgradeOpen(false)}
+        mask={{ closable: false }}
+        centered
+        destroyOnHidden
+        width={560}
+        footer={[
+          <Button key="back" onClick={() => setUpgradeOpen(false)}>
+            返回
+          </Button>,
+          upgradeProgress.done ? (
+            <Button key="apply" type="primary" onClick={onUpgradeApply}>
+              更新
+            </Button>
           ) : (
-            <div className="exit-card admin-card upgrade-card upgrade-applying" onClick={(e) => e.stopPropagation()}>
-              <div className="upgrade-loader">
-                <span className="upgrade-ring"></span>
-                <span className="upgrade-ring upgrade-ring-2"></span>
-              </div>
-              <div className="upgrade-applying-title">正在更新到 v{state?.upgrade?.latest || ""}</div>
-              <div className="upgrade-applying-tip">程序将自动重启，请稍候<span className="dots"><i>.</i><i>.</i><i>.</i></span></div>
-              <div className="upgrade-applying-sub">重启完成后页面会自动恢复，无需手动关闭</div>
-            </div>
-          )
-        ) : (
-          <div className="exit-card admin-card upgrade-card" onClick={(e) => e.stopPropagation()}>
-            <div className="upgrade-title">新版本 v{state?.upgrade?.latest || ""}</div>
-            <pre className="upgrade-body">{upgradeBody || "暂无更新说明"}</pre>
-            <div className="upgrade-progress">
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: Math.max(0, Math.min(100, upgradeProgress.percent || 0)) + "%" }}></div>
-              </div>
-              <span className="progress-pct">{upgradeProgress.percent || 0}%</span>
-            </div>
-            {upgradeModalError ? <div className="upgrade-error">{upgradeModalError}</div> : null}
-            {upgradeProgress.error ? <div className="upgrade-error">{upgradeProgress.error}</div> : null}
-            <div className="upgrade-actions">
-              <button type="button" className="upgrade-back" onClick={() => setUpgradeOpen(false)}>返回</button>
-              {upgradeProgress.done ? (
-                <button type="button" onClick={onUpgradeApply}>更新</button>
-              ) : (
-                <button type="button" disabled={upgradeProgress.downloading} onClick={onUpgradeDownload}>
-                  {upgradeProgress.downloading ? "下载中..." : "下载"}
-                </button>
-              )}
-            </div>
+            <Button key="download" type="primary" loading={upgradeProgress.downloading} onClick={onUpgradeDownload}>
+              {upgradeProgress.downloading ? "下载中..." : "下载"}
+            </Button>
+          ),
+        ]}
+      >
+        <Flex vertical gap={16}>
+          <div
+            style={{
+              maxHeight: 280,
+              overflow: "auto",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              padding: 12,
+              background: "rgba(8, 13, 24, 0.7)",
+              borderRadius: 10,
+            }}
+          >
+            {upgradeBody || "暂无更新说明"}
           </div>
+          <Progress percent={upgradeProgress.percent || 0} status={progressStatus} />
+          {upgradeErrorText ? <Alert type="error" showIcon message={upgradeErrorText} /> : null}
+        </Flex>
+      </Modal>
+
+      <Modal
+        open={applying}
+        footer={null}
+        closable={false}
+        keyboard={false}
+        mask={{ closable: false }}
+        centered
+        destroyOnHidden
+        width={480}
+      >
+        {reconnectTimedOut ? (
+          <Result status="warning" title="更新完成" subTitle="超过 5 秒未能连接主程序，请手动重启 Goodlink" />
+        ) : (
+          <Flex vertical align="center" gap={16} style={{ padding: "16px 0" }}>
+            <Spin size="large" />
+            <Typography.Title level={5} style={{ margin: 0 }}>
+              正在更新到 v{state?.upgrade?.latest || ""}
+            </Typography.Title>
+            <Typography.Text>程序将自动重启，请稍候</Typography.Text>
+            <Typography.Text type="secondary">重启完成后页面会自动恢复，无需手动关闭</Typography.Text>
+          </Flex>
         )}
-      </div>
-    </>
+      </Modal>
+    </div>
   );
 }
