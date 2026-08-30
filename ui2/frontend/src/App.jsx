@@ -320,7 +320,7 @@ export default function App() {
   const othersEnabled = !exited && !!view.othersEnabled;
   const startEnabled = !exited && !!view.enabled;
   const mappingEnabled = !exited && workType === "Local" && localMode === "forward";
-  const autoLabel = workType === "Remote" ? "程序启动后，自动启动服务端" : "程序启动后，自动连接Remote端";
+  const autoLabel = workType === "Remote" ? "程序运行后，自动启动Remote端" : "程序运行后，自动连接Remote端";
   const running = status === STATUS_CONNECTED || status === STATUS_STARTED;
 
   async function onGenerate() {
@@ -626,8 +626,7 @@ export default function App() {
         <div className="gl-start-wrap">
           <div className="gl-auto">
             <div className="gl-auto-copy">
-              <span className="gl-auto-title">自动启动</span>
-              <span className="gl-auto-desc">{autoLabel}</span>
+              <span className="gl-auto-title">{autoLabel}</span>
             </div>
             <Switch checked={autoStart} disabled={exited} onChange={onAutoStartToggle} />
           </div>
