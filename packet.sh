@@ -57,7 +57,7 @@ docker run --rm \
     -v /usr/local/go:/usr/local/go \
     -w /src/goodlink \
     "$IMAGE" \
-    make linux-build
+    make linux
 
 if command -v objdump >/dev/null 2>&1 && [ -f bin/goodlink-linux-amd64 ]; then
     echo "goodlink-linux-amd64 依赖的 GLIBC 符号:"
@@ -81,6 +81,9 @@ md5sum goodlink-linux-mips64le > md5sum.txt; zip goodlink-linux-mips64le.zip goo
 md5sum goodlink-linux-riscv64 > md5sum.txt; zip goodlink-linux-riscv64.zip goodlink-linux-riscv64 md5sum.txt; rm -rf goodlink-linux-riscv64 md5sum.txt
 md5sum goodlink-darwin-amd64 > md5sum.txt; zip goodlink-darwin-amd64.zip goodlink-darwin-amd64 md5sum.txt; rm -rf goodlink-darwin-amd64 md5sum.txt
 md5sum goodlink-darwin-arm64 > md5sum.txt; zip goodlink-darwin-arm64.zip goodlink-darwin-arm64 md5sum.txt; rm -rf goodlink-darwin-arm64 md5sum.txt
+md5sum goodlink-windows-arm.exe > md5sum.txt; zip goodlink-windows-arm.zip goodlink-windows-arm.exe md5sum.txt; rm -rf goodlink-windows-arm.exe md5sum.txt
+md5sum goodlink-windows-arm64.exe > md5sum.txt; zip goodlink-windows-arm64.zip goodlink-windows-arm64.exe md5sum.txt; rm -rf goodlink-windows-arm64.exe md5sum.txt
+md5sum goodlink-windows-386.exe > md5sum.txt; zip goodlink-windows-386.zip goodlink-windows-386.exe md5sum.txt; rm -rf goodlink-windows-386.exe md5sum.txt
 
 sync
 cd ..

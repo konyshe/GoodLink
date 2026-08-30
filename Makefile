@@ -46,12 +46,9 @@ debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64
 
 macos: $(DARWIN_PLATFORM_LIST) strip
 
-windows: create_nac $(WINDOWS_PLATFORM_LIST)  rm_nac $(WINDOWS_PLATFORM2_LIST)
+windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac
 
-# linux-build 只产出二进制，不调用 upx；packet.sh 在 glibc 2.17 容器中使用该目标
-linux-build: $(LINUX_PLATFORM_LIST)
-
-linux: linux-build strip
+linux: $(LINUX_PLATFORM_LIST) strip $(WINDOWS_PLATFORM2_LIST)
 
 linux-386:
 	GOARCH=386 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
