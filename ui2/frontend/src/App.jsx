@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { applyForwards, applyUpgrade, fetchState, fetchUpgradeInfo, generateKey, importConfig, saveAutoStart, start, startUpgradeDownload, stop } from "./api";
+import { applyForwards, applyUpgrade, fetchUpgradeInfo, generateKey, importConfig, probeState, saveAutoStart, start, startUpgradeDownload, stop } from "./api";
 import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
 import { useUIEvents } from "./useUIEvents";
@@ -75,6 +75,17 @@ const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
 const NAT4_HINT = "两端网络都是NAT4，无法直连，已停止连接。";
 const RETRY_FAIL_HINT = "已尝试15次仍无法连接，已停止。";
 const CONNECT_FAIL_HELP_URL = "https://gitee.com/konyshe/goodlink/wikis/%E4%B8%BA%E4%BD%95%E6%97%A0%E6%B3%95%E8%BF%9E%E6%8E%A5";
+const APPLY_FETCH_TIMEOUT_MS = 2500;
+const APPLY_RECONNECT_MS = 5000;
+const APPLY_OVERALL_MS = 45000;
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function isRestartedVersion(fromVersion, version) {
+  return !!(fromVersion && version && version !== fromVersion);
+}
 
 export default function App() {
   const { state, logs, exited, upgradeProgress } = useUIEvents();
@@ -97,6 +108,7 @@ export default function App() {
   const keyInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const logRef = useRef(null);
+  const applyFromVersionRef = useRef("");
 
   useEffect(() => {
     if (!state) return;
@@ -138,6 +150,14 @@ export default function App() {
   }, [state?.version]);
 
   useEffect(() => {
+    if (!applying) return;
+    const fromVersion = applyFromVersionRef.current;
+    if (isRestartedVersion(fromVersion, state?.version)) {
+      window.location.reload();
+    }
+  }, [applying, state?.version]);
+
+  useEffect(() => {
     const st = state?.status ?? STATUS_DETECTING;
     if (st === STATUS_CONNECTING_NAT4) {
       setFailHint(NAT4_HINT);
@@ -153,34 +173,38 @@ export default function App() {
   useEffect(() => {
     if (!applying) return;
     let stopped = false;
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const fromVersion = applyFromVersionRef.current;
     (async () => {
+      let sawDown = false;
+      let downAt = 0;
+      const startedAt = Date.now();
       for (; ;) {
         if (stopped) return;
-        try {
-          const resp = await fetchState();
-          if (!resp.ok) break;
-        } catch (_) {
-          break;
+        const { up, version, timedOut } = await probeState(APPLY_FETCH_TIMEOUT_MS);
+        if (stopped) return;
+        if (up && (isRestartedVersion(fromVersion, version) || sawDown)) {
+          window.location.reload();
+          return;
         }
-        await sleep(200);
-      }
-      const deadline = Date.now() + 5000;
-      for (; ;) {
-        if (stopped) return;
-        try {
-          const resp = await fetchState();
-          if (resp.ok) {
-            window.location.reload();
-            return;
-          }
-        } catch (_) { }
-        const remain = deadline - Date.now();
-        if (remain <= 0) {
+        const now = Date.now();
+        if (!up && !timedOut && !sawDown) {
+          sawDown = true;
+          downAt = now;
+        }
+        if (sawDown && now - downAt >= APPLY_RECONNECT_MS) {
           setReconnectTimedOut(true);
           return;
         }
-        await sleep(Math.min(500, remain));
+        if (now - startedAt >= APPLY_OVERALL_MS) {
+          setReconnectTimedOut(true);
+          return;
+        }
+        const wait = sawDown
+          ? Math.min(500, Math.max(0, APPLY_RECONNECT_MS - (now - downAt)))
+          : 200;
+        if (wait > 0) {
+          await sleep(wait);
+        }
       }
     })();
     return () => {
@@ -350,6 +374,7 @@ export default function App() {
     if (!upgradeProgress.done || applying) return;
     setUpgradeModalError("");
     setReconnectTimedOut(false);
+    applyFromVersionRef.current = state?.version || "";
     setApplying(true);
     const result = await applyUpgrade();
     if (result.error) {

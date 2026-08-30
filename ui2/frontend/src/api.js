@@ -53,6 +53,24 @@ export async function fetchState() {
   return resp;
 }
 
+export async function probeState(timeoutMs = 2500) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const resp = await fetch("/api/state", { cache: "no-store", signal: ctrl.signal });
+    if (!resp.ok) {
+      return { up: false, version: "", timedOut: false };
+    }
+    const data = await resp.json().catch(() => ({}));
+    return { up: true, version: data.version || "", timedOut: false };
+  } catch (err) {
+    const timedOut = !!err && (err.name === "AbortError" || err.name === "TimeoutError");
+    return { up: false, version: "", timedOut };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function importConfig(cfg) {
   const resp = await fetch("/api/config", {
     method: "POST",
