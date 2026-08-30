@@ -149,7 +149,7 @@ export default function LocalPanel({
       {localMode === "forward" && (
         <section className="forwards">
           <div className="forwards-head">
-            <span className="label">端口转发:</span>
+            <span className="label">端口转发(点击确认立即生效, 无需重新连接):</span>
             <div className="forwards-actions">
               <button type="button" disabled={!mappingEnabled} onClick={() => setRows((prev) => [...prev, newRow()])}>
                 添加
