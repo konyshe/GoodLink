@@ -529,22 +529,6 @@ export default function App() {
 
   return (
     <div className="gl-shell">
-      <header className="gl-header">
-        <div className="gl-brand">
-          <BrandMark />
-          <div className="gl-brand-text">
-            <span className="gl-brand-name">Goodlink</span>
-            <span className="gl-brand-meta">{state?.version ? `v${state.version}` : "点对点安全连接"}</span>
-          </div>
-        </div>
-        <div className="gl-header-aside">
-          <span className={`gl-status gl-status-${view.importance}${view.activity ? " is-busy" : ""}`}>
-            <span className="gl-status-dot" />
-            {shortStatus(status)}
-          </span>
-        </div>
-      </header>
-
       <Form component="div" layout="vertical" requiredMark={false}>
         <Card className="gl-panel" title="连接配置" size="small">
           <Form.Item label="工作端侧">
