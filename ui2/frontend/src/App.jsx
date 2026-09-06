@@ -209,6 +209,7 @@ export default function App() {
   const keyInputRef = useRef(null);
   const logRef = useRef(null);
   const applyFromVersionRef = useRef("");
+  const elevateBaseStateRef = useRef(null);
 
   // 提权重启由本页面触发，也可能来自其他标签页（通过 SSE 推送）
   const elevating = elevatingLocal || !!state?.elevating;
@@ -258,6 +259,15 @@ export default function App() {
     }
   }, [applying, state?.version]);
 
+  // SSE 重连后拿到未提权的新快照, 说明提权重启已完成, 撤掉遮罩
+  useEffect(() => {
+    if (!elevatingLocal) return;
+    if (!state || state === elevateBaseStateRef.current) return;
+    if (state.elevating === false) {
+      setElevatingLocal(false);
+    }
+  }, [elevatingLocal, state]);
+
   useEffect(() => {
     const st = state?.status ?? STATUS_DETECTING;
     if (st === STATUS_CONNECTING_NAT4) {
@@ -283,9 +293,11 @@ export default function App() {
       const startedAt = Date.now();
       for (; ;) {
         if (stopped) return;
-        const { up, version, timedOut } = await probeState(APPLY_FETCH_TIMEOUT_MS);
+        const { up, version, elevating: srvElevating, timedOut } = await probeState(APPLY_FETCH_TIMEOUT_MS);
         if (stopped) return;
-        if (up && (isRestartedVersion(fromVersion, version) || sawDown)) {
+        // 提权时服务端在响应启动请求前已置 elevating, 所以探测到 elevating=false 即为新进程
+        const restarted = isRestartedVersion(fromVersion, version) || sawDown || (elevating && !srvElevating);
+        if (up && restarted) {
           window.location.reload();
           return;
         }
@@ -464,6 +476,8 @@ export default function App() {
 
   function beginElevating() {
     setReconnectTimedOut(false);
+    // 记录触发时的快照, 避免把提权前的旧状态当成重启完成
+    elevateBaseStateRef.current = state;
     setElevatingLocal(true);
   }
 
@@ -789,7 +803,7 @@ export default function App() {
             title={elevating ? "重启超时" : "更新完成"}
             subTitle={
               elevating
-                ? "超过 15 秒未能连接主程序，请手动启动 Goodlink"
+                ? "未能自动恢复页面，请从系统托盘图标重新打开控制页面"
                 : "超过 5 秒未能连接主程序，请手动重启 Goodlink"
             }
           />

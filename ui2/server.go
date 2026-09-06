@@ -16,16 +16,40 @@ import (
 //go:embed web
 var webFS embed.FS
 
-const defaultUIAddr = "0.0.0.0:16780"
+const (
+	defaultUIAddr     = "0.0.0.0:16780"
+	uiAddrRetries     = 10
+	uiAddrRetryWaitMS = 200
+)
+
+// listenUI 优先使用固定端口。提权重启时旧进程刚退出, 端口可能尚未释放,
+// 此时重试若干次, 避免回退随机端口导致旧页面无法重连。
+func listenUI() (net.Listener, error) {
+	retries := 1
+	if portRetryEnabled() {
+		retries = uiAddrRetries
+	}
+
+	var err error
+	for i := 0; i < retries; i++ {
+		var ln net.Listener
+		ln, err = net.Listen("tcp4", defaultUIAddr)
+		if err == nil {
+			return ln, nil
+		}
+		if i+1 < retries {
+			time.Sleep(uiAddrRetryWaitMS * time.Millisecond)
+		}
+	}
+
+	log.Println("UI固定端口不可用, 回退随机端口:", err)
+	return net.Listen("tcp4", "0.0.0.0:0")
+}
 
 func StartServer() (string, error) {
-	ln, err := net.Listen("tcp4", defaultUIAddr)
+	ln, err := listenUI()
 	if err != nil {
-		// 固定端口占用时回退到随机端口
-		ln, err = net.Listen("tcp4", "0.0.0.0:0")
-		if err != nil {
-			return "", err
-		}
+		return "", err
 	}
 	log.Println("UI server started on", ln.Addr().String())
 

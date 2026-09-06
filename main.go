@@ -91,6 +91,7 @@ func runUI(openBrowser, autoConnect bool, waitPid int) {
 	ui2.InitTrayIcons()
 
 	ui2.SetForceAutoConnect(autoConnect)
+	ui2.SetPortRetry(waitPid > 0)
 	ui2.Init()
 
 	uiURL, err := ui2.StartServer()

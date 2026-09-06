@@ -59,13 +59,13 @@ export async function probeState(timeoutMs = 2500) {
   try {
     const resp = await fetch("/api/state", { cache: "no-store", signal: ctrl.signal });
     if (!resp.ok) {
-      return { up: false, version: "", timedOut: false };
+      return { up: false, version: "", elevating: false, timedOut: false };
     }
     const data = await resp.json().catch(() => ({}));
-    return { up: true, version: data.version || "", timedOut: false };
+    return { up: true, version: data.version || "", elevating: !!data.elevating, timedOut: false };
   } catch (err) {
     const timedOut = !!err && (err.name === "AbortError" || err.name === "TimeoutError");
-    return { up: false, version: "", timedOut };
+    return { up: false, version: "", elevating: false, timedOut };
   } finally {
     clearTimeout(timer);
   }

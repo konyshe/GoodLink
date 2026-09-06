@@ -12,8 +12,19 @@ import (
 // forceAutoConnect 由 --auto-connect 设置, 仅生效一次, 不写入 goodlink.json
 var forceAutoConnect atomic.Bool
 
+// portRetry 由 --wait-pid 设置, 表示本次是接替旧进程启动, 需要等固定端口释放
+var portRetry atomic.Bool
+
 func SetForceAutoConnect(enabled bool) {
 	forceAutoConnect.Store(enabled)
+}
+
+func SetPortRetry(enabled bool) {
+	portRetry.Store(enabled)
+}
+
+func portRetryEnabled() bool {
+	return portRetry.Load()
 }
 
 func consumeForceAutoConnect() bool {
