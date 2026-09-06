@@ -247,9 +247,9 @@ export default function App() {
 
   useEffect(() => {
     if (state?.version) {
-      document.title = "Goodlink v" + state.version;
+      document.title = `Goodlink v${state.version} · ${state.isAdmin ? "管理员" : "普通权限"}`;
     }
-  }, [state?.version]);
+  }, [state?.version, state?.isAdmin]);
 
   useEffect(() => {
     if (!applying) return;
