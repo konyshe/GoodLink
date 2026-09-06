@@ -15,6 +15,7 @@ config.json
 debug.sh
 *.dll
 *.syso
+.versioninfo.json
 .claude
 goodlink-windows-amd64
 goodlink.log

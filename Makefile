@@ -102,7 +102,9 @@ windows-arm:
 	GOARCH=arm GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
 
 create_nac:
-	$(GOVERSIONINFO) -64 -o nac.syso -icon ui2/frontend/public/favicon.ico -manifest nac.manifest config/versioninfo.json
+	go run ./config/expandversioninfo > .versioninfo.json
+	$(GOVERSIONINFO) -64 -o nac.syso -icon ui2/frontend/public/favicon.ico -manifest nac.manifest .versioninfo.json
+	rm -f .versioninfo.json
 
 rm_nac:
 	rm -rf nac.syso
@@ -111,4 +113,4 @@ strip:
 	-upx $(BINDIR)/*
 
 clean:
-	rm -rf $(BINDIR) *.exe
+	rm -rf $(BINDIR) *.exe .versioninfo.json
