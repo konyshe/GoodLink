@@ -169,17 +169,15 @@ function resolveProxy(localMode, proxy) {
   return FWD_PROXY;
 }
 
-function needsAdminHint(nextWorkType, nextLocalMode, isAdmin) {
-  return nextWorkType === "Local" && nextLocalMode === "tun" && isAdmin === false;
-}
-
-const ADMIN_HINT = "TUN模式, 需要管理员权限重新启动Goodlink";
 const NAT4_HINT = "两端网络都是NAT4，无法直连，已停止连接。";
 const RETRY_FAIL_HINT = "已尝试15次仍无法连接，已停止。";
 const CONNECT_FAIL_HELP_URL = "https://gitee.com/konyshe/goodlink/wikis/%E4%B8%BA%E4%BD%95%E6%97%A0%E6%B3%95%E8%BF%9E%E6%8E%A5";
 const APPLY_FETCH_TIMEOUT_MS = 2500;
 const APPLY_RECONNECT_MS = 5000;
 const APPLY_OVERALL_MS = 45000;
+// 提权重启要等旧进程退出后新进程再绑定端口，重连窗口比升级更宽松
+const ELEVATE_RECONNECT_MS = 15000;
+const ELEVATE_OVERALL_MS = 60000;
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -199,18 +197,22 @@ export default function App() {
   const [autoStart, setAutoStart] = useState(false);
   const [rows, setRows] = useState([]);
   const [formError, setFormError] = useState("");
-  const [adminHint, setAdminHint] = useState(false);
   const [failHint, setFailHint] = useState("");
   const [conflictHint, setConflictHint] = useState("");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeBody, setUpgradeBody] = useState("");
   const [upgradeModalError, setUpgradeModalError] = useState("");
   const [applying, setApplying] = useState(false);
+  const [elevatingLocal, setElevatingLocal] = useState(false);
   const [reconnectTimedOut, setReconnectTimedOut] = useState(false);
   const initialized = useRef(false);
   const keyInputRef = useRef(null);
   const logRef = useRef(null);
   const applyFromVersionRef = useRef("");
+
+  // 提权重启由本页面触发，也可能来自其他标签页（通过 SSE 推送）
+  const elevating = elevatingLocal || !!state?.elevating;
+  const restarting = applying || elevating;
 
   useEffect(() => {
     if (!state) return;
@@ -222,9 +224,6 @@ export default function App() {
       setAutoStart(!!state.autoStart);
       setRows(rowsFromRules(state.forwardRules));
       initialized.current = true;
-      if (needsAdminHint(state.workType || "Local", state.localMode || "tun", state.isAdmin)) {
-        setAdminHint(true);
-      }
       return;
     }
     setAutoStart(!!state.autoStart);
@@ -273,9 +272,11 @@ export default function App() {
   }, [state?.status]);
 
   useEffect(() => {
-    if (!applying) return;
+    if (!restarting) return;
     let stopped = false;
     const fromVersion = applyFromVersionRef.current;
+    const reconnectMs = elevating ? ELEVATE_RECONNECT_MS : APPLY_RECONNECT_MS;
+    const overallMs = elevating ? ELEVATE_OVERALL_MS : APPLY_OVERALL_MS;
     (async () => {
       let sawDown = false;
       let downAt = 0;
@@ -293,16 +294,16 @@ export default function App() {
           sawDown = true;
           downAt = now;
         }
-        if (sawDown && now - downAt >= APPLY_RECONNECT_MS) {
+        if (sawDown && now - downAt >= reconnectMs) {
           setReconnectTimedOut(true);
           return;
         }
-        if (now - startedAt >= APPLY_OVERALL_MS) {
+        if (now - startedAt >= overallMs) {
           setReconnectTimedOut(true);
           return;
         }
         const wait = sawDown
-          ? Math.min(500, Math.max(0, APPLY_RECONNECT_MS - (now - downAt)))
+          ? Math.min(500, Math.max(0, reconnectMs - (now - downAt)))
           : 200;
         if (wait > 0) {
           await sleep(wait);
@@ -312,7 +313,7 @@ export default function App() {
     return () => {
       stopped = true;
     };
-  }, [applying]);
+  }, [restarting, elevating]);
 
   const status = state?.status ?? STATUS_DETECTING;
   const view = viewFromStatus(status, workType);
@@ -400,9 +401,6 @@ export default function App() {
     setTransport(next.transport || "kcp");
     setAutoStart(!!next.autoStart);
     setRows(rowsFromRules(next.forwardRules));
-    if (needsAdminHint(nextWorkType, nextLocalMode, state?.isAdmin)) {
-      setAdminHint(true);
-    }
     message.success("已导入配置");
   }
 
@@ -434,9 +432,10 @@ export default function App() {
           return;
         }
         setFormError(result.error);
-        if (String(result.error).includes("管理员权限")) {
-          setAdminHint(true);
-        }
+        return;
+      }
+      if (result.state?.elevating) {
+        beginElevating();
       }
       return;
     }
@@ -455,12 +454,17 @@ export default function App() {
         return;
       }
       setFormError(result.error);
-      if (String(result.error).includes("管理员权限")) {
-        setAdminHint(true);
-        return;
-      }
       setAutoStart(!enabled);
+      return;
     }
+    if (result.state?.elevating) {
+      beginElevating();
+    }
+  }
+
+  function beginElevating() {
+    setReconnectTimedOut(false);
+    setElevatingLocal(true);
   }
 
   async function openUpgradeModal() {
@@ -535,12 +539,7 @@ export default function App() {
             <ChoiceGroup
               value={workType}
               disabled={!othersEnabled}
-              onChange={(next) => {
-                setWorkType(next);
-                if (needsAdminHint(next, localMode, state?.isAdmin)) {
-                  setAdminHint(true);
-                }
-              }}
+              onChange={(next) => setWorkType(next)}
               options={[
                 {
                   value: "Local",
@@ -591,11 +590,6 @@ export default function App() {
               setRows={setRows}
               mappingEnabled={mappingEnabled}
               onConfirm={onConfirm}
-              onNeedAdminHint={() => {
-                if (needsAdminHint(workType, "tun", state?.isAdmin)) {
-                  setAdminHint(true);
-                }
-              }}
               proxy={resolveProxy(localMode, state?.proxy)}
             />
           ) : (
@@ -691,7 +685,7 @@ export default function App() {
       </footer>
 
       <Modal
-        open={exited && !applying}
+        open={exited && !restarting}
         footer={null}
         closable={false}
         keyboard={false}
@@ -700,22 +694,6 @@ export default function App() {
         destroyOnHidden
       >
         <Result status="warning" title="程序已退出" subTitle="请重新启动 Goodlink" />
-      </Modal>
-
-      <Modal
-        title="需要管理员权限"
-        open={!exited && adminHint}
-        onCancel={() => setAdminHint(false)}
-        mask={{ closable: true }}
-        centered
-        destroyOnHidden
-        footer={[
-          <Button key="ok" type="primary" onClick={() => setAdminHint(false)}>
-            确定
-          </Button>,
-        ]}
-      >
-        {ADMIN_HINT}
       </Modal>
 
       <Modal
@@ -755,7 +733,7 @@ export default function App() {
 
       <Modal
         title={`新版本 v${state?.upgrade?.latest || ""}`}
-        open={upgradeOpen && !applying && !exited}
+        open={upgradeOpen && !restarting && !exited}
         onCancel={() => setUpgradeOpen(false)}
         mask={{ closable: false }}
         centered
@@ -796,7 +774,7 @@ export default function App() {
       </Modal>
 
       <Modal
-        open={applying}
+        open={restarting}
         footer={null}
         closable={false}
         keyboard={false}
@@ -806,12 +784,20 @@ export default function App() {
         width={480}
       >
         {reconnectTimedOut ? (
-          <Result status="warning" title="更新完成" subTitle="超过 5 秒未能连接主程序，请手动重启 Goodlink" />
+          <Result
+            status="warning"
+            title={elevating ? "重启超时" : "更新完成"}
+            subTitle={
+              elevating
+                ? "超过 15 秒未能连接主程序，请手动启动 Goodlink"
+                : "超过 5 秒未能连接主程序，请手动重启 Goodlink"
+            }
+          />
         ) : (
           <Flex vertical align="center" gap={16} style={{ padding: "16px 0" }}>
             <Spin size="large" />
             <Typography.Title level={5} style={{ margin: 0 }}>
-              正在更新到 v{state?.upgrade?.latest || ""}
+              {elevating ? "正在以管理员权限重启 Goodlink" : `正在更新到 v${state?.upgrade?.latest || ""}`}
             </Typography.Title>
             <Typography.Text>程序将自动重启，请稍候</Typography.Text>
             <Typography.Text type="secondary">重启完成后页面会自动恢复，无需手动关闭</Typography.Text>

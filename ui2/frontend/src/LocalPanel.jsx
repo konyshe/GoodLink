@@ -71,7 +71,6 @@ export default function LocalPanel({
   setRows,
   mappingEnabled,
   onConfirm,
-  onNeedAdminHint,
   proxy,
 }) {
   function updateRow(id, field, value) {
@@ -202,16 +201,13 @@ export default function LocalPanel({
         <ChoiceGroup
           value={localMode}
           disabled={!othersEnabled}
-          onChange={(next) => {
-            setLocalMode(next);
-            if (next === "tun") onNeedAdminHint?.();
-          }}
+          onChange={(next) => setLocalMode(next)}
           options={[
             {
               value: "tun",
               icon: <WifiOutlined />,
               label: "TUN 模式",
-              desc: "简单易用，需要管理员权限",
+              desc: "简单易用，自动申请管理员权限",
             },
             {
               value: "forward",

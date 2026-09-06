@@ -15,7 +15,7 @@ export async function start(workType, tunKey, localMode, forwardRules, transport
   if (!resp.ok) {
     return { error: data.error || "启动失败" };
   }
-  return { error: null };
+  return { error: null, state: data };
 }
 
 export async function stop() {
@@ -45,7 +45,7 @@ export async function saveAutoStart(autoStart, workType, tunKey, localMode, forw
   if (!resp.ok) {
     return { error: data.error || "保存失败" };
   }
-  return { error: null };
+  return { error: null, state: data };
 }
 
 export async function fetchState() {

@@ -57,6 +57,7 @@ type UIState struct {
 	AutoStart    bool                   `json:"autoStart"`
 	ForwardRules []config.UIForwardRule `json:"forwardRules"`
 	IsAdmin      bool                   `json:"isAdmin"`
+	Elevating    bool                   `json:"elevating"`
 	Status       int                    `json:"status"`
 	NAT          NATInfo                `json:"nat"`
 	Upgrade      UpgradeInfo            `json:"upgrade"`
@@ -77,6 +78,7 @@ var (
 	m_upgrade       UpgradeInfo
 	m_proxy_host    string
 	m_proxy_port    int
+	m_elevating     bool
 	sseHubInst      = newSSEHub()
 )
 
@@ -154,6 +156,7 @@ func snapshot(includeLogs bool) UIState {
 		AutoStart:    m_auto_start,
 		ForwardRules: rules,
 		IsAdmin:      utils.IsAdmin(),
+		Elevating:    m_elevating,
 		Status:       m_status,
 		NAT:          m_nat,
 		Upgrade:      m_upgrade,
@@ -212,6 +215,14 @@ func resetProxyListen() {
 	stateMu.Lock()
 	m_proxy_host = ""
 	m_proxy_port = 0
+	stateMu.Unlock()
+	broadcastState()
+}
+
+// setElevating 标记正在以管理员权限重启, 前端据此显示重启遮罩而非"程序已退出"
+func setElevating(elevating bool) {
+	stateMu.Lock()
+	m_elevating = elevating
 	stateMu.Unlock()
 	broadcastState()
 }

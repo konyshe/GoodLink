@@ -49,6 +49,7 @@ func Help() {
 	flag.IntVar(&Arg_upgrade_waitpid, "wait-pid", 0, "内部使用: 等待退出的主进程PID")
 	flag.StringVar(&Arg_upgrade_target, "target", "", "内部使用: 要覆盖的主程序路径")
 	flag.Bool("no-browser", false, "启动UI但不自动打开浏览器")
+	flag.Bool("auto-connect", false, "内部使用: 提权重启后自动继续本次连接")
 
 	flag.Parse()
 
@@ -100,24 +101,70 @@ func ParseSelfUpdateArgs(args []string) (zipPath string, waitPid int, target str
 	return
 }
 
-func isNoBrowserFlag(a string) bool {
-	switch a {
-	case "--no-browser", "-no-browser", "--no-browser=true", "-no-browser=true":
-		return true
-	default:
-		return strings.HasPrefix(a, "--no-browser=") || strings.HasPrefix(a, "-no-browser=")
-	}
-}
-
-// IsNoBrowserLaunch 表示仅带 --no-browser 启动 UI（不自动打开浏览器）。
-func IsNoBrowserLaunch(args []string) bool {
-	if len(args) == 0 {
-		return false
-	}
-	for _, a := range args {
-		if !isNoBrowserFlag(a) {
-			return false
+// parseBoolFlag 匹配 -name / --name / -name=v / --name=v 形式的布尔参数。
+func parseBoolFlag(a, name string) (val bool, matched bool) {
+	for _, prefix := range []string{"--", "-"} {
+		if a == prefix+name {
+			return true, true
+		}
+		if v, ok := strings.CutPrefix(a, prefix+name+"="); ok {
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return false, false
+			}
+			return b, true
 		}
 	}
-	return true
+	return false, false
+}
+
+// ParseUILaunchArgs 解析仅由 UI 使用的启动参数（--no-browser / --auto-connect / --wait-pid）。
+// 出现其它参数时返回 ok=false, 交由常规 CLI 流程处理。
+func ParseUILaunchArgs(args []string) (openBrowser, autoConnect bool, waitPid int, ok bool) {
+	if len(args) == 0 {
+		return true, false, 0, false
+	}
+
+	openBrowser = true
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if v, matched := parseBoolFlag(a, "no-browser"); matched {
+			openBrowser = !v
+			continue
+		}
+		if v, matched := parseBoolFlag(a, "auto-connect"); matched {
+			autoConnect = v
+			continue
+		}
+		if a == "--wait-pid" || a == "-wait-pid" {
+			if i+1 >= len(args) {
+				return true, false, 0, false
+			}
+			i++
+			n, err := strconv.Atoi(args[i])
+			if err != nil {
+				return true, false, 0, false
+			}
+			waitPid = n
+			continue
+		}
+		if v, cut := strings.CutPrefix(a, "--wait-pid="); cut {
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				return true, false, 0, false
+			}
+			waitPid = n
+			continue
+		}
+		if v, cut := strings.CutPrefix(a, "-wait-pid="); cut {
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				return true, false, 0, false
+			}
+			waitPid = n
+			continue
+		}
+		return true, false, 0, false
+	}
+	return openBrowser, autoConnect, waitPid, true
 }

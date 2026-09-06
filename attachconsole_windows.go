@@ -19,7 +19,7 @@ func attachParentConsoleIfCLI() {
 	if _, _, _, ok := config.ParseSelfUpdateArgs(args); ok {
 		return
 	}
-	if config.IsNoBrowserLaunch(args) {
+	if _, _, _, ok := config.ParseUILaunchArgs(args); ok {
 		return
 	}
 	for _, a := range args {

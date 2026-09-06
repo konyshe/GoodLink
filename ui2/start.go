@@ -297,10 +297,15 @@ func HandleSetAutoStart(autoStart bool, workType, tunKey, localMode, transport s
 }
 
 func tryAutoStart() {
-	if !getAutoStart() {
+	forced := consumeForceAutoConnect()
+	if !getAutoStart() && !forced {
 		return
 	}
-	UILogPrintF("已配置自动%s, 正在启动%s端...", autoConnectVerb(), GetWorkType())
+	if forced {
+		UILogPrintF("已获得管理员权限, 正在启动%s端...", GetWorkType())
+	} else {
+		UILogPrintF("已配置自动%s, 正在启动%s端...", autoConnectVerb(), GetWorkType())
+	}
 	if err := HandleStart(GetWorkType(), getTunKey(), getLocalMode(), getTransport(), getForwardRules()); err != nil {
 		UILogPrintF("自动%s失败: %v", autoConnectVerb(), err)
 	}
@@ -346,7 +351,7 @@ func HandleStart(workType, tunKey, localMode, transport string, rules []config.U
 		return err
 	}
 	if GetWorkType() == workTypeLocal && getLocalMode() == config.LocalModeTUN && !utils.IsAdmin() {
-		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
+		return requestElevatedRestart()
 	}
 
 	resetProxyListen()

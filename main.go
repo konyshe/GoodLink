@@ -19,6 +19,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func main2() {
@@ -71,7 +72,10 @@ func main2() {
 	pro.StopRemote()
 }
 
-func runUI(openBrowser bool) {
+func runUI(openBrowser, autoConnect bool, waitPid int) {
+	// 提权重启时先等旧进程退出，避免抢不到单实例锁与UI端口
+	ui2.WaitForPidExit(waitPid, 15*time.Second)
+
 	// 检查单实例，如果不是第一个实例则退出
 	// 必须在创建任何UI资源之前检查，避免影响已运行的实例
 	if !utils.CheckSingleInstance() {
@@ -86,6 +90,7 @@ func runUI(openBrowser bool) {
 
 	ui2.InitTrayIcons()
 
+	ui2.SetForceAutoConnect(autoConnect)
 	ui2.Init()
 
 	uiURL, err := ui2.StartServer()
@@ -113,7 +118,7 @@ func main() {
 
 	// 无任何参数时启动 UI（Windows/Linux/macOS）
 	if len(os.Args) <= 1 {
-		runUI(true)
+		runUI(true, false, 0)
 		return
 	}
 
@@ -122,8 +127,8 @@ func main() {
 		return
 	}
 
-	if config.IsNoBrowserLaunch(os.Args[1:]) {
-		runUI(false)
+	if openBrowser, autoConnect, waitPid, ok := config.ParseUILaunchArgs(os.Args[1:]); ok {
+		runUI(openBrowser, autoConnect, waitPid)
 		return
 	}
 
