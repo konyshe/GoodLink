@@ -14,6 +14,8 @@ func smuxConf() *smux.Config {
 	cfg.Version = 2
 	cfg.KeepAliveInterval = 10 * time.Second
 	cfg.KeepAliveTimeout = 120 * time.Second
+	// 默认 MaxStreamBuffer=64KB，单流吞吐容易被卡住；256KB 仍低于会话 4MB 共享缓冲。
+	cfg.MaxStreamBuffer = 256 * 1024
 	return cfg
 }
 

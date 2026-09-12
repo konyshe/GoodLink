@@ -59,6 +59,7 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 
 	forcedMTU := defaultMTU
 	if t.mtu > 0 {
+		// TunMTU=1280：避免内层 MSS 装不进外层 QUIC。
 		forcedMTU = int(t.mtu)
 	}
 

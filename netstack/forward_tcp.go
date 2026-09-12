@@ -12,7 +12,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/waiter"
 	"log"
-	"os"
 	"time"
 )
 
@@ -28,25 +27,18 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn tls2.Conn) {
 	if err != nil {
 		log.Printf("[netstack] TCP转发打开quic流失败 %s:%d: %v", originConn.ID().LocalAddress, originConn.ID().LocalPort, err)
 		originConn.Close()
-		os.Exit(0)
+		// 开流失败只关这条连接。os.Exit 会干掉整个进程，引发重连风暴。
 		return
 	}
 
-	// 批量构建头部数据：协议类型(1字节) + IP地址(4字节) + 端口(2字节)
-	// 使用缓冲池获取头部缓冲区
-	ioBuf := go2pool.Malloc(7)
+	ioBuf := go2pool.Malloc(proxy.HEAD_LEN)
 	defer go2pool.Free(ioBuf)
 
-	ioBuf[0] = 0x00 // TCP协议标识
-
-	// 写入回环地址 127.0.0.1
+	ioBuf[0] = 0x00
 	copy(ioBuf[1:5], LoopBackAddr[:])
+	binary.BigEndian.PutUint16(ioBuf[5:proxy.HEAD_LEN], originConn.ID().LocalPort)
 
-	// 写入端口（大端序）
-	binary.BigEndian.PutUint16(ioBuf[5:7], originConn.ID().LocalPort)
-
-	// 一次性写入所有头部数据
-	if _, err := new_quic_stream.Write(ioBuf[:7]); err != nil {
+	if _, err := new_quic_stream.Write(ioBuf[:proxy.HEAD_LEN]); err != nil {
 		log.Println("写入头部失败", err)
 		originConn.Close()
 		new_quic_stream.CancelRead(0)
@@ -54,12 +46,12 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn tls2.Conn) {
 		return
 	}
 
-	go proxy.ForwardQ2T(new_quic_stream, originConn)
-	go proxy.ForwardT2Q(originConn, new_quic_stream)
+	proxy.Relay(originConn, new_quic_stream)
 }
 
-func NewTcpForwarder(s *stack.Stack, stun_quic_conn tls2.Conn) *tcp.Forwarder {
-	return tcp.NewForwarder(s, 0, 2048, func(r *tcp.ForwarderRequest) {
+func NewTcpForwarder(s *stack.Stack) *tcp.Forwarder {
+	// rcvWnd 与套接字缓冲一致，避免 SYN-ACK 仍通告默认 1MB。
+	return tcp.NewForwarder(s, defaultReceiveBufferSize, 2048, func(r *tcp.ForwarderRequest) {
 		var (
 			wq  waiter.Queue
 			ep  tcpip.Endpoint
@@ -67,27 +59,27 @@ func NewTcpForwarder(s *stack.Stack, stun_quic_conn tls2.Conn) *tcp.Forwarder {
 			id  = r.ID()
 		)
 
+		stun_quic_conn := currentTunnel()
 		if stun_quic_conn == nil {
-			r.Complete(true) // 拒绝连接
-			return
-		}
-
-		// 开始三次握手
-		ep, err = r.CreateEndpoint(&wq)
-		if err != nil {
-			log.Printf("forward tcp request: %s:%d->%s:%d: %s", id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
-
-			// 发送RST：防止潜在的半开TCP连接泄漏
 			r.Complete(true)
 			return
 		}
-		defer r.Complete(false)
+
+		ep, err = r.CreateEndpoint(&wq)
+		if err != nil {
+			log.Printf("forward tcp request: %s:%d->%s:%d: %s", id.RemoteAddress, id.RemotePort, id.LocalAddress, id.LocalPort, err)
+			r.Complete(true)
+			return
+		}
+		// 握手完成后立刻 Complete，释放 inFlight 名额；OpenStream 可能阻塞数秒。
+		r.Complete(false)
 
 		setSocketOptions(s, ep)
 
-		ForwardTCPConn(&TcpConn{
+		conn := &TcpConn{
 			TCPConn: gonet.NewTCPConn(&wq, ep),
 			id:      id,
-		}, stun_quic_conn)
+		}
+		go ForwardTCPConn(conn, stun_quic_conn)
 	})
 }

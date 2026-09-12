@@ -13,24 +13,31 @@ import (
 	"time"
 
 	"gvisor.dev/gvisor/pkg/buffer"
-	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
-	defaultOutQueueLen = 1 << 14 // 16384, 避免出站队列溢出丢包
+	defaultOutQueueLen = 1 << 14
 
 	dispatchRetryDelay    = 100 * time.Millisecond
 	dispatchMaxRetryDelay = 5 * time.Second
+
+	// Wintun/utun 支持一次读写多个包；32 在拷贝次数和延迟之间折中。
+	tunBatchSize = 32
 )
 
-// Endpoint implements the interface of stack.LinkEndpoint from io.ReadWriter.
+type batchIO interface {
+	ReadBatch(bufs [][]byte, sizes []int, offset int) (int, error)
+	WriteBatch(bufs [][]byte, offset int) (int, error)
+}
+
 type Endpoint struct {
 	*channel.Endpoint
 
 	rw     io.ReadWriter
+	batch  batchIO
 	mtu    uint32
 	offset int
 
@@ -39,34 +46,31 @@ type Endpoint struct {
 	cancel context.CancelFunc
 }
 
-// New returns stack.LinkEndpoint(.*Endpoint) and error.
 func NewEndpoint(rw io.ReadWriter, mtu uint32, offset int) (*Endpoint, error) {
-	// 校验MTU（最大传输单元）有效性
 	if mtu == 0 {
 		return nil, errors.New("MTU size is zero")
 	}
-
-	// 确保IO接口有效
 	if rw == nil {
 		return nil, errors.New("RW interface is nil")
 	}
-
-	// 校验偏移量合法性（用于TUN设备头）
 	if offset < 0 {
 		return nil, errors.New("offset must be non-negative")
 	}
 
-	// 创建并初始化端点实例
-	return &Endpoint{
+	ep := &Endpoint{
 		Endpoint: channel.New(
 			defaultOutQueueLen,
-			mtu,                // 最大传输单元
-			"",                 // 链路层名称（保留空）
+			mtu,
+			"",
 		),
-		rw:     rw,     // 底层IO读写接口
-		mtu:    mtu,    // 保存MTU配置
-		offset: offset, // TUN设备头偏移量
-	}, nil
+		rw:     rw,
+		mtu:    mtu,
+		offset: offset,
+	}
+	if b, ok := rw.(batchIO); ok {
+		ep.batch = b
+	}
+	return ep, nil
 }
 
 func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
@@ -105,16 +109,40 @@ func isTemporaryError(err error) bool {
 	return true
 }
 
+func (e *Endpoint) injectIPv4(payload []byte) {
+	if len(payload) == 0 || !e.IsAttached() {
+		return
+	}
+	if header.IPVersion(payload) != header.IPv4Version {
+		return
+	}
+	// 拷进 PacketBuffer 自有 View，读缓冲才能复用。直接 MakeWithData(切片)
+	// 会让栈持有读缓冲，只能每包 make。
+	view := buffer.NewView(len(payload))
+	if _, err := view.Write(payload); err != nil {
+		view.Release()
+		return
+	}
+	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+		Payload: buffer.MakeWithView(view),
+	})
+	e.InjectInbound(header.IPv4ProtocolNumber, pkt)
+	pkt.DecRef()
+}
+
 func (e *Endpoint) dispatchLoop(cancel context.CancelFunc) {
 	defer cancel()
 
+	if e.batch != nil {
+		e.dispatchBatch()
+		return
+	}
+
 	offset, mtu := e.offset, int(e.mtu)
 	retryDelay := dispatchRetryDelay
+	data := make([]byte, offset+mtu)
 
 	for {
-		// 每次读取分配独立缓冲区，避免 InjectInbound 异步引用被覆盖
-		data := make([]byte, offset+mtu)
-
 		n, err := e.rw.Read(data)
 		if err != nil {
 			if !isTemporaryError(err) {
@@ -131,49 +159,122 @@ func (e *Endpoint) dispatchLoop(cancel context.CancelFunc) {
 		if n == 0 || n > mtu {
 			continue
 		}
-
-		if !e.IsAttached() {
-			continue
-		}
-
-		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-			Payload: buffer.MakeWithData(data[offset : offset+n]),
-		})
-
-		switch header.IPVersion(data[offset:]) {
-		case header.IPv4Version:
-			e.InjectInbound(header.IPv4ProtocolNumber, pkt)
-		}
-		pkt.DecRef()
+		e.injectIPv4(data[offset : offset+n])
 	}
 }
 
+func (e *Endpoint) dispatchBatch() {
+	offset, mtu := e.offset, int(e.mtu)
+	retryDelay := dispatchRetryDelay
+
+	bufs := make([][]byte, tunBatchSize)
+	sizes := make([]int, tunBatchSize)
+	for i := range bufs {
+		bufs[i] = make([]byte, offset+mtu)
+	}
+
+	for {
+		n, err := e.batch.ReadBatch(bufs, sizes, offset)
+		if err != nil && n == 0 {
+			if !isTemporaryError(err) {
+				log.Printf("[netstack] dispatchLoop 致命错误，退出: %v", err)
+				return
+			}
+			log.Printf("[netstack] dispatchLoop 读取临时错误，%v 后重试: %v", retryDelay, err)
+			time.Sleep(retryDelay)
+			retryDelay = min(retryDelay*2, dispatchMaxRetryDelay)
+			continue
+		}
+		retryDelay = dispatchRetryDelay
+
+		for i := 0; i < n; i++ {
+			pktLen := sizes[i]
+			if pktLen == 0 || pktLen > mtu {
+				continue
+			}
+			e.injectIPv4(bufs[i][offset : offset+pktLen])
+		}
+	}
+}
+
+func copyPktTo(dst []byte, pkt *stack.PacketBuffer) int {
+	vl, hdrOff := pkt.AsViewList()
+	skipped := 0
+	n := 0
+	for v := vl.Front(); v != nil; v = v.Next() {
+		s := v.AsSlice()
+		if skipped < hdrOff {
+			if skipped+len(s) <= hdrOff {
+				skipped += len(s)
+				continue
+			}
+			s = s[hdrOff-skipped:]
+			skipped = hdrOff
+		}
+		if n >= len(dst) {
+			break
+		}
+		n += copy(dst[n:], s)
+	}
+	return n
+}
+
+func (e *Endpoint) packPacket(pkt *stack.PacketBuffer, dest []byte) []byte {
+	need := e.offset + pkt.Size()
+	if cap(dest) < need {
+		dest = make([]byte, need)
+	} else {
+		dest = dest[:need]
+	}
+	_ = copyPktTo(dest[e.offset:], pkt)
+	return dest
+}
+
 func (e *Endpoint) outboundLoop(ctx context.Context) {
+	scratch := make([][]byte, tunBatchSize)
+	pkts := make([]*stack.PacketBuffer, 0, tunBatchSize)
+	bufs := make([][]byte, 0, tunBatchSize)
+	for i := range scratch {
+		scratch[i] = make([]byte, e.offset+int(e.mtu))
+	}
+
 	for {
 		pkt := e.ReadContext(ctx)
 		if pkt == nil {
 			break
 		}
-		e.writePacket(pkt)
+
+		pkts = pkts[:0]
+		bufs = bufs[:0]
+		pkts = append(pkts, pkt)
+		bufs = append(bufs, e.packPacket(pkt, scratch[0]))
+
+		for i := 1; i < tunBatchSize; i++ {
+			p := e.Read()
+			if p == nil {
+				break
+			}
+			pkts = append(pkts, p)
+			bufs = append(bufs, e.packPacket(p, scratch[i]))
+		}
+
+		if e.batch != nil {
+			if _, err := e.batch.WriteBatch(bufs, e.offset); err != nil {
+				log.Printf("[netstack] writePacket 写入TUN失败: %v", err)
+			}
+		} else {
+			for _, buf := range bufs {
+				if _, err := e.rw.Write(buf); err != nil {
+					log.Printf("[netstack] writePacket 写入TUN失败: %v", err)
+					break
+				}
+			}
+		}
+
+		for _, p := range pkts {
+			p.DecRef()
+		}
 	}
-}
-
-func (e *Endpoint) writePacket(pkt *stack.PacketBuffer) tcpip.Error {
-	defer pkt.DecRef()
-
-	buf := pkt.ToBuffer()
-	defer buf.Release()
-
-	if e.offset != 0 {
-		v := buffer.NewViewWithData(make([]byte, e.offset))
-		_ = buf.Prepend(v)
-	}
-
-	if _, err := e.rw.Write(buf.Flatten()); err != nil {
-		log.Printf("[netstack] writePacket 写入TUN失败: %v", err)
-		return &tcpip.ErrInvalidEndpointState{}
-	}
-	return nil
 }
 
 func (e *Endpoint) Close() {

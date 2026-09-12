@@ -13,6 +13,11 @@ var quicCfg = &quic.Config{
 	KeepAlivePeriod:    10 * time.Second,
 	MaxIncomingStreams: 16 * 1024,
 	Allow0RTT:          true,
+	// 默认流初始窗口 512KB，大文件/Git 慢启动偏长；提到 2MB 缩短爬升。
+	InitialStreamReceiveWindow:     2 * 1024 * 1024,
+	MaxStreamReceiveWindow:         6 * 1024 * 1024,
+	InitialConnectionReceiveWindow: 2 * 1024 * 1024,
+	MaxConnectionReceiveWindow:     15 * 1024 * 1024,
 }
 
 type quicConn struct {

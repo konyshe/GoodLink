@@ -19,7 +19,6 @@ type ForwardRule struct {
 	Proto      byte // 0x00 TCP, 0x01 UDP（与 Remote process_stream 一致）
 }
 
-// ForwardRunner 本地转发监听器（TCP 或 UDP），隧道重连时通过 SetQuicConn/ClearQuicConn 热替换 QUIC。
 type ForwardRunner interface {
 	SetQuicConn(conn tls2.Conn)
 	ClearQuicConn()
@@ -29,8 +28,6 @@ type ForwardRunner interface {
 	Close()
 }
 
-// ForwardClient 管理 TCP 监听和 QUIC 隧道转发。
-// listener 只创建一次，隧道重连时通过 SetQuicConn/ClearQuicConn 热替换 QUIC 连接。
 type ForwardClient struct {
 	listener   net.Listener
 	mu         sync.RWMutex
@@ -39,22 +36,22 @@ type ForwardClient struct {
 	remotePort uint16
 }
 
-// ForwardUDPClient 管理 UDP 监听：每个入站数据报对应一条隧道流。
+// ForwardUDPClient 按客户端地址复用隧道流。每数据报开一条流会把 QUIC 握手打满。
 type ForwardUDPClient struct {
 	pc         *net.UDPConn
 	mu         sync.RWMutex
 	quicConn   tls2.Conn
 	remoteIP   net.IP
 	remotePort uint16
+
+	sessMu   sync.Mutex
+	sessions map[string]*udpFwdSession
 }
 
-type udpWriteBack struct {
-	pc   *net.UDPConn
-	addr net.Addr
-}
-
-func (u *udpWriteBack) Write(b []byte) (int, error) {
-	return u.pc.WriteTo(b, u.addr)
+type udpFwdSession struct {
+	mu     sync.Mutex
+	stream tls2.Stream
+	closed bool
 }
 
 func newForwardRunner(rule ForwardRule) (ForwardRunner, error) {
@@ -73,6 +70,7 @@ func newForwardRunner(rule ForwardRule) (ForwardRunner, error) {
 			pc:         pc,
 			remoteIP:   rule.RemoteIP,
 			remotePort: rule.RemotePort,
+			sessions:   make(map[string]*udpFwdSession),
 		}, nil
 	default:
 		ln, err := net.Listen("tcp", rule.ListenAddr)
@@ -153,7 +151,7 @@ func (p *ForwardClient) handleConn(tcpConn net.Conn, quicConn tls2.Conn) {
 
 	ioBuf := go2pool.Malloc(HEAD_LEN)
 
-	ioBuf[0] = 0x00 // TCP协议标识
+	ioBuf[0] = 0x00
 	copy(ioBuf[1:5], remoteIP.To4())
 	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], remotePort)
 
@@ -167,8 +165,7 @@ func (p *ForwardClient) handleConn(tcpConn net.Conn, quicConn tls2.Conn) {
 	}
 	go2pool.Free(ioBuf)
 
-	go ForwardT2Q(tcpConn, stream)
-	go ForwardQ2T(stream, tcpConn)
+	Relay(tcpConn, stream)
 }
 
 func (p *ForwardClient) ListenAddr() string {
@@ -185,15 +182,17 @@ func (p *ForwardClient) Close() {
 }
 
 func (p *ForwardUDPClient) SetQuicConn(conn tls2.Conn) {
+	p.closeAllSessions()
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.quicConn = conn
+	p.mu.Unlock()
 }
 
 func (p *ForwardUDPClient) ClearQuicConn() {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.quicConn = nil
+	p.mu.Unlock()
+	p.closeAllSessions()
 }
 
 func (p *ForwardUDPClient) getQuicConn() tls2.Conn {
@@ -215,6 +214,110 @@ func (p *ForwardUDPClient) target() (net.IP, uint16) {
 	return p.remoteIP, p.remotePort
 }
 
+func (s *udpFwdSession) write(b []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return io.EOF
+	}
+	_, err := s.stream.Write(b)
+	return err
+}
+
+func (s *udpFwdSession) close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
+	s.closed = true
+	s.stream.CancelRead(0)
+	_ = s.stream.Close()
+}
+
+func (p *ForwardUDPClient) closeAllSessions() {
+	p.sessMu.Lock()
+	old := p.sessions
+	p.sessions = make(map[string]*udpFwdSession)
+	p.sessMu.Unlock()
+	for _, s := range old {
+		s.close()
+	}
+}
+
+func (p *ForwardUDPClient) dropSession(key string) {
+	p.sessMu.Lock()
+	s := p.sessions[key]
+	delete(p.sessions, key)
+	p.sessMu.Unlock()
+	if s != nil {
+		s.close()
+	}
+}
+
+func (p *ForwardUDPClient) getSession(key string) *udpFwdSession {
+	p.sessMu.Lock()
+	defer p.sessMu.Unlock()
+	return p.sessions[key]
+}
+
+func (p *ForwardUDPClient) newSession(key string, clientAddr net.Addr) (*udpFwdSession, error) {
+	quicConn := p.getQuicConn()
+	if quicConn == nil {
+		return nil, io.ErrClosedPipe
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	stream, err := quicConn.OpenStreamSync(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	remoteIP, remotePort := p.target()
+	ioBuf := go2pool.Malloc(HEAD_LEN)
+	ioBuf[0] = 0x01
+	copy(ioBuf[1:5], remoteIP.To4())
+	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], remotePort)
+	_, err = stream.Write(ioBuf[:HEAD_LEN])
+	go2pool.Free(ioBuf)
+	if err != nil {
+		stream.CancelRead(0)
+		_ = stream.Close()
+		return nil, err
+	}
+
+	sess := &udpFwdSession{stream: stream}
+	p.sessMu.Lock()
+	if existing := p.sessions[key]; existing != nil {
+		p.sessMu.Unlock()
+		sess.close()
+		return existing, nil
+	}
+	p.sessions[key] = sess
+	p.sessMu.Unlock()
+
+	go p.readBack(key, clientAddr, sess)
+	return sess, nil
+}
+
+func (p *ForwardUDPClient) readBack(key string, clientAddr net.Addr, sess *udpFwdSession) {
+	defer p.dropSession(key)
+
+	buf := go2pool.Malloc(copyBufSize)
+	defer go2pool.Free(buf)
+	for {
+		n, err := sess.stream.Read(buf)
+		if n > 0 {
+			_, _ = p.pc.WriteTo(buf[:n], clientAddr)
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
 func (p *ForwardUDPClient) Serve() {
 	buf := make([]byte, 65535)
 	for {
@@ -226,58 +329,24 @@ func (p *ForwardUDPClient) Serve() {
 		if n == 0 {
 			continue
 		}
-		payload := make([]byte, n)
-		copy(payload, buf[:n])
-		quicConn := p.getQuicConn()
-		if quicConn == nil {
+		if p.getQuicConn() == nil {
 			log.Println("[proxy] 隧道未就绪，丢弃UDP数据报")
 			continue
 		}
-		go p.handleDatagram(payload, clientAddr, quicConn)
+
+		key := clientAddr.String()
+		sess := p.getSession(key)
+		if sess == nil {
+			sess, err = p.newSession(key, clientAddr)
+			if err != nil {
+				log.Println("[proxy] UDP转发打开流失败:", err)
+				continue
+			}
+		}
+		if err := sess.write(buf[:n]); err != nil {
+			p.dropSession(key)
+		}
 	}
-}
-
-func (p *ForwardUDPClient) handleDatagram(payload []byte, clientAddr net.Addr, quicConn tls2.Conn) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	stream, err := quicConn.OpenStreamSync(ctx)
-	if err != nil {
-		log.Println("[proxy] UDP转发打开QUIC流失败:", err)
-		return
-	}
-
-	remoteIP, remotePort := p.target()
-
-	ioBuf := go2pool.Malloc(HEAD_LEN)
-	ioBuf[0] = 0x01 // UDP协议标识
-	copy(ioBuf[1:5], remoteIP.To4())
-	binary.BigEndian.PutUint16(ioBuf[5:HEAD_LEN], remotePort)
-	if _, err := stream.Write(ioBuf[:HEAD_LEN]); err != nil {
-		go2pool.Free(ioBuf)
-		log.Println("[proxy] UDP转发写入头部失败:", err)
-		stream.CancelRead(0)
-		stream.Close()
-		return
-	}
-	go2pool.Free(ioBuf)
-
-	if _, err := stream.Write(payload); err != nil {
-		log.Println("[proxy] UDP转发写入载荷失败:", err)
-		stream.CancelRead(0)
-		stream.Close()
-		return
-	}
-
-	wb := &udpWriteBack{pc: p.pc, addr: clientAddr}
-	cpBuf := go2pool.Malloc(32 * 1024)
-	defer go2pool.Free(cpBuf)
-	_, err = io.CopyBuffer(wb, stream, cpBuf)
-	if err != nil && err != io.EOF {
-		log.Println("[proxy] UDP转发读流失败:", err)
-	}
-	stream.CancelRead(0)
-	stream.Close()
 }
 
 func (p *ForwardUDPClient) ListenAddr() string {
@@ -288,6 +357,7 @@ func (p *ForwardUDPClient) ListenAddr() string {
 }
 
 func (p *ForwardUDPClient) Close() {
+	p.closeAllSessions()
 	if p.pc != nil {
 		p.pc.Close()
 	}

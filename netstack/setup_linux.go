@@ -93,7 +93,7 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 		return err
 	}
 
-	cmd = exec.Command("ip", "link", "set", NetStackName, "up")
+	cmd = exec.Command("ip", "link", "set", NetStackName, "up", "mtu", fmt.Sprintf("%d", TunMTU))
 	if err := cmd.Run(); err != nil {
 		return err
 	}

@@ -34,6 +34,7 @@ func Open(name string, mtu uint32) (Device, error) {
 	t.fd = fd
 
 	if t.mtu > 0 {
+		// TunMTU=1280：避免内层 MSS≈1460 装不进外层 QUIC。
 		if err := setMTU(t.name, t.mtu); err != nil {
 			return nil, fmt.Errorf("set mtu: %w", err)
 		}

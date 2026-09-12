@@ -25,6 +25,10 @@ const (
 	nicID               = tcpip.NICID(1)
 	NetStackName        = "Goodlink"
 	NetStackIP          = "192.17.19.1"
+
+	// 内层 TUN 默认 1500 时 gVisor 通告 MSS≈1460，外层还要加 QUIC/UDP/IP，
+	// 一个内层 TCP 段会被拆成多个 QUIC 包。1280 让内层段通常能进一个 QUIC 包。
+	TunMTU = 1280
 )
 
 func tunInterfacePrefixFrom(destIP string) (netip.Prefix, error) {
@@ -67,7 +71,24 @@ var (
 	initStackDone  bool
 	netstack_stack *stack.Stack
 	currentDevice  Device
+
+	// 隧道连接与协议栈 handler 解耦：gVisor 规定 SetTransportProtocolHandler
+	// 只能在初始化时调用，运行中替换不安全。重连只改这个指针。
+	tunnelMu sync.RWMutex
+	tunnel   tls2.Conn
 )
+
+func setTunnel(c tls2.Conn) {
+	tunnelMu.Lock()
+	tunnel = c
+	tunnelMu.Unlock()
+}
+
+func currentTunnel() tls2.Conn {
+	tunnelMu.RLock()
+	defer tunnelMu.RUnlock()
+	return tunnel
+}
 
 func initStack() error {
 	CleanupOldAdapter(NetStackName)
@@ -77,13 +98,20 @@ func initStack() error {
 			ipv4.NewProtocol,
 		},
 		TransportProtocols: []stack.TransportProtocolFactory{
-			tcp.NewProtocol,
+			// Cubic 在 WAN/高 BDP 上比默认 Reno 爬升更快；内层 TCP 最终要跑在 QUIC 上。
+			tcp.NewProtocolCUBIC,
 			udp.NewProtocol,
 			icmp.NewProtocol4,
 		},
 	})
 
-	dev, err := Open(NetStackName, 0)
+	// 协议栈级默认也可能开 Nagle；这里关掉，避免新 endpoint 继承。
+	delayOff := tcpip.TCPDelayEnabled(false)
+	if err := netstack_stack.SetTransportProtocolOption(tcp.ProtocolNumber, &delayOff); err != nil {
+		log.Printf("[netstack] 关闭协议栈级 Nagle 失败: %s", err)
+	}
+
+	dev, err := Open(NetStackName, TunMTU)
 	if err != nil {
 		if strings.Contains(err.Error(), "wintun.dll") {
 			return err
@@ -113,6 +141,10 @@ func initStack() error {
 	if err := setNetStack(netstack_stack, nicID); err != nil {
 		return err
 	}
+
+	// 只在建栈时安装一次 Forwarder；之后 SetForWarder 只更新 currentTunnel。
+	netstack_stack.SetTransportProtocolHandler(tcp.ProtocolNumber, NewTcpForwarder(netstack_stack).HandlePacket)
+	netstack_stack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUdpForwarder(netstack_stack).HandlePacket)
 
 	return nil
 }
@@ -177,12 +209,5 @@ func rebuildStack() {
 }
 
 func SetForWarder(stun_quic_conn tls2.Conn) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if netstack_stack == nil {
-		return
-	}
-	netstack_stack.SetTransportProtocolHandler(tcp.ProtocolNumber, NewTcpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
-	netstack_stack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUdpForwarder(netstack_stack, stun_quic_conn).HandlePacket)
+	setTunnel(stun_quic_conn)
 }

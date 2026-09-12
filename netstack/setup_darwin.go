@@ -21,6 +21,13 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 		return fmt.Errorf("ifconfig failed: %w, output: %s", err, out)
 	}
 
+	// ifconfig 可能把 CreateTUN 设的 MTU 改回默认，这里再钉成 TunMTU。
+	cmd = exec.Command("ifconfig", devName, "mtu", fmt.Sprintf("%d", TunMTU))
+	log.Printf("SetTunIP: %s", cmd.String())
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("ifconfig mtu failed: %w, output: %s", err, out)
+	}
+
 	// route add -host 192.17.19.1 -interface utunN
 	cmd = exec.Command("route", "add", "-host", ip, "-interface", devName)
 	log.Printf("SetTunIP: %s", cmd.String())

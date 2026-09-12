@@ -9,25 +9,25 @@ import (
 	"io"
 	"net"
 	proxy_handle "proxy/handle"
+	"strconv"
+	"time"
 )
 
 const (
 	HEAD_LEN   = 7 // 1字节传输协议类型 + 4字节IPv4地址 + 2字节端口号
 	PROXY_PORT = 1080
+
+	tcpDialTimeout = 10 * time.Second
 )
 
 func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 
-	// 复用头部缓冲区，减少内存分配开销
 	headerBuf := go2pool.Malloc(HEAD_LEN)
 	defer go2pool.Free(headerBuf)
 
-	// 读取头部数据
 	_, err := io.ReadFull(new_quic_stream, headerBuf[:HEAD_LEN])
 	if err != nil {
-		// 区分连接关闭和其他错误
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			// 连接关闭是正常情况，不需要记录错误日志
 		} else {
 			log.Error("read quic head error: ", err)
 		}
@@ -36,12 +36,13 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 		return
 	}
 
-	// 在释放缓冲区前提取所有需要的数据
-	protocolType := headerBuf[0]                                 // 传输协议类型
-	remoteIP := headerBuf[1:5]                                   // 远程IP地址
-	remotePort := binary.BigEndian.Uint16(headerBuf[5:HEAD_LEN]) // 远程端口号
+	protocolType := headerBuf[0]
+	remotePort := binary.BigEndian.Uint16(headerBuf[5:HEAD_LEN])
+	// 拷出 IP：headerBuf 来自缓冲池，不能把子切片交给 Dial。
+	ip := make(net.IP, 4)
+	copy(ip, headerBuf[1:5])
 
-	switch protocolType { // 根据传输协议类型处理
+	switch protocolType {
 	case 0x00: // TCP
 		switch remotePort {
 		case PROXY_PORT:
@@ -54,17 +55,19 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 			if remotePort == 13389 {
 				remotePort = 3389
 			}
-			new_conn, err := net.DialTCP("tcp4", nil, &net.TCPAddr{
-				IP:   remoteIP,
-				Port: int(remotePort),
-			})
+			d := &net.Dialer{
+				Timeout:   tcpDialTimeout,
+				KeepAlive: 30 * time.Second,
+			}
+			c, err := d.Dial("tcp4", net.JoinHostPort(ip.String(), strconv.Itoa(int(remotePort))))
 			if err == nil {
-				go ForwardT2Q(new_conn, new_quic_stream)
-				ForwardQ2T(new_quic_stream, new_conn)
+				if tcpConn, ok := c.(*net.TCPConn); ok {
+					// 对端内核 TCP 默认开 Nagle，与 gVisor 侧叠加会拖慢 RDP/SSH。
+					_ = tcpConn.SetNoDelay(true)
+				}
+				Relay(c, new_quic_stream)
 			} else {
-				// 区分连接关闭和其他错误
 				if err == io.EOF || err == io.ErrUnexpectedEOF {
-					// 连接关闭是正常情况，不需要记录错误日志
 				} else {
 					log.Error("dial tcp error: ", err)
 				}
@@ -74,16 +77,15 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 		}
 	case 0x01: // UDP
 		new_conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{
-			IP:   remoteIP,
+			IP:   ip,
 			Port: int(remotePort),
 		})
 		if err == nil {
-			go ForwardT2Q(new_conn, new_quic_stream)
-			ForwardQ2T(new_quic_stream, new_conn)
+			_ = new_conn.SetReadBuffer(256 * 1024)
+			_ = new_conn.SetWriteBuffer(256 * 1024)
+			RelayIdle(new_conn, new_quic_stream, UDPIdleTimeout)
 		} else {
-			// 区分连接关闭和其他错误
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				// 连接关闭是正常情况，不需要记录错误日志
 			} else {
 				log.Error("dial udp error: ", err)
 			}
@@ -93,19 +95,15 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 	}
 }
 
-// Remote端
 func ProcessProxyServer(stun_quic_conn tls2.Conn) {
 	proxy_handle.Init()
 	log.Info("开启代理模式")
 
-	// 提前获取并缓存远程地址，避免在 goroutine 中重复调用
 	remoteAddrStr := stun_quic_conn.RemoteAddr().String()
 
 	for {
 		new_quic_stream, err := stun_quic_conn.AcceptStream(context.Background())
 		if err != nil {
-			// 连接已关闭，AcceptStream 会立即持续返回错误，
-			// 此时必须退出循环，否则会形成死循环占满 CPU 并泄漏 goroutine
 			log.Error("ProcessProxyServer AcceptStream error: ", err)
 			return
 		}

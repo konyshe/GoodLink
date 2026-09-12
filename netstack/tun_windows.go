@@ -81,7 +81,7 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 		return make([][]byte, 1)
 	}
 
-	// 设置 MTU，如果指定了MTU则使用指定值，否则使用系统默认值
+	// 设置 MTU：调用方传入 TunMTU(1280)，避免内层段撑爆外层 QUIC。
 	forcedMTU := defaultMTU
 	if t.mtu > 0 {
 		forcedMTU = int(t.mtu)
