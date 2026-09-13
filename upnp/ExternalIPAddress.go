@@ -2,11 +2,6 @@ package upnp
 
 import (
 	"encoding/xml"
-	"io"
-
-	// "log"
-	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -15,70 +10,42 @@ type ExternalIPAddress struct {
 }
 
 func (this *ExternalIPAddress) Send() bool {
-	request := this.BuildRequest()
-	client := &http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
+	if this.upnp == nil {
 		return false
 	}
-	defer response.Body.Close()
-	resultBody, _ := io.ReadAll(response.Body)
-	if response.StatusCode == 200 {
-		this.resolve(string(resultBody))
-		return true
+	body, status, err := this.upnp.soapPost("GetExternalIPAddress", nil)
+	if err != nil || status != 200 {
+		return false
 	}
-	return false
-}
-func (this *ExternalIPAddress) BuildRequest() *http.Request {
-	//请求头
-	header := http.Header{}
-	header.Set("Accept", "text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2")
-	header.Set("SOAPAction", `"`+this.upnp.Gateway.ServiceType+`#GetExternalIPAddress"`)
-	header.Set("Content-Type", "text/xml")
-	header.Set("Connection", "Close")
-	header.Set("Content-Length", "")
-	//请求体
-	body := Node{Name: "SOAP-ENV:Envelope",
-		Attr: map[string]string{"xmlns:SOAP-ENV": `"http://schemas.xmlsoap.org/soap/envelope/"`,
-			"SOAP-ENV:encodingStyle": `"http://schemas.xmlsoap.org/soap/encoding/"`}}
-	childOne := Node{Name: `SOAP-ENV:Body`}
-	childTwo := Node{Name: `m:GetExternalIPAddress`,
-		Attr: map[string]string{"xmlns:m": `"` + this.upnp.Gateway.ServiceType + `"`}}
-	childOne.AddChild(childTwo)
-	body.AddChild(childOne)
-
-	bodyStr := body.BuildXML()
-	//请求
-	request, _ := http.NewRequest("POST", "http://"+this.upnp.Gateway.Host+this.upnp.CtrlUrl,
-		strings.NewReader(bodyStr))
-	request.Header = header
-	request.Header.Set("Content-Length", strconv.Itoa(len([]byte(body.BuildXML()))))
-	return request
+	ip := parseExternalIP(string(body))
+	if ip == "" {
+		return false
+	}
+	this.upnp.GatewayOutsideIP = ip
+	return true
 }
 
-// NewExternalIPAddress
-func (this *ExternalIPAddress) resolve(resultStr string) {
-	inputReader := strings.NewReader(resultStr)
-	decoder := xml.NewDecoder(inputReader)
-	ISexternalIP := false
+func parseExternalIP(resultStr string) string {
+	decoder := xml.NewDecoder(strings.NewReader(resultStr))
+	found := false
 	for t, err := decoder.Token(); err == nil; t, err = decoder.Token() {
 		switch token := t.(type) {
-		// 处理元素开始（标签）
 		case xml.StartElement:
-			name := token.Name.Local
-			if name == "NewExternalIPAddress" {
-				ISexternalIP = true
+			if token.Name.Local == "NewExternalIPAddress" {
+				found = true
 			}
-		// 处理元素结束（标签）
 		case xml.EndElement:
-		// 处理字符数据（这里就是元素的文本）
-		case xml.CharData:
-			if ISexternalIP == true {
-				this.upnp.GatewayOutsideIP = string([]byte(token))
-				return
+			if token.Name.Local == "NewExternalIPAddress" {
+				found = false
 			}
-		default:
-			// ...
+		case xml.CharData:
+			if found {
+				ip := strings.TrimSpace(string(token))
+				if ip != "" {
+					return ip
+				}
+			}
 		}
 	}
+	return ""
 }

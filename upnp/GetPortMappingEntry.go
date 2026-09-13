@@ -2,13 +2,10 @@ package upnp
 
 import (
 	"encoding/xml"
-	"io"
-	"net/http"
 	"strconv"
 	"strings"
 )
 
-// PortMappingEntry 端口映射条目
 type PortMappingEntry struct {
 	ExternalPort   int
 	Protocol       string
@@ -22,61 +19,22 @@ type GetPortMappingEntry struct {
 	upnp *Upnp
 }
 
-// Send 发送请求获取指定索引的端口映射
-// 返回端口映射条目和是否成功
-// 当索引超出范围时返回 nil, false
 func (this *GetPortMappingEntry) Send(index int) (*PortMappingEntry, bool) {
-	request := this.buildRequest(index)
-	client := &http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
+	if this.upnp == nil {
 		return nil, false
 	}
-	defer response.Body.Close()
-	resultBody, _ := io.ReadAll(response.Body)
-	if response.StatusCode == 200 {
-		return this.resolve(string(resultBody)), true
+	body, status, err := this.upnp.soapPost("GetGenericPortMappingEntry", []Node{
+		{Name: "NewPortMappingIndex", Content: strconv.Itoa(index)},
+	})
+	if err != nil || status != 200 {
+		return nil, false
 	}
-	return nil, false
+	return parsePortMappingEntry(string(body)), true
 }
 
-func (this *GetPortMappingEntry) buildRequest(index int) *http.Request {
-	// 请求头
-	header := http.Header{}
-	header.Set("Accept", "text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2")
-	header.Set("SOAPAction", `"`+this.upnp.Gateway.ServiceType+`#GetGenericPortMappingEntry"`)
-	header.Set("Content-Type", "text/xml")
-	header.Set("Connection", "Close")
-	header.Set("Content-Length", "")
-
-	// 请求体
-	body := Node{Name: "SOAP-ENV:Envelope",
-		Attr: map[string]string{"xmlns:SOAP-ENV": `"http://schemas.xmlsoap.org/soap/envelope/"`,
-			"SOAP-ENV:encodingStyle": `"http://schemas.xmlsoap.org/soap/encoding/"`}}
-	childOne := Node{Name: `SOAP-ENV:Body`}
-	childTwo := Node{Name: `m:GetGenericPortMappingEntry`,
-		Attr: map[string]string{"xmlns:m": `"` + this.upnp.Gateway.ServiceType + `"`}}
-
-	// 添加索引参数
-	childIndex := Node{Name: "NewPortMappingIndex", Content: strconv.Itoa(index)}
-	childTwo.AddChild(childIndex)
-
-	childOne.AddChild(childTwo)
-	body.AddChild(childOne)
-	bodyStr := body.BuildXML()
-
-	// 请求
-	request, _ := http.NewRequest("POST", "http://"+this.upnp.Gateway.Host+this.upnp.CtrlUrl,
-		strings.NewReader(bodyStr))
-	request.Header = header
-	request.Header.Set("Content-Length", strconv.Itoa(len([]byte(bodyStr))))
-	return request
-}
-
-func (this *GetPortMappingEntry) resolve(resultStr string) *PortMappingEntry {
+func parsePortMappingEntry(resultStr string) *PortMappingEntry {
 	entry := &PortMappingEntry{}
-	inputReader := strings.NewReader(resultStr)
-	decoder := xml.NewDecoder(inputReader)
+	decoder := xml.NewDecoder(strings.NewReader(resultStr))
 
 	var currentElement string
 	for t, err := decoder.Token(); err == nil; t, err = decoder.Token() {

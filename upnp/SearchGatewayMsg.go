@@ -1,14 +1,15 @@
 package upnp
 
 import (
-	"log"
+	"context"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
-	"time"
-
-	go2pool "go2/pool"
+	"sync"
 )
+
+const ssdpMulticastAddr = "239.255.255.250:1900"
 
 type Gateway struct {
 	GatewayName   string //网关名称
@@ -17,8 +18,6 @@ type Gateway struct {
 	Cache         string //cache
 	ST            string
 	USN           string
-	deviceType    string //设备的urn   "urn:schemas-upnp-org:service:WANIPConnection:1"
-	ControlURL    string //设备端口映射请求路径
 	ServiceType   string //提供upnp服务的服务类型
 }
 
@@ -30,107 +29,139 @@ func (this *SearchGateway) buildRequest(serviceType string) string {
 	return "M-SEARCH * HTTP/1.1\r\n" +
 		"HOST: 239.255.255.250:1900\r\n" +
 		"MAN: \"ssdp:discover\"\r\n" +
-		"MX: 6\r\n" +
+		"MX: " + strconv.Itoa(ssdpMX) + "\r\n" +
 		"ST: urn:schemas-upnp-org:service:" + serviceType + ":1\r\n\r\n"
 }
 
 func (this *SearchGateway) Send() bool {
-	c := make(chan string)
+	if this.upnp == nil {
+		return false
+	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), ssdpSearchTimeout)
+	defer cancel()
+
+	results := make(chan string, 2)
+	var wg sync.WaitGroup
 	for _, serviceType := range []string{"WANPPPConnection", "WANIPConnection"} {
-		go this.send("239.255.255.250:1900", this.buildRequest(serviceType), c)
+		wg.Add(1)
+		go func(st string) {
+			defer wg.Done()
+			this.send(ctx, ssdpMulticastAddr, this.buildRequest(st), results)
+		}(serviceType)
 	}
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
-	result := <-c
-	if result == "" {
-		//超时了
+	result, ok := <-results
+	if !ok || result == "" {
 		this.upnp.Active = false
-		return this.upnp.Active
+		return false
 	}
-	this.resolve(result)
+	cancel()
 
-	this.upnp.Gateway.ServiceType = this.upnp.Gateway.ST //"urn:schemas-upnp-org:service:WANIPConnection:1"
+	this.resolve(result)
+	if this.upnp.Gateway == nil || this.upnp.Gateway.Host == "" || this.upnp.Gateway.ST == "" {
+		this.upnp.Active = false
+		return false
+	}
+	this.upnp.Gateway.ServiceType = this.upnp.Gateway.ST
 	this.upnp.Active = true
-	return this.upnp.Active
+	return true
 }
 
-func (this *SearchGateway) send(remoteAddr, searchMessage string, c chan string) {
-	//发送组播消息，remoteAddr要带上端口，格式如："239.255.255.250:1900"
-	var conn *net.UDPConn
-	defer func() {
-		if r := recover(); r != nil {
-			//超时了
-		}
-	}()
-	go func(conn *net.UDPConn) {
-		defer func() {
-			if r := recover(); r != nil {
-				//没超时
-			}
-		}()
-		//超时时间为3秒
-		time.Sleep(time.Second * 3)
-		c <- ""
-		conn.Close()
-	}(conn)
-	remotAddr, err := net.ResolveUDPAddr("udp", remoteAddr)
-	if err != nil {
-		log.Fatal("组播地址格式不正确")
+func (this *SearchGateway) send(ctx context.Context, remoteAddr, searchMessage string, results chan<- string) {
+	select {
+	case <-ctx.Done():
+		return
+	default:
 	}
-	locaAddr, err := net.ResolveUDPAddr("udp", this.upnp.LocalHost+":")
 
+	remotAddr, err := net.ResolveUDPAddr("udp4", remoteAddr)
 	if err != nil {
-		log.Fatal("本地ip地址格式不正确")
+		return
 	}
-	conn, err = net.ListenUDP("udp", locaAddr)
-	if conn == nil || err != nil {
-		log.Fatal("监听udp出错")
+
+	localHost := ""
+	if this.upnp != nil {
+		localHost = this.upnp.LocalHost
+	}
+	locaAddr, err := net.ResolveUDPAddr("udp4", net.JoinHostPort(localHost, "0"))
+	if err != nil {
+		return
+	}
+	conn, err := net.ListenUDP("udp4", locaAddr)
+	if err != nil {
+		return
 	}
 	defer conn.Close()
 
-	_, err = conn.WriteToUDP([]byte(searchMessage), remotAddr)
-	if err != nil {
-		log.Fatal("发送msg到组播地址出错")
-	}
-	buf := go2pool.Malloc(1024)
-	defer go2pool.Free(buf)
-	n, _, err := conn.ReadFromUDP(buf)
-	if err != nil {
-		log.Fatal("从组播地址接搜消息出错")
+	go func() {
+		<-ctx.Done()
+		_ = conn.Close()
+	}()
+
+	if deadline, ok := ctx.Deadline(); ok {
+		_ = conn.SetDeadline(deadline)
 	}
 
-	result := string(buf[:n])
-	c <- result
+	if _, err = conn.WriteToUDP([]byte(searchMessage), remotAddr); err != nil {
+		return
+	}
+
+	buf := make([]byte, 2048)
+	for {
+		n, _, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			return
+		}
+		result := string(buf[:n])
+		if !strings.Contains(strings.ToUpper(result), "LOCATION:") {
+			continue
+		}
+		select {
+		case results <- result:
+		case <-ctx.Done():
+		}
+		return
+	}
 }
 
 func (this *SearchGateway) resolve(result string) {
-	this.upnp.Gateway = &Gateway{}
+	this.upnp.Gateway = parseGatewayFromSSDP(result)
+}
 
-	lines := strings.Split(result, "\r\n")
-	for _, line := range lines {
-		//按照第一个冒号分为两个字符串
-		nameValues := strings.SplitAfterN(line, ":", 2)
+func parseGatewayFromSSDP(result string) *Gateway {
+	gw := &Gateway{}
+	result = strings.ReplaceAll(result, "\r\n", "\n")
+	for _, line := range strings.Split(result, "\n") {
+		nameValues := strings.SplitN(line, ":", 2)
 		if len(nameValues) < 2 {
 			continue
 		}
-		switch strings.ToUpper(strings.Trim(strings.Split(nameValues[0], ":")[0], " ")) {
+		switch strings.ToUpper(strings.TrimSpace(nameValues[0])) {
 		case "ST":
-			this.upnp.Gateway.ST = strings.TrimSpace(nameValues[1])
+			gw.ST = strings.TrimSpace(nameValues[1])
 		case "CACHE-CONTROL":
-			this.upnp.Gateway.Cache = nameValues[1]
+			gw.Cache = strings.TrimSpace(nameValues[1])
 		case "LOCATION":
-			// 使用 url.Parse 来正确解析完整 URL
-			locationUrl := strings.TrimSpace(nameValues[1])
-			u, err := url.Parse(locationUrl)
-			if err == nil {
-				this.upnp.Gateway.Host = u.Host
-				this.upnp.Gateway.DeviceDescUrl = u.Path
+			locationURL := strings.TrimSpace(nameValues[1])
+			u, err := url.Parse(locationURL)
+			if err == nil && u.Host != "" {
+				gw.Host = u.Host
+				path := u.RequestURI()
+				if path == "" {
+					path = "/"
+				}
+				gw.DeviceDescUrl = path
 			}
 		case "SERVER":
-			this.upnp.Gateway.GatewayName = nameValues[1]
+			gw.GatewayName = strings.TrimSpace(nameValues[1])
 		case "USN":
-			this.upnp.Gateway.USN = nameValues[1]
-		default:
+			gw.USN = strings.TrimSpace(nameValues[1])
 		}
 	}
+	return gw
 }

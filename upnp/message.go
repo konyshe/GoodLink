@@ -1,7 +1,8 @@
 package upnp
 
 import (
-	"bytes"
+	"sort"
+	"strings"
 )
 
 type Node struct {
@@ -14,18 +15,35 @@ type Node struct {
 func (n *Node) AddChild(node Node) {
 	n.Child = append(n.Child, node)
 }
-func (n *Node) BuildXML() string {
-	buf := bytes.NewBufferString("<")
-	buf.WriteString(n.Name)
-	for key, value := range n.Attr {
-		buf.WriteString(" ")
-		buf.WriteString(key + "=" + value)
-	}
-	buf.WriteString(">" + n.Content)
 
-	for _, node := range n.Child {
-		buf.WriteString(node.BuildXML())
-	}
-	buf.WriteString("</" + n.Name + ">")
+func (n *Node) BuildXML() string {
+	var buf strings.Builder
+	n.writeXML(&buf)
 	return buf.String()
+}
+
+func (n *Node) writeXML(buf *strings.Builder) {
+	buf.WriteByte('<')
+	buf.WriteString(n.Name)
+	if len(n.Attr) > 0 {
+		keys := make([]string, 0, len(n.Attr))
+		for key := range n.Attr {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			buf.WriteByte(' ')
+			buf.WriteString(key)
+			buf.WriteByte('=')
+			buf.WriteString(n.Attr[key])
+		}
+	}
+	buf.WriteByte('>')
+	buf.WriteString(n.Content)
+	for i := range n.Child {
+		n.Child[i].writeXML(buf)
+	}
+	buf.WriteString("</")
+	buf.WriteString(n.Name)
+	buf.WriteByte('>')
 }

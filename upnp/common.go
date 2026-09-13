@@ -1,50 +1,24 @@
 package upnp
 
 import (
-	// "log"
 	"errors"
+	"fmt"
 	"net"
-	"strings"
+	"time"
 )
 
-// 获取本机能联网的ip地址
-func GetLocalIntenetIp() string {
-	/*
-	  获得所有本机地址
-	  判断能联网的ip地址
-	*/
-
-	conn, err := net.Dial("udp4", "124.223.50.150:13478")
+// GetLocalInternetIp 返回本机用于对外通信的 IPv4 地址。
+// UDP Dial 不真正发包，不依赖探测目标在线。
+func GetLocalInternetIp() (string, error) {
+	conn, err := net.DialTimeout("udp4", "8.8.8.8:80", time.Second)
 	if err != nil {
-		panic(errors.New("不能连接网络"))
+		return "", fmt.Errorf("upnp: 无法获取本机IP: %w", err)
 	}
 	defer conn.Close()
-	//log.Println(conn.LocalAddr().String())
-	//log.Println(strings.Split(conn.LocalAddr().String(), ":")[0])
-	return strings.Split(conn.LocalAddr().String(), ":")[0]
-}
 
-// This returns the list of local ip addresses which other hosts can connect
-// to (NOTE: Loopback ip is ignored).
-func GetLocalIPs() ([]*net.IP, error) {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return nil, err
+	udpAddr, ok := conn.LocalAddr().(*net.UDPAddr)
+	if !ok || udpAddr.IP == nil || udpAddr.IP.IsUnspecified() {
+		return "", errors.New("upnp: 无法获取本机IP")
 	}
-
-	ips := make([]*net.IP, 0)
-	for _, addr := range addrs {
-		ipnet, ok := addr.(*net.IPNet)
-		if !ok {
-			continue
-		}
-
-		if ipnet.IP.IsLoopback() {
-			continue
-		}
-
-		ips = append(ips, &ipnet.IP)
-	}
-
-	return ips, nil
+	return udpAddr.IP.String(), nil
 }
