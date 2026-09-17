@@ -4,7 +4,18 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-rm -rf goodlink-windows-amd64 goodlink-windows-amd64.zip bin
+DEBUG=0
+case "${1:-}" in
+    debug) DEBUG=1 ;;
+    "") ;;
+    *)
+        echo "用法: $0 [debug]" >&2
+        echo "  debug  只编译并打包 windows-amd64" >&2
+        exit 1
+        ;;
+esac
+
+rm -rf goodlink-windows-* bin
 
 make clean
 make ui
@@ -55,16 +66,10 @@ docker_make() {
 docker_make bash -c \
     'export PATH="/tmp/go/bin:/usr/local/go/bin:$PATH"; go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest; make windows'
 
-cd bin
-rm -rf goodlink.json
-wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
-md5sum goodlink-windows-amd64.exe > md5sum.txt
-md5sum wintun.dll >> md5sum.txt
-zip ../goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
-cd ..
-rm -rf bin
-
-make clean
+if [ "$DEBUG" -eq 1 ]; then
+    rm -rf /mnt/windows/bin/goodlink-windows-amd64.exe; mv bin/goodlink-windows-amd64.exe /mnt/windows/bin/
+    exit 0
+fi
 
 docker_make make linux
 
@@ -73,10 +78,11 @@ if command -v objdump >/dev/null 2>&1 && [ -f bin/goodlink-linux-amd64 ]; then
     objdump -T bin/goodlink-linux-amd64 | grep -oE 'GLIBC_[0-9.]+' | sort -Vu || true
 fi
 
-make macos
-cd bin
+docker_make make macos
 
-mv ../goodlink-windows-amd64.zip .
+cd bin
+wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
+md5sum goodlink-windows-amd64.exe wintun.dll > md5sum.txt; zip ../goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
 md5sum goodlink-linux-amd64 > md5sum.txt; zip goodlink-linux-amd64.zip goodlink-linux-amd64 md5sum.txt; rm -rf goodlink-linux-amd64 md5sum.txt
 md5sum goodlink-linux-arm64 > md5sum.txt; zip goodlink-linux-arm64.zip goodlink-linux-arm64 md5sum.txt; rm -rf goodlink-linux-arm64 md5sum.txt
 md5sum goodlink-linux-386 > md5sum.txt; zip goodlink-linux-386.zip goodlink-linux-386 md5sum.txt; rm -rf goodlink-linux-386 md5sum.txt
@@ -93,7 +99,7 @@ md5sum goodlink-darwin-arm64 > md5sum.txt; zip goodlink-darwin-arm64.zip goodlin
 md5sum goodlink-windows-arm.exe > md5sum.txt; zip goodlink-windows-arm.zip goodlink-windows-arm.exe md5sum.txt; rm -rf goodlink-windows-arm.exe md5sum.txt
 md5sum goodlink-windows-arm64.exe > md5sum.txt; zip goodlink-windows-arm64.zip goodlink-windows-arm64.exe md5sum.txt; rm -rf goodlink-windows-arm64.exe md5sum.txt
 md5sum goodlink-windows-386.exe > md5sum.txt; zip goodlink-windows-386.zip goodlink-windows-386.exe md5sum.txt; rm -rf goodlink-windows-386.exe md5sum.txt
+cd ..
 
 sync
-cd ..
 rm -rf /mnt/windows/packet; mv bin /mnt/windows/packet
