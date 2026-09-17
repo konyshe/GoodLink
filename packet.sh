@@ -8,7 +8,52 @@ rm -rf goodlink-windows-amd64 goodlink-windows-amd64.zip bin
 
 make clean
 make ui
-make windows
+
+GO_VERSION="1.25.14"
+
+# Windows / Linux 均在 glibc 2.17 容器中用固定 Go 编译，不改动宿主机工具链
+if ! command -v docker >/dev/null 2>&1; then
+    echo "需要 docker 或 podman，以便在隔离环境中使用 glibc 2.17 / Go ${GO_VERSION} 编译" >&2
+    exit 1
+fi
+IMAGE="localhost/goodlink-builder-glibc217:go${GO_VERSION}"
+BASE_IMAGE="${GLIBC217_BASE_IMAGE:-docker.m.daocloud.io/library/centos:7}"
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    if [ ! -x "/usr/local/go${GO_VERSION}/bin/go" ]; then
+        echo "未找到 /usr/local/go${GO_VERSION}/bin/go，无法注入 glibc 2.17 编译镜像" >&2
+        exit 1
+    fi
+    echo "构建 glibc 2.17 编译镜像: $IMAGE"
+    docker build \
+        --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+        -t "$IMAGE" \
+        -f "$ROOT/Dockerfile.glibc217" \
+        "$ROOT"
+fi
+
+PARENT="$(dirname "$ROOT")"
+
+docker_make() {
+    docker run --rm \
+        --user "$(id -u):$(id -g)" \
+        -e HOME=/tmp \
+        -e GOPATH=/tmp/go \
+        -e GOPROXY="${GOPROXY:-https://goproxy.cn,direct}" \
+        -e GO111MODULE=on \
+        -e GOTOOLCHAIN=local \
+        -e GOCACHE=/tmp/go-build \
+        -e GOMODCACHE=/tmp/go-mod \
+        -v "$PARENT":/src \
+        -v "/usr/local/go${GO_VERSION}:/usr/local/go" \
+        -w /src/goodlink \
+        "$IMAGE" \
+        "$@"
+}
+
+# windows-amd64 需要 goversioninfo 生成 nac.syso
+docker_make bash -c \
+    'export PATH="/tmp/go/bin:/usr/local/go/bin:$PATH"; go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest; make windows'
 
 cd bin
 rm -rf goodlink.json
@@ -21,43 +66,7 @@ rm -rf bin
 
 make clean
 
-# Linux 在 glibc 2.17 容器中编译，不改动宿主机 glibc / gcc / go
-if ! command -v docker >/dev/null 2>&1; then
-    echo "需要 docker 或 podman，以便在隔离环境中使用 glibc 2.17 编译 Linux 产物" >&2
-    exit 1
-fi
-
-GO_VERSION="$(awk '/^go /{print $2; exit}' go.mod)"
-IMAGE="localhost/goodlink-builder-glibc217:go${GO_VERSION}"
-BASE_IMAGE="${GLIBC217_BASE_IMAGE:-docker.m.daocloud.io/library/centos:7}"
-
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    if [ ! -x /usr/local/go/bin/go1.25.14 ]; then
-        echo "未找到 /usr/local/go/bin/go1.25.14，无法注入 glibc 2.17 编译镜像" >&2
-        exit 1
-    fi
-    echo "构建 glibc 2.17 编译镜像: $IMAGE"
-    docker build \
-        --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
-        -t "$IMAGE" \
-        -f "$ROOT/Dockerfile.glibc217" \
-        "$ROOT"
-fi
-
-PARENT="$(dirname "$ROOT")"
-docker run --rm \
-    --user "$(id -u):$(id -g)" \
-    -e HOME=/tmp \
-    -e GOPROXY="${GOPROXY:-https://goproxy.cn,direct}" \
-    -e GO111MODULE=on \
-    -e GOTOOLCHAIN=local \
-    -e GOCACHE=/tmp/go-build \
-    -e GOMODCACHE=/tmp/go-mod \
-    -v "$PARENT":/src \
-    -v /usr/local/go1.25.14:/usr/local/go \
-    -w /src/goodlink \
-    "$IMAGE" \
-    make linux
+docker_make make linux
 
 if command -v objdump >/dev/null 2>&1 && [ -f bin/goodlink-linux-amd64 ]; then
     echo "goodlink-linux-amd64 依赖的 GLIBC 符号:"
