@@ -32,8 +32,8 @@ IMAGE="localhost/goodlink-builder-glibc217:go${GO_VERSION}"
 BASE_IMAGE="${GLIBC217_BASE_IMAGE:-docker.m.daocloud.io/library/centos:7}"
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    if [ ! -x /usr/local/go/bin/go ]; then
-        echo "未找到 /usr/local/go/bin/go，无法注入 glibc 2.17 编译镜像" >&2
+    if [ ! -x /usr/local/go/bin/go1.25.14 ]; then
+        echo "未找到 /usr/local/go/bin/go1.25.14，无法注入 glibc 2.17 编译镜像" >&2
         exit 1
     fi
     echo "构建 glibc 2.17 编译镜像: $IMAGE"
@@ -54,7 +54,7 @@ docker run --rm \
     -e GOCACHE=/tmp/go-build \
     -e GOMODCACHE=/tmp/go-mod \
     -v "$PARENT":/src \
-    -v /usr/local/go:/usr/local/go \
+    -v /usr/local/go1.25.14:/usr/local/go \
     -w /src/goodlink \
     "$IMAGE" \
     make linux
