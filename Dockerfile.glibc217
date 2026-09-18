@@ -1,5 +1,4 @@
-# 仅用于 packet.sh 打包 Linux 二进制。
-# CentOS 7 / glibc 2.17，容器内编译，不改动宿主机 glibc。
+# 用于 build.sh packet / docker：在 CentOS 7 / glibc 2.17 容器内编译，不改动宿主机 glibc。
 ARG BASE_IMAGE=docker.m.daocloud.io/library/centos:7
 FROM ${BASE_IMAGE}
 
