@@ -138,7 +138,7 @@ cmd_docker() {
     make ui
 
     docker_make bash -c \
-        'export PATH="/usr/local/go/bin:$PATH"; make clean && CGO_ENABLED=0 make linux-amd64'
+        'export PATH="/usr/local/go/bin:$PATH"; make linux-amd64'
     upx -9 bin/goodlink-linux-amd64
 
     docker rmi dev/goodlink:latest -f

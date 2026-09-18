@@ -3,7 +3,8 @@ BINDIR=bin
 # 获取源码最近一次 git commit log，包含 commit sha 值，以及 commit message
 GitCommitLog=$(shell git log --pretty=oneline -n 1)
 BuildTime=$(shell date +'%Y-%m-%d %H:%M:%S')
-GO_ENV=GO111MODULE=on \
+GO_ENV=CGO_ENABLED=0 \
+		GO111MODULE=on \
 		GOPROXY="https://goproxy.cn,direct" \
 		GOEXPERIMENT=jsonv2,loopvar
 LD_COMMON=-X "go2.GitCommitLog=$(GitCommitLog)" \
