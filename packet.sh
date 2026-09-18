@@ -82,6 +82,9 @@ DEST_DIR="/mnt/windows/packet"
 rm -rf ${DEST_DIR}
 mkdir -p ${DEST_DIR}
 
+# 打包阶段：忽略单个架构的错误，不要中途结束
+set +eo pipefail
+
 cd bin
 wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
 md5sum goodlink-windows-amd64.exe wintun.dll > md5sum.txt; zip ${DEST_DIR}/goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
@@ -107,4 +110,8 @@ upx -9 goodlink-darwin-arm64; md5sum goodlink-darwin-arm64 > md5sum.txt; zip ${D
 rm -rf md5sum.txt
 cd ..
 
+make clean
+
 sync
+
+exit 0
