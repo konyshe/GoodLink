@@ -41,7 +41,7 @@ ui:
 
 windows86: create_nac windows-amd64 rm_nac
 
-packet: $(DARWIN_PLATFORM_LIST) $(LINUX_PLATFORM_LIST) strip $(WINDOWS_PLATFORM2_LIST)
+packet: $(DARWIN_PLATFORM_LIST) $(LINUX_PLATFORM_LIST) $(WINDOWS_PLATFORM2_LIST)
 
 linux-386:
 	GOARCH=386 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
@@ -101,9 +101,6 @@ create_nac:
 
 rm_nac:
 	rm -rf nac.syso
-
-strip:
-	-upx $(BINDIR)/*
 
 clean:
 	rm -rf $(NAME)-windows-* $(BINDIR) *.exe .versioninfo.json

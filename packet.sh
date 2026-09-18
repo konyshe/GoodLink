@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+set -x
+
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
@@ -76,26 +78,33 @@ if command -v objdump >/dev/null 2>&1 && [ -f bin/goodlink-linux-amd64 ]; then
     objdump -T bin/goodlink-linux-amd64 | grep -oE 'GLIBC_[0-9.]+' | sort -Vu || true
 fi
 
+DEST_DIR="/mnt/windows/packet"
+rm -rf ${DEST_DIR}
+mkdir -p ${DEST_DIR}
+
 cd bin
 wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
-md5sum goodlink-windows-amd64.exe wintun.dll > md5sum.txt; zip goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
-md5sum goodlink-linux-amd64 > md5sum.txt; zip goodlink-linux-amd64.zip goodlink-linux-amd64 md5sum.txt; rm -rf goodlink-linux-amd64 md5sum.txt
-md5sum goodlink-linux-arm64 > md5sum.txt; zip goodlink-linux-arm64.zip goodlink-linux-arm64 md5sum.txt; rm -rf goodlink-linux-arm64 md5sum.txt
-md5sum goodlink-linux-386 > md5sum.txt; zip goodlink-linux-386.zip goodlink-linux-386 md5sum.txt; rm -rf goodlink-linux-386 md5sum.txt
-md5sum goodlink-linux-arm > md5sum.txt; zip goodlink-linux-arm.zip goodlink-linux-arm md5sum.txt; rm -rf goodlink-linux-arm md5sum.txt
-md5sum goodlink-linux-armv6l > md5sum.txt; zip goodlink-linux-armv6l.zip goodlink-linux-armv6l md5sum.txt; rm -rf goodlink-linux-armv6l md5sum.txt
-md5sum goodlink-linux-loong64 > md5sum.txt; zip goodlink-linux-loong64.zip goodlink-linux-loong64 md5sum.txt; rm -rf goodlink-linux-loong64 md5sum.txt
-md5sum goodlink-linux-mips > md5sum.txt; zip goodlink-linux-mips.zip goodlink-linux-mips md5sum.txt; rm -rf goodlink-linux-mips md5sum.txt
-md5sum goodlink-linux-mipsle > md5sum.txt; zip goodlink-linux-mipsle.zip goodlink-linux-mipsle md5sum.txt; rm -rf goodlink-linux-mipsle md5sum.txt
-md5sum goodlink-linux-mips64 > md5sum.txt; zip goodlink-linux-mips64.zip goodlink-linux-mips64 md5sum.txt; rm -rf goodlink-linux-mips64 md5sum.txt
-md5sum goodlink-linux-mips64le > md5sum.txt; zip goodlink-linux-mips64le.zip goodlink-linux-mips64le md5sum.txt; rm -rf goodlink-linux-mips64le md5sum.txt
-md5sum goodlink-linux-riscv64 > md5sum.txt; zip goodlink-linux-riscv64.zip goodlink-linux-riscv64 md5sum.txt; rm -rf goodlink-linux-riscv64 md5sum.txt
-md5sum goodlink-darwin-amd64 > md5sum.txt; zip goodlink-darwin-amd64.zip goodlink-darwin-amd64 md5sum.txt; rm -rf goodlink-darwin-amd64 md5sum.txt
-md5sum goodlink-darwin-arm64 > md5sum.txt; zip goodlink-darwin-arm64.zip goodlink-darwin-arm64 md5sum.txt; rm -rf goodlink-darwin-arm64 md5sum.txt
-md5sum goodlink-windows-arm.exe > md5sum.txt; zip goodlink-windows-arm.zip goodlink-windows-arm.exe md5sum.txt; rm -rf goodlink-windows-arm.exe md5sum.txt
-md5sum goodlink-windows-arm64.exe > md5sum.txt; zip goodlink-windows-arm64.zip goodlink-windows-arm64.exe md5sum.txt; rm -rf goodlink-windows-arm64.exe md5sum.txt
-md5sum goodlink-windows-386.exe > md5sum.txt; zip goodlink-windows-386.zip goodlink-windows-386.exe md5sum.txt; rm -rf goodlink-windows-386.exe md5sum.txt
+md5sum goodlink-windows-amd64.exe wintun.dll > md5sum.txt; zip ${DEST_DIR}/goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
+md5sum goodlink-windows-arm.exe > md5sum.txt; zip ${DEST_DIR}/goodlink-windows-arm.zip goodlink-windows-arm.exe md5sum.txt
+md5sum goodlink-windows-arm64.exe > md5sum.txt; zip ${DEST_DIR}/goodlink-windows-arm64.zip goodlink-windows-arm64.exe md5sum.txt
+md5sum goodlink-windows-386.exe > md5sum.txt; zip ${DEST_DIR}/goodlink-windows-386.zip goodlink-windows-386.exe md5sum.txt
+
+upx -9 goodlink-linux-amd64; md5sum goodlink-linux-amd64 > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-amd64.zip goodlink-linux-amd64 md5sum.txt
+upx -9 goodlink-linux-arm64; md5sum goodlink-linux-arm64 > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-arm64.zip goodlink-linux-arm64 md5sum.txt
+upx -9 goodlink-linux-386; md5sum goodlink-linux-386 > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-386.zip goodlink-linux-386 md5sum.txt
+upx -9 goodlink-linux-arm; md5sum goodlink-linux-arm > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-arm.zip goodlink-linux-arm md5sum.txt
+upx -9 goodlink-linux-armv6l; md5sum goodlink-linux-armv6l > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-armv6l.zip goodlink-linux-armv6l md5sum.txt
+upx -9 goodlink-linux-loong64; md5sum goodlink-linux-loong64 > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-loong64.zip goodlink-linux-loong64 md5sum.txt
+upx -9 goodlink-linux-mips; md5sum goodlink-linux-mips > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-mips.zip goodlink-linux-mips md5sum.txt
+upx -9 goodlink-linux-mipsle; md5sum goodlink-linux-mipsle > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-mipsle.zip goodlink-linux-mipsle md5sum.txt
+upx -9 goodlink-linux-mips64; md5sum goodlink-linux-mips64 > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-mips64.zip goodlink-linux-mips64 md5sum.txt
+upx -9 goodlink-linux-mips64le; md5sum goodlink-linux-mips64le > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-mips64le.zip goodlink-linux-mips64le md5sum.txt
+upx -9 goodlink-linux-riscv64; md5sum goodlink-linux-riscv64 > md5sum.txt; zip ${DEST_DIR}/goodlink-linux-riscv64.zip goodlink-linux-riscv64 md5sum.txt
+
+upx -9 goodlink-darwin-amd64; md5sum goodlink-darwin-amd64 > md5sum.txt; zip ${DEST_DIR}/goodlink-darwin-amd64.zip goodlink-darwin-amd64 md5sum.txt
+upx -9 goodlink-darwin-arm64; md5sum goodlink-darwin-arm64 > md5sum.txt; zip ${DEST_DIR}/goodlink-darwin-arm64.zip goodlink-darwin-arm64 md5sum.txt
+
+rm -rf md5sum.txt
 cd ..
 
 sync
-rm -rf /mnt/windows/packet; mv bin /mnt/windows/packet
