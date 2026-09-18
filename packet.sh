@@ -78,7 +78,7 @@ fi
 
 cd bin
 wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
-md5sum goodlink-windows-amd64.exe wintun.dll > md5sum.txt; zip ../goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
+md5sum goodlink-windows-amd64.exe wintun.dll > md5sum.txt; zip goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
 md5sum goodlink-linux-amd64 > md5sum.txt; zip goodlink-linux-amd64.zip goodlink-linux-amd64 md5sum.txt; rm -rf goodlink-linux-amd64 md5sum.txt
 md5sum goodlink-linux-arm64 > md5sum.txt; zip goodlink-linux-arm64.zip goodlink-linux-arm64 md5sum.txt; rm -rf goodlink-linux-arm64 md5sum.txt
 md5sum goodlink-linux-386 > md5sum.txt; zip goodlink-linux-386.zip goodlink-linux-386 md5sum.txt; rm -rf goodlink-linux-386 md5sum.txt
