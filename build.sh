@@ -135,7 +135,6 @@ cmd_docker() {
     fi
 
     make clean
-    rm -rf ui2/web
     make ui
 
     docker_make bash -c \

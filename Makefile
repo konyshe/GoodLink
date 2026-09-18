@@ -103,4 +103,4 @@ rm_nac:
 	rm -rf nac.syso
 
 clean:
-	rm -rf $(NAME)-windows-* $(BINDIR) *.exe .versioninfo.json
+	rm -rf $(NAME)-windows-* $(BINDIR) *.exe .versioninfo.json ui2/web
