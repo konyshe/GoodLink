@@ -48,6 +48,12 @@ docker_make() {
         "$@"
 }
 
+if [ ! -e "/usr/bin/upx" ]; then
+    echo "请先下载 upx, 解压并保存为 /usr/bin/upx" >&2
+    echo "下载地址: https://github.com/upx/upx/releases" >&2
+    exit 1
+fi
+
 usage() {
     echo "用法: $0 {packet [debug] | docker [tag]}" >&2
     echo "  packet [debug]  多平台编译并打包（debug 仅 windows-amd64）" >&2
@@ -127,12 +133,6 @@ cmd_packet() {
 
 cmd_docker() {
     local TAG="${1:-}"
-
-    if [ ! -e "/usr/bin/upx" ]; then
-        echo "请先下载 upx, 解压并保存为 /usr/bin/upx" >&2
-        echo "下载地址: https://github.com/upx/upx/releases" >&2
-        exit 1
-    fi
 
     make clean
     make ui
