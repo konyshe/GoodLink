@@ -15,8 +15,6 @@ case "${1:-}" in
         ;;
 esac
 
-rm -rf goodlink-windows-* bin
-
 make clean
 make ui
 
@@ -64,21 +62,19 @@ docker_make() {
 
 # windows-amd64 需要 goversioninfo 生成 nac.syso
 docker_make bash -c \
-    'export PATH="/tmp/go/bin:/usr/local/go/bin:$PATH"; go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest; make windows'
+    'export PATH="/tmp/go/bin:/usr/local/go/bin:$PATH"; go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest; make windows86'
 
 if [ "$DEBUG" -eq 1 ]; then
     rm -rf /mnt/windows/bin/goodlink-windows-amd64.exe; mv bin/goodlink-windows-amd64.exe /mnt/windows/bin/
     exit 0
 fi
 
-docker_make make linux
+docker_make make packet
 
 if command -v objdump >/dev/null 2>&1 && [ -f bin/goodlink-linux-amd64 ]; then
     echo "goodlink-linux-amd64 依赖的 GLIBC 符号:"
     objdump -T bin/goodlink-linux-amd64 | grep -oE 'GLIBC_[0-9.]+' | sort -Vu || true
 fi
-
-docker_make make macos
 
 cd bin
 wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll

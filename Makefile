@@ -39,7 +39,7 @@ WINDOWS_PLATFORM2_LIST = \
 ui:
 	cd ui2/frontend && npm ci && npm run build
 
-windows: create_nac windows-amd64 rm_nac
+windows86: create_nac windows-amd64 rm_nac
 
 packet: $(DARWIN_PLATFORM_LIST) $(LINUX_PLATFORM_LIST) strip $(WINDOWS_PLATFORM2_LIST)
 
@@ -106,4 +106,4 @@ strip:
 	-upx $(BINDIR)/*
 
 clean:
-	rm -rf $(BINDIR) *.exe .versioninfo.json
+	rm -rf $(NAME)-windows-* $(BINDIR) *.exe .versioninfo.json
