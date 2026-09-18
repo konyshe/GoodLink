@@ -158,7 +158,7 @@ cmd_docker() {
     upx -9 bin/goodlink-linux-amd64
 
     docker rmi dev/goodlink:latest -f
-    docker buildx build --platform linux/amd64 -t dev/goodlink:latest .
+    docker buildx build --platform linux/amd64 -f "$ROOT/Dockerfile.runtime" -t dev/goodlink:latest .
 
     if [ -n "$TAG" ]; then
         docker rmi registry.cn-shanghai.aliyuncs.com/kony/goodlink:$TAG -f
