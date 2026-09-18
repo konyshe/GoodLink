@@ -7,16 +7,39 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
 GO_VERSION="1.25.14"
-
-# Windows / Linux 均在 glibc 2.17 容器中用固定 Go 编译，不改动宿主机工具链
-if ! command -v docker >/dev/null 2>&1; then
-    echo "需要 docker 或 podman，以便在隔离环境中使用 glibc 2.17 / Go ${GO_VERSION} 编译" >&2
-    exit 1
-fi
 IMAGE="localhost/goodlink-builder-glibc217:go${GO_VERSION}"
 BASE_IMAGE="${GLIBC217_BASE_IMAGE:-docker.m.daocloud.io/library/centos:7}"
+PARENT="$(dirname "$ROOT")"
 
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+usage() {
+    echo "用法: $0 {packet [debug] | docker [tag]}" >&2
+    echo "  packet [debug]  多平台编译并打包（debug 仅 windows-amd64）" >&2
+    echo "  docker [tag]    静态编译 linux-amd64 并构建/推送运行镜像" >&2
+    exit 1
+}
+
+# 检查 docker / podman 是否可用
+ensure_docker() {
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "需要 docker 或 podman，以便在隔离环境中使用 glibc 2.17 / Go ${GO_VERSION} 编译" >&2
+        exit 1
+    fi
+}
+
+# 检查宿主机 upx
+ensure_upx() {
+    if [ ! -e "/usr/bin/upx" ]; then
+        echo "请先下载 upx, 解压并保存为 /usr/bin/upx" >&2
+        echo "下载地址: https://github.com/upx/upx/releases" >&2
+        exit 1
+    fi
+}
+
+# 确保 glibc 2.17 编译镜像存在（不存在则构建）
+ensure_builder_image() {
+    if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+        return 0
+    fi
     if [ ! -x "/usr/local/go${GO_VERSION}/bin/go" ]; then
         echo "未找到 /usr/local/go${GO_VERSION}/bin/go，无法注入 glibc 2.17 编译镜像" >&2
         exit 1
@@ -27,10 +50,9 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
         -t "$IMAGE" \
         -f "$ROOT/Dockerfile.glibc217" \
         "$ROOT"
-fi
+}
 
-PARENT="$(dirname "$ROOT")"
-
+# 在 glibc 2.17 容器中执行 make / bash（不改动宿主机工具链）
 docker_make() {
     docker run --rm \
         --user "$(id -u):$(id -g)" \
@@ -48,17 +70,11 @@ docker_make() {
         "$@"
 }
 
-if [ ! -e "/usr/bin/upx" ]; then
-    echo "请先下载 upx, 解压并保存为 /usr/bin/upx" >&2
-    echo "下载地址: https://github.com/upx/upx/releases" >&2
-    exit 1
-fi
-
-usage() {
-    echo "用法: $0 {packet [debug] | docker [tag]}" >&2
-    echo "  packet [debug]  多平台编译并打包（debug 仅 windows-amd64）" >&2
-    echo "  docker [tag]    静态编译 linux-amd64 并构建/推送运行镜像" >&2
-    exit 1
+# 公共前置：docker + 编译镜像 + upx
+ensure_prereqs() {
+    ensure_docker
+    ensure_builder_image
+    ensure_upx
 }
 
 cmd_packet() {
@@ -158,6 +174,9 @@ cmd_docker() {
 
     docker images | grep goodlink
 }
+
+# ---- main ----
+ensure_prereqs
 
 CMD="${1:-}"
 shift || true
