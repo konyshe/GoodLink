@@ -30,9 +30,6 @@ DARWIN_PLATFORM_LIST = \
 	darwin-amd64 \
 	darwin-arm64 \
 
-WINDOWS_PLATFORM_LIST = \
-	windows-amd64 \
-
 WINDOWS_PLATFORM2_LIST = \
 	windows-arm \
 	windows-arm64 \
@@ -42,13 +39,9 @@ WINDOWS_PLATFORM2_LIST = \
 ui:
 	cd ui2/frontend && npm ci && npm run build
 
-debug: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac linux-amd64
+windows: create_nac windows-amd64 rm_nac
 
-macos: $(DARWIN_PLATFORM_LIST) strip
-
-windows: create_nac $(WINDOWS_PLATFORM_LIST) rm_nac
-
-linux: $(LINUX_PLATFORM_LIST) strip $(WINDOWS_PLATFORM2_LIST)
+packet: $(DARWIN_PLATFORM_LIST) $(LINUX_PLATFORM_LIST) strip $(WINDOWS_PLATFORM2_LIST)
 
 linux-386:
 	GOARCH=386 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
