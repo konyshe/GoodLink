@@ -1,4 +1,5 @@
-import { Badge, Tabs, Typography } from "antd";
+import { DownloadOutlined } from "@ant-design/icons";
+import { Badge, Button, Tabs, Typography } from "antd";
 
 function badgeStatus(status) {
   if (status === 5 || status === 6) return "success";
@@ -13,7 +14,7 @@ function isTextEditable(el) {
   return tag === "INPUT" || tag === "TEXTAREA" || !!el.isContentEditable;
 }
 
-export default function ServiceTabs({ services, activeId, onChange, onCreate, onDelete, onRename }) {
+export default function ServiceTabs({ services, activeId, onChange, onCreate, onDelete, onRename, onExportConfig }) {
   // rc-tabs 在标签页上按 Backspace/Delete 会触发 onEdit('remove')，这里在捕获阶段拦截，
   // 删除服务只保留标签上的 × 按钮入口；改名编辑态仍可正常删除文字。
   function blockRemoveKey(e) {
@@ -27,37 +28,42 @@ export default function ServiceTabs({ services, activeId, onChange, onCreate, on
   }
 
   return (
-    <div className="gl-service-tabs-wrap" onKeyDownCapture={blockRemoveKey}>
-      <Tabs
-        className="gl-service-tabs"
-        tabPosition="left"
-        type="editable-card"
-        activeKey={activeId}
-        onChange={onChange}
-        onEdit={(key, action) => {
-          if (action === "add") onCreate();
-          if (action === "remove") onDelete(key);
-        }}
-        items={(services || []).map((svc) => ({
-          key: svc.id,
-          label: (
-            <span className="gl-service-tab">
-              <Badge status={badgeStatus(svc.status)} />
-              <Typography.Text
-                className="gl-service-tab-name"
-                ellipsis
-                editable={{
-                  text: svc.name,
-                  onChange: (next) => onRename(svc.id, next),
-                  triggerType: ["text"],
-                }}
-              >
-                {svc.name}
-              </Typography.Text>
-            </span>
-          ),
-        }))}
-      />
-    </div>
+    <>
+      <div className="gl-service-tabs-wrap" onKeyDownCapture={blockRemoveKey}>
+        <Tabs
+          className="gl-service-tabs"
+          tabPosition="left"
+          type="editable-card"
+          activeKey={activeId}
+          onChange={onChange}
+          onEdit={(key, action) => {
+            if (action === "add") onCreate();
+            if (action === "remove") onDelete(key);
+          }}
+          items={(services || []).map((svc) => ({
+            key: svc.id,
+            label: (
+              <span className="gl-service-tab">
+                <Badge status={badgeStatus(svc.status)} />
+                <Typography.Text
+                  className="gl-service-tab-name"
+                  ellipsis
+                  editable={{
+                    text: svc.name,
+                    onChange: (next) => onRename(svc.id, next),
+                    triggerType: ["text"],
+                  }}
+                >
+                  {svc.name}
+                </Typography.Text>
+              </span>
+            ),
+          }))}
+        />
+      </div>
+      <Button className="gl-service-export" block icon={<DownloadOutlined />} onClick={onExportConfig}>
+        导出配置
+      </Button>
+    </>
   );
 }

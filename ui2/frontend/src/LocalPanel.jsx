@@ -63,7 +63,6 @@ export default function LocalPanel({
   onGenerate,
   onCopy,
   onPaste,
-  onExportConfig,
   onImportFile,
   localMode,
   setLocalMode,
@@ -194,7 +193,6 @@ export default function LocalPanel({
         onGenerate={onGenerate}
         onCopy={onCopy}
         onPaste={onPaste}
-        onExportConfig={onExportConfig}
         onImportFile={onImportFile}
       />
 

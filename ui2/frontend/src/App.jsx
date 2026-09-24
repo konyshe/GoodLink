@@ -577,7 +577,6 @@ export default function App() {
     onGenerate,
     onCopy,
     onPaste,
-    onExportConfig,
     onImportFile,
   };
 
@@ -608,6 +607,7 @@ export default function App() {
               const result = await renameService(id, name);
               if (result.error) setFormError(result.error);
             }}
+            onExportConfig={onExportConfig}
           />
         </aside>
         <div className="gl-main">

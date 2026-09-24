@@ -1,6 +1,5 @@
 import {
   CopyOutlined,
-  DownloadOutlined,
   KeyOutlined,
   SnippetsOutlined,
   UploadOutlined,
@@ -15,7 +14,6 @@ export default function KeySection({
   onGenerate,
   onCopy,
   onPaste,
-  onExportConfig,
   onImportFile,
 }) {
   return (
@@ -43,9 +41,6 @@ export default function KeySection({
           </Button>
           <Button icon={<SnippetsOutlined />} disabled={!othersEnabled} onClick={onPaste}>
             粘贴密钥
-          </Button>
-          <Button icon={<DownloadOutlined />} onClick={onExportConfig}>
-            导出配置
           </Button>
           <Upload
             accept=".json,application/json"

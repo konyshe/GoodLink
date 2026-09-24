@@ -67,11 +67,17 @@ body {
   display: none;
 }
 
+/* 不撑满剩余高度，保证「导出配置」紧邻 "+" 按钮下方 */
 .gl-service-tabs-wrap {
-  flex: 1;
-  min-height: 0;
+  flex: none;
   min-width: 0;
   display: flex;
+}
+
+.gl-service-export {
+  margin-top: 4px;
+  justify-content: flex-start;
+  padding-inline: 10px;
 }
 
 .gl-service-tabs.ant-tabs-left {
