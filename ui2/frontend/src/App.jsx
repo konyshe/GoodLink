@@ -587,184 +587,184 @@ export default function App() {
   return (
     <div className="gl-shell">
       <div className="gl-workspace">
-      <aside className="gl-sider">
-        <div className="gl-sider-title">服务</div>
-      <ServiceTabs
-        services={services}
-        activeId={active?.id}
-        onChange={setActiveId}
-        onCreate={async () => {
-          const result = await createService();
-          if (result.error) setFormError(result.error);
-          else if (result.state?.id) setActiveId(result.state.id);
-        }}
-        onDelete={async (id) => {
-          const svc = services.find((s) => s.id === id);
-          if (!window.confirm(`确定删除服务[${svc?.name || ""}]？`)) return;
-          const result = await deleteService(id);
-          if (result.error) setFormError(result.error);
-        }}
-        onRename={async (id, name) => {
-          const result = await renameService(id, name);
-          if (result.error) setFormError(result.error);
-        }}
-      />
-      </aside>
-      <div className="gl-main">
-      <ServicePanel>
-      <Form component="div" layout="vertical" requiredMark={false}>
-        <Card className="gl-panel" size="small">
-          <Form.Item label="工作端侧">
-            <ChoiceGroup
-              value={workType}
-              disabled={!othersEnabled}
-              onChange={(next) => setWorkType(next)}
-              options={[
-                {
-                  value: "Local",
-                  icon: <DesktopOutlined />,
-                  label: "Local 端",
-                  desc: "本地客户端，主动发起连接",
-                },
-                {
-                  value: "Remote",
-                  icon: <CloudServerOutlined />,
-                  label: "Remote 端",
-                  desc: "被连接服务端，等待对端接入",
-                },
-              ]}
-            />
-          </Form.Item>
+        <aside className="gl-sider">
+          <div className="gl-sider-title">服务列表(双击可修改名称)</div>
+          <ServiceTabs
+            services={services}
+            activeId={active?.id}
+            onChange={setActiveId}
+            onCreate={async () => {
+              const result = await createService();
+              if (result.error) setFormError(result.error);
+              else if (result.state?.id) setActiveId(result.state.id);
+            }}
+            onDelete={async (id) => {
+              const svc = services.find((s) => s.id === id);
+              if (!window.confirm(`确定删除服务[${svc?.name || ""}]？`)) return;
+              const result = await deleteService(id);
+              if (result.error) setFormError(result.error);
+            }}
+            onRename={async (id, name) => {
+              const result = await renameService(id, name);
+              if (result.error) setFormError(result.error);
+            }}
+          />
+        </aside>
+        <div className="gl-main">
+          <ServicePanel>
+            <Form component="div" layout="vertical" requiredMark={false}>
+              <Card className="gl-panel" size="small">
+                <Form.Item label="工作端侧">
+                  <ChoiceGroup
+                    value={workType}
+                    disabled={!othersEnabled}
+                    onChange={(next) => setWorkType(next)}
+                    options={[
+                      {
+                        value: "Local",
+                        icon: <DesktopOutlined />,
+                        label: "Local 端",
+                        desc: "本地客户端，主动发起连接",
+                      },
+                      {
+                        value: "Remote",
+                        icon: <CloudServerOutlined />,
+                        label: "Remote 端",
+                        desc: "被连接服务端，等待对端接入",
+                      },
+                    ]}
+                  />
+                </Form.Item>
 
-          {workType === "Remote" && (
-            <Form.Item label="传输协议">
-              <ChoiceGroup
-                value={transport}
-                disabled={!othersEnabled}
-                onChange={(next) => setTransport(next)}
-                options={[
-                  {
-                    value: "kcp",
-                    icon: <ThunderboltOutlined />,
-                    label: "KCP",
-                    desc: "CPU 降低约 40%，适合个人使用",
-                  },
-                  {
-                    value: "quic",
-                    icon: <SafetyCertificateOutlined />,
-                    label: "QUIC",
-                    desc: "二次加密，传输更稳，适合企业",
-                  },
-                ]}
-              />
-            </Form.Item>
-          )}
+                {workType === "Remote" && (
+                  <Form.Item label="传输协议">
+                    <ChoiceGroup
+                      value={transport}
+                      disabled={!othersEnabled}
+                      onChange={(next) => setTransport(next)}
+                      options={[
+                        {
+                          value: "kcp",
+                          icon: <ThunderboltOutlined />,
+                          label: "KCP",
+                          desc: "CPU 降低约 40%，适合个人使用",
+                        },
+                        {
+                          value: "quic",
+                          icon: <SafetyCertificateOutlined />,
+                          label: "QUIC",
+                          desc: "二次加密，传输更稳，适合企业",
+                        },
+                      ]}
+                    />
+                  </Form.Item>
+                )}
 
-          {workType === "Local" ? (
-            <LocalPanel
-              {...keyProps}
-              localMode={localMode}
-              setLocalMode={setLocalMode}
-              rows={rows}
-              setRows={setRows}
-              mappingEnabled={mappingEnabled}
-              onConfirm={onConfirm}
-              proxy={resolveProxy(localMode, active?.proxy)}
-              isAdmin={state?.isAdmin}
-            />
-          ) : (
-            <RemotePanel {...keyProps} />
-          )}
-        </Card>
-      </Form>
-      </ServicePanel>
+                {workType === "Local" ? (
+                  <LocalPanel
+                    {...keyProps}
+                    localMode={localMode}
+                    setLocalMode={setLocalMode}
+                    rows={rows}
+                    setRows={setRows}
+                    mappingEnabled={mappingEnabled}
+                    onConfirm={onConfirm}
+                    proxy={resolveProxy(localMode, active?.proxy)}
+                    isAdmin={state?.isAdmin}
+                  />
+                ) : (
+                  <RemotePanel {...keyProps} />
+                )}
+              </Card>
+            </Form>
+          </ServicePanel>
 
-      {formError ? <Alert type="error" showIcon message={formError} /> : null}
+          {formError ? <Alert type="error" showIcon message={formError} /> : null}
 
-      <Card className="gl-panel" title="连接控制" size="small">
-        <div className="gl-start-wrap">
-          <div className="gl-auto">
-            <div className="gl-auto-copy">
-              <span className="gl-auto-title">{autoLabel}</span>
-            </div>
-            <Switch checked={autoStart} disabled={exited} onChange={onAutoStartToggle} />
-          </div>
-          <Button
-            size="large"
-            block
-            className={`gl-start-btn gl-start-${view.importance}${view.activity ? " is-busy" : ""}`}
-            disabled={!startEnabled}
-            icon={view.activity ? <LoadingOutlined /> : running ? <PauseCircleOutlined /> : startEnabled ? <PlayCircleOutlined /> : undefined}
-            onClick={onStart}
-            {...startBtnTone(view.importance)}
-          >
-            {view.text}
-          </Button>
-        </div>
-      </Card>
-
-      <Card
-        className="gl-panel"
-        title="运行日志"
-        size="small"
-        extra={
-          <Button size="small" icon={<ExportOutlined />} disabled={!viewLogs.length} onClick={onExportLogs}>
-            导出日志
-          </Button>
-        }
-      >
-        <pre ref={logRef} className={"gl-log" + (viewLogs.length ? "" : " is-empty")}>{viewLogs.join("\n")}</pre>
-      </Card>
-
-      <footer className="gl-footer">
-        <Tag className="gl-nat" color={natTagColor(nat)}>{natHint(nat)}</Tag>
-        <Space wrap size={4}>
-          {state?.upgrade?.checkError ? (
-            <Button
-              type="link"
-              href="https://gitee.com/konyshe/goodlink/releases"
-              target="_blank"
-              rel="noopener"
-            >
-              {state.upgrade.checkError}
-            </Button>
-          ) : state?.upgrade?.need ? (
-            <Badge dot>
+          <Card className="gl-panel" title="连接控制" size="small">
+            <div className="gl-start-wrap">
+              <div className="gl-auto">
+                <div className="gl-auto-copy">
+                  <span className="gl-auto-title">{autoLabel}</span>
+                </div>
+                <Switch checked={autoStart} disabled={exited} onChange={onAutoStartToggle} />
+              </div>
               <Button
-                color="green"
-                variant="solid"
-                size="small"
-                icon={<CloudDownloadOutlined />}
-                onClick={openUpgradeModal}
+                size="large"
+                block
+                className={`gl-start-btn gl-start-${view.importance}${view.activity ? " is-busy" : ""}`}
+                disabled={!startEnabled}
+                icon={view.activity ? <LoadingOutlined /> : running ? <PauseCircleOutlined /> : startEnabled ? <PlayCircleOutlined /> : undefined}
+                onClick={onStart}
+                {...startBtnTone(view.importance)}
               >
-                有新版本 v{state.upgrade.latest}
+                {view.text}
               </Button>
-            </Badge>
-          ) : null}
-          <Button type="link" icon={<GlobalOutlined />} href="https://goodlink.kony.vip" target="_blank" rel="noopener">
-            官方网站
-          </Button>
-          <Button
-            type="link"
-            icon={<BookOutlined />}
-            href="https://gitee.com/konyshe/goodlink/wikis/pages"
-            target="_blank"
-            rel="noopener"
+            </div>
+          </Card>
+
+          <Card
+            className="gl-panel"
+            title="运行日志"
+            size="small"
+            extra={
+              <Button size="small" icon={<ExportOutlined />} disabled={!viewLogs.length} onClick={onExportLogs}>
+                导出日志
+              </Button>
+            }
           >
-            使用教程
-          </Button>
-          <Button
-            type="link"
-            icon={<CommentOutlined />}
-            href="https://gitee.com/konyshe/goodlink/issues"
-            target="_blank"
-            rel="noopener"
-          >
-            反馈问题
-          </Button>
-        </Space>
-      </footer>
-      </div>
+            <pre ref={logRef} className={"gl-log" + (viewLogs.length ? "" : " is-empty")}>{viewLogs.join("\n")}</pre>
+          </Card>
+
+          <footer className="gl-footer">
+            <Tag className="gl-nat" color={natTagColor(nat)}>{natHint(nat)}</Tag>
+            <Space wrap size={4}>
+              {state?.upgrade?.checkError ? (
+                <Button
+                  type="link"
+                  href="https://gitee.com/konyshe/goodlink/releases"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  {state.upgrade.checkError}
+                </Button>
+              ) : state?.upgrade?.need ? (
+                <Badge dot>
+                  <Button
+                    color="green"
+                    variant="solid"
+                    size="small"
+                    icon={<CloudDownloadOutlined />}
+                    onClick={openUpgradeModal}
+                  >
+                    有新版本 v{state.upgrade.latest}
+                  </Button>
+                </Badge>
+              ) : null}
+              <Button type="link" icon={<GlobalOutlined />} href="https://goodlink.kony.vip" target="_blank" rel="noopener">
+                官方网站
+              </Button>
+              <Button
+                type="link"
+                icon={<BookOutlined />}
+                href="https://gitee.com/konyshe/goodlink/wikis/pages"
+                target="_blank"
+                rel="noopener"
+              >
+                使用教程
+              </Button>
+              <Button
+                type="link"
+                icon={<CommentOutlined />}
+                href="https://gitee.com/konyshe/goodlink/issues"
+                target="_blank"
+                rel="noopener"
+              >
+                反馈问题
+              </Button>
+            </Space>
+          </footer>
+        </div>
       </div>
 
       <Modal

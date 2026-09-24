@@ -67,8 +67,16 @@ body {
   display: none;
 }
 
+.gl-service-tabs-wrap {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+
 .gl-service-tabs.ant-tabs-left {
   flex: 1;
+  min-width: 0;
 }
 
 .gl-service-tabs.ant-tabs-left > .ant-tabs-nav {
