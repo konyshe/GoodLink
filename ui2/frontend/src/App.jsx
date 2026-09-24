@@ -608,20 +608,7 @@ export default function App() {
       <div className="gl-main">
       <ServicePanel>
       <Form component="div" layout="vertical" requiredMark={false}>
-        <Card className="gl-panel" title="连接配置" size="small">
-          <Form.Item label="服务名称" validateStatus={!String(form.name || "").trim() ? "error" : ""} help={!String(form.name || "").trim() ? "名称不能为空" : ""}>
-            <input
-              className="ant-input"
-              maxLength={32}
-              value={form.name || ""}
-              onChange={(e) => patchForm({ name: e.target.value })}
-              onBlur={async () => {
-                if (!active) return;
-                const result = await renameService(active.id, form.name);
-                if (result.error) setFormError(result.error);
-              }}
-            />
-          </Form.Item>
+        <Card className="gl-panel" size="small">
           <Form.Item label="工作端侧">
             <ChoiceGroup
               value={workType}
