@@ -32,12 +32,83 @@ body {
 
 .gl-shell {
   min-height: 100%;
-  max-width: 880px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 20px 18px 28px;
+}
+
+.gl-workspace {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.gl-sider {
+  position: sticky;
+  top: 20px;
+  min-height: calc(100vh - 40px);
+  background: var(--gl-panel);
+  border: 1px solid var(--gl-line);
+  border-radius: 14px;
+  padding: 12px 8px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.gl-sider-title {
+  padding: 0 10px 8px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--gl-muted);
+}
+
+.gl-service-tabs.ant-tabs-left > .ant-tabs-content-holder {
+  display: none;
+}
+
+.gl-service-tabs.ant-tabs-left {
+  flex: 1;
+}
+
+.gl-service-tabs.ant-tabs-left > .ant-tabs-nav {
+  width: 100%;
+  min-height: 100%;
+}
+
+.gl-service-tabs .ant-tabs-nav-list {
+  width: 100%;
+}
+
+.gl-service-tabs .ant-tabs-tab {
+  width: 100%;
+  margin: 0 0 4px !important;
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  justify-content: flex-start;
+}
+
+.gl-service-tabs .ant-tabs-tab-btn {
+  max-width: calc(100% - 18px);
+}
+
+.gl-service-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.gl-service-tab-name {
+  min-width: 0;
+}
+
+.gl-main {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .gl-header {
@@ -437,6 +508,17 @@ body {
   background: rgba(8, 13, 24, 0.65) !important;
   font-size: 12px;
   color: var(--gl-muted);
+}
+
+@media (max-width: 900px) {
+  .gl-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .gl-sider {
+    position: static;
+    min-height: 0;
+  }
 }
 
 @media (max-width: 640px) {

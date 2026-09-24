@@ -10,6 +10,8 @@ function badgeStatus(status) {
 export default function ServiceTabs({ services, activeId, onChange, onCreate, onDelete, onRename }) {
   return (
     <Tabs
+      className="gl-service-tabs"
+      tabPosition="left"
       type="editable-card"
       activeKey={activeId}
       onChange={onChange}
@@ -20,9 +22,11 @@ export default function ServiceTabs({ services, activeId, onChange, onCreate, on
       items={(services || []).map((svc) => ({
         key: svc.id,
         label: (
-          <span>
-            <Badge status={badgeStatus(svc.status)} />{" "}
+          <span className="gl-service-tab">
+            <Badge status={badgeStatus(svc.status)} />
             <Typography.Text
+              className="gl-service-tab-name"
+              ellipsis
               editable={{
                 text: svc.name,
                 onChange: (next) => onRename(svc.id, next),

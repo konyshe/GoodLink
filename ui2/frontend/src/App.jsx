@@ -581,6 +581,9 @@ export default function App() {
 
   return (
     <div className="gl-shell">
+      <div className="gl-workspace">
+      <aside className="gl-sider">
+        <div className="gl-sider-title">服务</div>
       <ServiceTabs
         services={services}
         activeId={active?.id}
@@ -601,6 +604,8 @@ export default function App() {
           if (result.error) setFormError(result.error);
         }}
       />
+      </aside>
+      <div className="gl-main">
       <ServicePanel>
       <Form component="div" layout="vertical" requiredMark={false}>
         <Card className="gl-panel" title="连接配置" size="small">
@@ -767,6 +772,8 @@ export default function App() {
           </Button>
         </Space>
       </footer>
+      </div>
+      </div>
 
       <Modal
         open={exited && !restarting}
