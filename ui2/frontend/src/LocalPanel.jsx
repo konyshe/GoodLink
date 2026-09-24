@@ -72,6 +72,7 @@ export default function LocalPanel({
   mappingEnabled,
   onConfirm,
   proxy,
+  isAdmin,
 }) {
   function updateRow(id, field, value) {
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
@@ -207,7 +208,8 @@ export default function LocalPanel({
               value: "tun",
               icon: <WifiOutlined />,
               label: "TUN 模式",
-              desc: "简单易用，自动申请管理员权限",
+              desc: isAdmin === false ? "需要管理员权限，请重启 Goodlink 并在 UAC 弹窗选择同意" : "简单易用，系统级虚拟网卡",
+              disabled: isAdmin === false,
             },
             {
               value: "forward",

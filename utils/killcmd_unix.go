@@ -9,7 +9,9 @@ import (
 	"strings"
 )
 
-func WriteWorkerPid(pid int) {}
+func WriteWorkerPid(serviceID string, pid int) {}
+
+func RemoveWorkerPid(serviceID string) {}
 
 func KillProcess(pid int) {
 	if pid == os.Getpid() {

@@ -14,7 +14,7 @@ func CleanupOldAdapter(name string) {}
 func SetTunIP(wintunEP *Device, ip string, mask int) error {
 	devName := (*wintunEP).Name()
 
-	// ifconfig utunN 192.17.0.1 192.17.19.1 up
+	// ifconfig utunN 192.17.N.1/32 up
 	cmd := exec.Command("ifconfig", devName, fmt.Sprintf("%s/%d", ip, mask), "up")
 	log.Printf("SetTunIP: %s", cmd.String())
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -28,7 +28,7 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 		return fmt.Errorf("ifconfig mtu failed: %w, output: %s", err, out)
 	}
 
-	// route add -host 192.17.19.1 -interface utunN
+	// route add -host 192.17.N.1 -interface utunN
 	cmd = exec.Command("route", "add", "-host", ip, "-interface", devName)
 	log.Printf("SetTunIP: %s", cmd.String())
 	if out, err := cmd.CombinedOutput(); err != nil {

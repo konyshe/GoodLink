@@ -17,10 +17,26 @@ const MUTEX_NAME = "Global\\GoodLinkSingleInstance"
 var (
 	kernel32        = windows.NewLazySystemDLL("kernel32.dll")
 	procCreateMutex = kernel32.NewProc("CreateMutexW")
+	procOpenMutex   = kernel32.NewProc("OpenMutexW")
 	procCloseHandle = kernel32.NewProc("CloseHandle")
 
 	mutexHandle uintptr
 )
+
+// InstanceExists 只读探测是否已有实例持有单实例互斥锁, 不创建锁。
+func InstanceExists() bool {
+	namePtr, err := syscall.UTF16PtrFromString(MUTEX_NAME)
+	if err != nil {
+		return false
+	}
+	const synchronize = 0x00100000
+	ret, _, _ := procOpenMutex.Call(synchronize, 0, uintptr(unsafe.Pointer(namePtr)))
+	if ret == 0 {
+		return false
+	}
+	_ = windows.CloseHandle(windows.Handle(ret))
+	return true
+}
 
 func notifyFilePath() (string, error) {
 	dir, err := exeDir()

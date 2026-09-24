@@ -12,6 +12,11 @@ import (
 
 var lockFile *os.File
 
+// InstanceExists 非 Windows 不做只读探测, 由 CheckSingleInstance 负责互斥。
+func InstanceExists() bool {
+	return false
+}
+
 func notifyFilePath() (string, error) {
 	return filepath.Join(os.TempDir(), NOTIFY_FILE), nil
 }

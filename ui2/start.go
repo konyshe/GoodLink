@@ -3,10 +3,8 @@ package ui2
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,34 +15,61 @@ import (
 	"goodlink/utils"
 )
 
+type svcProc struct {
+	cmd         *exec.Cmd
+	started     bool
+	autoRestart bool
+}
+
 var (
-	m_start_button_lock  sync.Mutex
-	m_start_button_state int
-
-	// 子进程管理
-	m_cmd_process *exec.Cmd
-	m_cmd_mutex   sync.Mutex
-
-	// 自动重启控制
-	m_auto_restart_enabled bool
+	procMu  sync.Mutex
+	procs   = map[string]*svcProc{}
+	startMu sync.Mutex
 )
 
-// StopCmdProcess 停止子进程（供外部调用，如窗口关闭时）
-func StopCmdProcess() {
-	m_cmd_mutex.Lock()
-	defer m_cmd_mutex.Unlock()
-
-	if m_cmd_process != nil && m_cmd_process.Process != nil {
-		utils.KillProcess(m_cmd_process.Process.Pid)
-		m_cmd_process = nil
+func procOf(id string) *svcProc {
+	p, ok := procs[id]
+	if !ok {
+		p = &svcProc{}
+		procs[id] = p
 	}
+	return p
+}
 
-	// 清理所有遗留的cmd进程
+func StopCmdProcess() {
+	procMu.Lock()
+	ids := make([]string, 0, len(procs))
+	for id, p := range procs {
+		if p.cmd != nil && p.cmd.Process != nil {
+			utils.KillProcess(p.cmd.Process.Pid)
+		}
+		p.cmd = nil
+		p.started = false
+		p.autoRestart = false
+		ids = append(ids, id)
+	}
+	procMu.Unlock()
+	for _, id := range ids {
+		resetProxyListen(id)
+		setServiceStatus(id, StatusIdle)
+	}
 	utils.CleanupOrphanedCmdProcesses()
 }
 
-// parseStatusMessage 解析子进程状态行，返回整数状态。
-// 支持带时间戳前缀，如 "2024/01/01 12:00:00 [GOODLINK_STATUS]3"
+func stopServiceProcess(id string) {
+	procMu.Lock()
+	p := procOf(id)
+	p.autoRestart = false
+	cmd := p.cmd
+	p.cmd = nil
+	p.started = false
+	procMu.Unlock()
+	if cmd != nil && cmd.Process != nil {
+		utils.KillProcess(cmd.Process.Pid)
+	}
+	utils.RemoveWorkerPid(id)
+}
+
 func parseStatusMessage(line string) (int, bool) {
 	idx := strings.Index(line, pro.TagStatusPrefix)
 	if idx == -1 {
@@ -74,221 +99,375 @@ func parseProxyMessage(line string) (string, bool) {
 	return addr, true
 }
 
-func updateConnectionStatus(status int) {
+func updateConnectionStatus(id string, status int) {
+	name := serviceName(id)
 	switch status {
 	case pro.StatusConnecting:
-		if GetWorkType() == workTypeLocal {
-			setStatus(StatusConnecting)
-		}
+		setServiceStatus(id, StatusConnecting)
 	case pro.StatusConnected:
-		if GetWorkType() == workTypeLocal {
-			setStatus(StatusConnected)
-		}
+		setServiceStatus(id, StatusConnected)
 	case pro.StatusConnectingNAT4:
-		if GetWorkType() == workTypeLocal {
-			setStatus(StatusConnectingNAT4)
-		}
-		m_start_button_lock.Lock()
-		m_auto_restart_enabled = false
-		m_start_button_lock.Unlock()
-		UILogPrintF("两端网络都是NAT4，无法直连，已停止连接")
+		setServiceStatus(id, StatusConnectingNAT4)
+		disableAutoRestart(id)
+		ServiceLogPrintF(id, "服务[%s] 两端网络都是NAT4，无法直连，已停止连接", name)
 		go func() {
 			time.Sleep(500 * time.Millisecond)
-			StopCmdProcess()
+			stopServiceProcess(id)
 		}()
 	case pro.StatusConnectFailed:
-		if GetWorkType() == workTypeLocal {
-			setStatus(StatusConnectFailed)
-		}
-		m_start_button_lock.Lock()
-		m_auto_restart_enabled = false
-		m_start_button_lock.Unlock()
-		UILogPrintF("已尝试15次仍无法连接，已停止")
+		setServiceStatus(id, StatusConnectFailed)
+		disableAutoRestart(id)
+		ServiceLogPrintF(id, "服务[%s] 已尝试15次仍无法连接，已停止", name)
 		go func() {
 			time.Sleep(500 * time.Millisecond)
-			StopCmdProcess()
+			stopServiceProcess(id)
 		}()
 	case pro.StatusRunning:
-		if GetWorkType() == workTypeRemote {
-			setStatus(StatusRunning)
-		}
+		setServiceStatus(id, StatusRunning)
 	case pro.StatusVersionMismatch, pro.StatusTransportMismatch:
-		m_start_button_lock.Lock()
-		m_auto_restart_enabled = false
-		m_start_button_lock.Unlock()
+		disableAutoRestart(id)
 		go func() {
 			time.Sleep(500 * time.Millisecond)
-			StopCmdProcess()
+			stopServiceProcess(id)
 		}()
 	case pro.StatusNeedAdmin:
-		m_start_button_lock.Lock()
-		m_auto_restart_enabled = false
-		m_start_button_lock.Unlock()
+		disableAutoRestart(id)
+		ServiceLogPrintF(id, "服务[%s] %s", name, utils.NeedAdminRestartMsg)
+		setServiceStatus(id, StatusIdle)
 	}
 }
 
-// startCmdProcess 启动cmd进程（提取的公共逻辑，用于初始启动和自动重启）
-func startCmdProcess() error {
-	// 构建命令行参数
+func disableAutoRestart(id string) {
+	procMu.Lock()
+	procOf(id).autoRestart = false
+	procMu.Unlock()
+}
+
+func startCmdProcess(id string) error {
 	cmdPath := utils.GetCmdExePath()
-
-	// 检查 cmd 程序是否存在
-	if _, err := os.Stat(cmdPath); os.IsNotExist(err) {
-		return fmt.Errorf("文件不存在: %s", filepath.Base(cmdPath))
-	}
-
-	args := []string{"--ui"}
-
-	// 创建子进程
-	m_cmd_mutex.Lock()
-	m_cmd_process = exec.Command(cmdPath, args...)
-
-	// 获取输出管道
-	stdout, err := m_cmd_process.StdoutPipe()
+	args := []string{"--ui", "--service-id=" + id}
+	cmd := exec.Command(cmdPath, args...)
+	cmd.Env = append(os.Environ(), config.ExportRuntimeConfEnv(runtimeConf))
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		m_cmd_mutex.Unlock()
-		UILogPrintF("获取stdout失败: %v", err)
 		return err
 	}
-	stderr, err := m_cmd_process.StderrPipe()
+	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		m_cmd_mutex.Unlock()
-		UILogPrintF("获取stderr失败: %v", err)
 		return err
 	}
-
-	// 启动子进程
-	if err := m_cmd_process.Start(); err != nil {
-		m_cmd_mutex.Unlock()
-		UILogPrintF("启动失败: %v", err)
+	if err := cmd.Start(); err != nil {
 		return err
 	}
-	if m_cmd_process.Process != nil {
-		utils.WriteWorkerPid(m_cmd_process.Process.Pid)
+	if cmd.Process != nil {
+		utils.WriteWorkerPid(id, cmd.Process.Pid)
 	}
-	m_cmd_mutex.Unlock()
+	procMu.Lock()
+	p := procOf(id)
+	p.cmd = cmd
+	p.started = true
+	procMu.Unlock()
 
-	// 处理进程输出的通用函数
-	handleProcessOutput := func(scanner *bufio.Scanner) {
+	handle := func(scanner *bufio.Scanner) {
 		for scanner.Scan() {
 			line := scanner.Text()
 			if addr, ok := parseProxyMessage(line); ok {
-				setProxyListen(addr)
+				setProxyListen(id, addr)
 				continue
 			}
 			if status, ok := parseStatusMessage(line); ok {
-				updateConnectionStatus(status)
+				updateConnectionStatus(id, status)
 			} else {
-				UILogPrintF(line)
+				ServiceLogPrintF(id, line)
 			}
 		}
 	}
-
-	// 读取 stdout 和 stderr
-	go handleProcessOutput(bufio.NewScanner(stdout))
-	go handleProcessOutput(bufio.NewScanner(stderr))
-
+	go handle(bufio.NewScanner(stdout))
+	go handle(bufio.NewScanner(stderr))
 	return nil
 }
 
-func saveConfig() error {
-	cfg := config.UIConfig{
-		WorkType:     GetWorkType(),
-		TunKey:       getTunKey(),
-		LocalMode:    getLocalMode(),
-		Transport:    getTransport(),
-		AutoStart:    getAutoStart(),
-		ForwardRules: getForwardRules(),
+func saveAllConfig() error {
+	return config.SaveUIConfig(config.UIConfigPath(), allServicesConfig())
+}
+
+func duplicateKey(id, tunKey string) string {
+	tunKey = strings.TrimSpace(tunKey)
+	if tunKey == "" {
+		return ""
 	}
-	log.Println(cfg)
-	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
-		log.Println("保存 goodlink.json 失败:", err)
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	for _, svc := range m_services {
+		if svc.cfg.ID == id {
+			continue
+		}
+		if strings.TrimSpace(svc.cfg.TunKey) == tunKey {
+			return svc.cfg.Name
+		}
+	}
+	return ""
+}
+
+func HandleStart(id, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
+	startMu.Lock()
+	defer startMu.Unlock()
+
+	procMu.Lock()
+	started := procOf(id).started
+	procMu.Unlock()
+	if started {
+		return fmt.Errorf("already started")
+	}
+	st := getServiceStatus(id)
+	if st == StatusDetecting || st == StatusStopping {
+		return fmt.Errorf("busy")
+	}
+
+	var svcCopy config.UIService
+	err := mutateService(id, func(svc *serviceState) error {
+		svc.cfg.WorkType = strings.TrimSpace(workType)
+		if svc.cfg.WorkType != workTypeLocal && svc.cfg.WorkType != workTypeRemote {
+			svc.cfg.WorkType = workTypeLocal
+		}
+		if strings.TrimSpace(tunKey) != "" {
+			svc.cfg.TunKey = strings.TrimSpace(tunKey)
+		}
+		svc.cfg.LocalMode = localMode
+		svc.cfg.Transport = transport
+		svc.cfg.ForwardRules = rules
+		svcCopy = svc.cfg
+		return nil
+	})
+	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func HandleForwards(localMode string, rules []config.UIForwardRule) error {
-	m_start_button_lock.Lock()
-	running := m_start_button_state == 1
-	m_start_button_lock.Unlock()
-	if running {
-		localMode = getLocalMode()
+	if other := duplicateKey(id, svcCopy.TunKey); other != "" {
+		return fmt.Errorf("连接密钥与服务[%s]重复, 请先修改密钥", other)
 	}
-
-	cfg := config.UIConfig{
-		LocalMode:    localMode,
-		ForwardRules: rules,
-	}
+	cfg := allServicesConfig()
 	if err := config.NormalizeAndValidate(&cfg); err != nil {
 		return err
 	}
-
-	var skip []config.UIForwardRule
-	if running {
-		skip = getForwardRules()
-	}
-	if conflicts := config.ListenConflicts(cfg.ForwardRules, skip); len(conflicts) > 0 {
-		return fmt.Errorf("%s", config.FormatListenConflicts(conflicts))
-	}
-
-	if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
+	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
 		return err
 	}
-	if err := saveConfig(); err != nil {
+	_ = mutateService(id, func(svc *serviceState) error {
+		if found, ok := config.FindService(cfg, id); ok {
+			svc.cfg = *found
+		}
+		return nil
+	})
+
+	stateMu.RLock()
+	cur, ok := lookupService(id)
+	var mode, wt string
+	if ok {
+		mode = cur.cfg.LocalMode
+		wt = cur.cfg.WorkType
+	}
+	stateMu.RUnlock()
+	if !ok {
+		return fmt.Errorf("服务不存在")
+	}
+	if wt == workTypeLocal && mode == config.LocalModeForward {
+		if conflicts := config.ListenConflicts(rules, nil); len(conflicts) > 0 {
+			return fmt.Errorf("%s", config.FormatListenConflicts(conflicts))
+		}
+	}
+	if wt == workTypeLocal && mode == config.LocalModeTUN && !utils.IsAdmin() {
+		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
+	}
+
+	resetProxyListen(id)
+	if wt == workTypeLocal {
+		setServiceStatus(id, StatusConnecting)
+	} else {
+		setServiceStatus(id, StatusStarting)
+	}
+	procMu.Lock()
+	procOf(id).autoRestart = true
+	procMu.Unlock()
+
+	if err := startCmdProcess(id); err != nil {
+		ServiceLogPrintF(id, "服务[%s] 启动失败: %v", serviceName(id), err)
+		procMu.Lock()
+		procOf(id).started = false
+		procOf(id).autoRestart = false
+		procMu.Unlock()
+		resetProxyListen(id)
+		setServiceStatus(id, StatusIdle)
 		return err
 	}
-	broadcastState()
-	UILogPrintF("端口映射已保存")
+	go waitForProcessAndHandleExit(id)
 	return nil
 }
 
-func autoConnectVerb() string {
-	if GetWorkType() == workTypeRemote {
-		return "启动"
+func HandleStop(id string) {
+	procMu.Lock()
+	started := procOf(id).started
+	procMu.Unlock()
+	if !started {
+		return
 	}
-	return "连接"
+	setServiceStatus(id, StatusStopping)
+	procMu.Lock()
+	procOf(id).autoRestart = false
+	procMu.Unlock()
+	go func() {
+		stopServiceProcess(id)
+		resetProxyListen(id)
+		setServiceStatus(id, StatusIdle)
+	}()
 }
 
-func HandleSetAutoStart(autoStart bool, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
-	if othersEnabled() {
-		wt := strings.TrimSpace(workType)
-		if wt == "" {
-			wt = GetWorkType()
-		}
-		if wt != workTypeLocal && wt != workTypeRemote {
-			return fmt.Errorf("无效的工作端侧: %s", wt)
-		}
-		cfg := config.UIConfig{
-			LocalMode:    localMode,
-			Transport:    transport,
-			ForwardRules: rules,
-		}
-		if err := config.NormalizeAndValidate(&cfg); err != nil {
-			return err
-		}
-		setWorkTypeAndKey(wt, tunKey)
-		if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
-			return err
-		}
-		setTransport(cfg.Transport)
+func waitForProcessAndHandleExit(id string) {
+	time.Sleep(time.Second)
+	procMu.Lock()
+	p := procOf(id)
+	if !p.started {
+		procMu.Unlock()
+		return
 	}
-	setAutoStart(autoStart)
-	if err := saveConfig(); err != nil {
+	cmd := p.cmd
+	procMu.Unlock()
+	if cmd != nil {
+		_ = cmd.Wait()
+	}
+	procMu.Lock()
+	p = procOf(id)
+	abnormal := p.started && p.autoRestart
+	procMu.Unlock()
+	if abnormal {
+		autoRestartProcess(id)
+		return
+	}
+	procMu.Lock()
+	procOf(id).started = false
+	procMu.Unlock()
+	resetProxyListen(id)
+	if getServiceStatus(id) != StatusConnectFailed && getServiceStatus(id) != StatusConnectingNAT4 {
+		setServiceStatus(id, StatusIdle)
+	}
+}
+
+func autoRestartProcess(id string) {
+	time.Sleep(500 * time.Millisecond)
+	procMu.Lock()
+	p := procOf(id)
+	ok := p.started && p.autoRestart
+	procMu.Unlock()
+	if !ok {
+		return
+	}
+	ServiceLogPrintF(id, "检测到服务[%s]进程异常退出，正在自动重启...", serviceName(id))
+	resetProxyListen(id)
+	if err := startCmdProcess(id); err != nil {
+		ServiceLogPrintF(id, "服务[%s] 自动重启失败: %v", serviceName(id), err)
+		procMu.Lock()
+		procOf(id).started = false
+		procOf(id).autoRestart = false
+		procMu.Unlock()
+		setServiceStatus(id, StatusIdle)
+		return
+	}
+	go waitForProcessAndHandleExit(id)
+}
+
+func tryAutoStart() {
+	stateMu.RLock()
+	var ids []string
+	for _, svc := range m_services {
+		if svc.cfg.AutoStart {
+			ids = append(ids, svc.cfg.ID)
+		}
+	}
+	stateMu.RUnlock()
+	for _, id := range ids {
+		name := serviceName(id)
+		ServiceLogPrintF(id, "已配置自动连接, 正在启动服务[%s]...", name)
+		stateMu.RLock()
+		svc := m_index[id]
+		var wt, key, mode, transport string
+		var rules []config.UIForwardRule
+		if svc != nil {
+			wt = svc.cfg.WorkType
+			key = svc.cfg.TunKey
+			mode = svc.cfg.LocalMode
+			transport = svc.cfg.Transport
+			rules = append([]config.UIForwardRule(nil), svc.cfg.ForwardRules...)
+		}
+		stateMu.RUnlock()
+		if err := HandleStart(id, wt, key, mode, transport, rules); err != nil {
+			ServiceLogPrintF(id, "服务[%s] 自动启动失败: %v", name, err)
+		}
+	}
+}
+
+func HandleForwards(id, localMode string, rules []config.UIForwardRule) error {
+	err := mutateService(id, func(svc *serviceState) error {
+		if !serviceIdle(svc) && svc.status != StatusConnected && svc.status != StatusConnecting && svc.status != StatusRunning && svc.status != StatusStarting {
+			return fmt.Errorf("busy")
+		}
+		svc.cfg.LocalMode = localMode
+		svc.cfg.ForwardRules = rules
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	cfg := allServicesConfig()
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return err
+	}
+	return config.SaveUIConfig(config.UIConfigPath(), cfg)
+}
+
+func HandleSetAutoStart(id string, autoStart bool, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
+	err := mutateService(id, func(svc *serviceState) error {
+		svc.cfg.AutoStart = autoStart
+		if serviceIdle(svc) {
+			if workType == workTypeLocal || workType == workTypeRemote {
+				svc.cfg.WorkType = workType
+			}
+			if strings.TrimSpace(tunKey) != "" {
+				svc.cfg.TunKey = strings.TrimSpace(tunKey)
+			}
+			svc.cfg.LocalMode = localMode
+			svc.cfg.Transport = transport
+			svc.cfg.ForwardRules = rules
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	cfg := allServicesConfig()
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return err
+	}
+	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
 		return err
 	}
 	broadcastState()
-
 	if !autoStart {
 		return nil
 	}
-	if getStatus() != StatusIdle {
+	if getServiceStatus(id) != StatusIdle {
 		return nil
 	}
-	UILogPrintF("已开启自动%s, 正在启动%s端...", autoConnectVerb(), GetWorkType())
-	if err := HandleStart(GetWorkType(), getTunKey(), getLocalMode(), getTransport(), getForwardRules()); err != nil {
-		msg := err.Error()
-		if msg == "already started" || msg == "busy" {
+	stateMu.RLock()
+	svc := m_index[id]
+	var wt, key, mode, transport2 string
+	var fr []config.UIForwardRule
+	if svc != nil {
+		wt, key, mode, transport2 = svc.cfg.WorkType, svc.cfg.TunKey, svc.cfg.LocalMode, svc.cfg.Transport
+		fr = append([]config.UIForwardRule(nil), svc.cfg.ForwardRules...)
+	}
+	stateMu.RUnlock()
+	ServiceLogPrintF(id, "已开启自动连接, 正在启动服务[%s]...", serviceName(id))
+	if err := HandleStart(id, wt, key, mode, transport2, fr); err != nil {
+		if err.Error() == "already started" || err.Error() == "busy" {
 			return nil
 		}
 		return err
@@ -296,170 +475,126 @@ func HandleSetAutoStart(autoStart bool, workType, tunKey, localMode, transport s
 	return nil
 }
 
-func tryAutoStart() {
-	forced := consumeForceAutoConnect()
-	if !getAutoStart() && !forced {
-		return
+func HandleRename(id, name string) error {
+	err := mutateService(id, func(svc *serviceState) error {
+		svc.cfg.Name = name
+		return nil
+	})
+	if err != nil {
+		return err
 	}
-	if forced {
-		UILogPrintF("已获得管理员权限, 正在启动%s端...", GetWorkType())
-	} else {
-		UILogPrintF("已配置自动%s, 正在启动%s端...", autoConnectVerb(), GetWorkType())
-	}
-	if err := HandleStart(GetWorkType(), getTunKey(), getLocalMode(), getTransport(), getForwardRules()); err != nil {
-		UILogPrintF("自动%s失败: %v", autoConnectVerb(), err)
-	}
-}
-
-func HandleStart(workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
-	m_start_button_lock.Lock()
-	defer m_start_button_lock.Unlock()
-
-	if m_start_button_state != 0 {
-		return fmt.Errorf("already started")
-	}
-
-	s := getStatus()
-	if s == StatusDetecting || s == StatusStopping {
-		return fmt.Errorf("busy")
-	}
-
-	cfg := config.UIConfig{
-		LocalMode:    localMode,
-		Transport:    transport,
-		ForwardRules: rules,
-	}
+	cfg := allServicesConfig()
 	if err := config.NormalizeAndValidate(&cfg); err != nil {
 		return err
 	}
-	wt := workType
-	if wt != workTypeLocal && wt != workTypeRemote {
-		wt = GetWorkType()
+	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
+		return err
 	}
-	if wt == workTypeLocal && cfg.LocalMode == config.LocalModeForward {
-		if conflicts := config.ListenConflicts(cfg.ForwardRules, nil); len(conflicts) > 0 {
-			return fmt.Errorf("%s", config.FormatListenConflicts(conflicts))
+	_ = mutateService(id, func(svc *serviceState) error {
+		if found, ok := config.FindService(cfg, id); ok {
+			svc.cfg.Name = found.Name
 		}
-	}
-
-	setWorkTypeAndKey(workType, tunKey)
-	if err := setLocalModeAndRules(cfg.LocalMode, cfg.ForwardRules); err != nil {
-		return err
-	}
-	setTransport(cfg.Transport)
-	if err := saveConfig(); err != nil {
-		return err
-	}
-	if GetWorkType() == workTypeLocal && getLocalMode() == config.LocalModeTUN && !utils.IsAdmin() {
-		return requestElevatedRestart()
-	}
-
-	resetProxyListen()
-	if GetWorkType() == workTypeLocal {
-		setStatus(StatusConnecting)
-	} else {
-		setStatus(StatusStarting)
-	}
-
-	m_start_button_state = 1
-
-	// 设置自动重启标志
-	m_auto_restart_enabled = true
-
-	// 启动进程
-	if err := startCmdProcess(); err != nil {
-		UILogPrintF("启动失败: %v", err)
-		m_start_button_state = 0
-		m_auto_restart_enabled = false
-		resetProxyListen()
-		setStatus(StatusIdle)
-		return err
-	}
-
-	// 更新按钮状态并等待进程结束
-	go waitForProcessAndHandleExit()
+		return nil
+	})
+	broadcastState()
+	ServiceLogPrintF(id, "服务已改名为[%s]", serviceName(id))
 	return nil
 }
 
-func HandleStop() {
-	m_start_button_lock.Lock()
-	defer m_start_button_lock.Unlock()
-
-	if m_start_button_state != 1 {
-		return
+func HandleCreateService() (ServiceView, error) {
+	startMu.Lock()
+	defer startMu.Unlock()
+	cfg := allServicesConfig()
+	svc := config.UIService{
+		Name:         config.AllocateServiceName(cfg),
+		WorkType:     workTypeLocal,
+		LocalMode:    config.LocalModeTUN,
+		Transport:    config.TransportKCP,
+		TunIP:        config.AllocateTunIP(cfg),
+		ForwardRules: []config.UIForwardRule{},
 	}
-
-	setStatus(StatusStopping)
-
-	// 设置自动重启标志为false，防止误触发重启
-	m_auto_restart_enabled = false
-
-	// 停止子进程（在 goroutine 中执行，避免阻塞 UI）
-	go func() {
-		StopCmdProcess()
-		m_start_button_state = 0
-		resetProxyListen()
-		setStatus(StatusIdle)
-	}()
+	if svc.TunIP == "" {
+		return ServiceView{}, fmt.Errorf("没有可用的网段")
+	}
+	cfg.Services = append(cfg.Services, svc)
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return ServiceView{}, err
+	}
+	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
+		return ServiceView{}, err
+	}
+	created := cfg.Services[len(cfg.Services)-1]
+	stateMu.Lock()
+	st := &serviceState{cfg: created, status: StatusIdle}
+	m_services = append(m_services, st)
+	m_index[created.ID] = st
+	view := serviceViewLocked(st, false)
+	stateMu.Unlock()
+	broadcastState()
+	return view, nil
 }
 
-// waitForProcessAndHandleExit 等待进程结束并处理退出逻辑（在 goroutine 中运行，状态通过 SSE 推送到浏览器）
-func waitForProcessAndHandleExit() {
-	time.Sleep(time.Second * 1)
-	if m_start_button_state != 1 {
-		return
+func HandleDeleteService(id string) error {
+	procMu.Lock()
+	started := false
+	if p, ok := procs[id]; ok {
+		started = p.started
 	}
-
-	// 等待子进程结束
-	m_cmd_mutex.Lock()
-	proc := m_cmd_process
-	m_cmd_mutex.Unlock()
-
-	if proc != nil {
-		proc.Wait()
+	procMu.Unlock()
+	if started || (getServiceStatus(id) != StatusIdle && getServiceStatus(id) != StatusDetecting && getServiceStatus(id) != StatusConnectFailed && getServiceStatus(id) != StatusConnectingNAT4) {
+		return fmt.Errorf("请先停止服务[%s]", serviceName(id))
 	}
-
-	// 检查是否为异常退出（需要自动重启）
-	m_start_button_lock.Lock()
-	isAbnormalExit := m_start_button_state == 1 && m_auto_restart_enabled
-	m_start_button_lock.Unlock()
-
-	if isAbnormalExit {
-		// 异常退出，自动重启
-		autoRestartProcess()
-	} else {
-		// 正常停止，恢复 UI
-		m_start_button_state = 0
-		resetProxyListen()
-		setStatus(StatusIdle)
+	stateMu.Lock()
+	if _, ok := lookupService(id); !ok {
+		stateMu.Unlock()
+		return fmt.Errorf("服务不存在")
 	}
+	next := make([]*serviceState, 0, len(m_services)-1)
+	for _, svc := range m_services {
+		if svc.cfg.ID == id {
+			continue
+		}
+		next = append(next, svc)
+	}
+	m_services = next
+	delete(m_index, id)
+	delete(procs, id)
+	stateMu.Unlock()
+	dropServiceLogs(id)
+	if err := saveAllConfig(); err != nil {
+		return err
+	}
+	broadcastState()
+	return nil
 }
 
-// autoRestartProcess 自动重启进程（当进程异常退出时调用，在 goroutine 中运行）
-func autoRestartProcess() {
-	// 短暂延迟，避免频繁重启
-	time.Sleep(500 * time.Millisecond)
-
-	// 检查是否仍然需要重启（用户可能在此期间手动停止了）
-	m_start_button_lock.Lock()
-	if m_start_button_state != 1 || !m_auto_restart_enabled {
-		m_start_button_lock.Unlock()
-		return
+func HandleUpdateConfig(id, workType, tunKey, localMode, transport string, rules []config.UIForwardRule, autoStart bool) error {
+	err := mutateService(id, func(svc *serviceState) error {
+		if !serviceIdle(svc) {
+			return fmt.Errorf("busy")
+		}
+		if workType == workTypeLocal || workType == workTypeRemote {
+			svc.cfg.WorkType = workType
+		}
+		if strings.TrimSpace(tunKey) != "" {
+			svc.cfg.TunKey = strings.TrimSpace(tunKey)
+		}
+		svc.cfg.LocalMode = localMode
+		svc.cfg.Transport = transport
+		svc.cfg.ForwardRules = rules
+		svc.cfg.AutoStart = autoStart
+		return nil
+	})
+	if err != nil {
+		return err
 	}
-	m_start_button_lock.Unlock()
-
-	UILogPrintF("检测到进程异常退出，正在自动重启...")
-
-	resetProxyListen()
-	// 重启进程
-	if err := startCmdProcess(); err != nil {
-		UILogPrintF("启动失败: %v", err)
-		m_start_button_state = 0
-		resetProxyListen()
-		setStatus(StatusIdle)
-		return
+	cfg := allServicesConfig()
+	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		return err
 	}
-
-	// 启动新的等待goroutine
-	go waitForProcessAndHandleExit()
+	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
+		return err
+	}
+	broadcastState()
+	return nil
 }

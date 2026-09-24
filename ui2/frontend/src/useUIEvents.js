@@ -10,7 +10,7 @@ const defaultUpgrade = {
 
 export function useUIEvents() {
   const [state, setState] = useState(null);
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState({ shared: [], byId: {} });
   const [exited, setExited] = useState(false);
   const [upgradeProgress, setUpgradeProgress] = useState(defaultUpgrade);
 
@@ -44,7 +44,9 @@ export function useUIEvents() {
       hideExited();
       const s = JSON.parse(e.data);
       setState(s);
-      setLogs(s.logs || []);
+      const byId = {};
+      for (const svc of s.services || []) byId[svc.id] = svc.logs || [];
+      setLogs({ shared: s.logs || [], byId });
       if (s.upgrade) {
         setUpgradeProgress({
           downloading: !!s.upgrade.downloading,
@@ -57,8 +59,14 @@ export function useUIEvents() {
     es.addEventListener("state", (e) => setState(JSON.parse(e.data)));
     es.addEventListener("upgrade", (e) => applyUpgrade(JSON.parse(e.data)));
     es.addEventListener("log", (e) => {
-      const line = JSON.parse(e.data).line;
-      setLogs((prev) => [...prev, line]);
+      const data = JSON.parse(e.data);
+      const line = data.line;
+      const serviceId = data.serviceId || "";
+      setLogs((prev) => {
+        if (!serviceId) return { ...prev, shared: [...prev.shared, line] };
+        const cur = prev.byId[serviceId] || [];
+        return { ...prev, byId: { ...prev.byId, [serviceId]: [...cur, line] } };
+      });
     });
     es.onopen = () => {
       connectedOnce = true;

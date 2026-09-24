@@ -19,7 +19,6 @@ import (
 	"runtime/debug"
 	"strings"
 	"syscall"
-	"time"
 )
 
 func main2() {
@@ -45,12 +44,17 @@ func main2() {
 
 	// 第三方集成, 关注以下代码即可
 	go func() {
-		if err := pro.Init(config.GetTunKey()); err != nil {
+		svc, err := config.GetService(config.Arg_service_id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if err := pro.Init(svc); err != nil {
 			log.Println(err)
 			return
 		}
 
-		switch strings.ToLower(config.GetWorkType()) {
+		switch strings.ToLower(svc.WorkType) {
 		case "local":
 			if err := pro.RunLocal(); err != nil {
 				log.Println(err)
@@ -72,9 +76,24 @@ func main2() {
 	pro.StopRemote()
 }
 
-func runUI(openBrowser, autoConnect bool, waitPid int) {
-	// 提权重启时先等旧进程退出，避免抢不到单实例锁与UI端口
-	ui2.WaitForPidExit(waitPid, 15*time.Second)
+func runUI(openBrowser bool) {
+	// 必须排在提权之前: 程序已在运行时只唤起已有窗口, 不再弹 UAC
+	if utils.InstanceExists() {
+		if err := utils.NotifyExistingInstance(); err != nil {
+			log.Printf("通知已存在实例失败: %v", err)
+		}
+		return
+	}
+
+	// 启动时一次性申请管理员权限。用户取消授权则以普通权限继续,
+	// 转发模式与 Remote 仍可用, TUN 模式在启动服务时直接报错。
+	if !utils.IsAdmin() {
+		if err := utils.RelaunchAsAdmin("--no-browser"); err != nil {
+			log.Println(err)
+		} else {
+			return
+		}
+	}
 
 	// 检查单实例，如果不是第一个实例则退出
 	// 必须在创建任何UI资源之前检查，避免影响已运行的实例
@@ -87,11 +106,22 @@ func runUI(openBrowser, autoConnect bool, waitPid int) {
 	utils.CleanupOrphanedCmdProcesses()
 
 	goodlink_config.DeleteLocalConfig()
+	if err := goodlink_config.Init(); err != nil {
+		log.Println("拉取运行配置失败:", err)
+	} else {
+		info := goodlink_config.GetConfig()
+		ui2.SetRuntimeConf(config.RuntimeConf{
+			Redis: config.RuntimeRedis{
+				Addr:    info.Redis.Addr,
+				TlsAddr: info.Redis.TlsAddr,
+				Passwd:  info.Redis.Passwd,
+				ID:      info.Redis.Id,
+			},
+			StunList: info.StunList,
+		})
+	}
 
 	ui2.InitTrayIcons()
-
-	ui2.SetForceAutoConnect(autoConnect)
-	ui2.SetPortRetry(waitPid > 0)
 	ui2.Init()
 
 	uiURL, err := ui2.StartServer()
@@ -119,7 +149,7 @@ func main() {
 
 	// 无任何参数时启动 UI（Windows/Linux/macOS）
 	if len(os.Args) <= 1 {
-		runUI(true, false, 0)
+		runUI(true)
 		return
 	}
 
@@ -128,8 +158,8 @@ func main() {
 		return
 	}
 
-	if openBrowser, autoConnect, waitPid, ok := config.ParseUILaunchArgs(os.Args[1:]); ok {
-		runUI(openBrowser, autoConnect, waitPid)
+	if openBrowser, ok := config.ParseUILaunchArgs(os.Args[1:]); ok {
+		runUI(openBrowser)
 		return
 	}
 
@@ -140,9 +170,11 @@ func main() {
 		return
 	}
 
-	goodlink_config.Init()
+	if _, ok := config.LoadRuntimeConfFromEnv(); !ok {
+		goodlink_config.Init()
+	}
 
-	if !config.FromUI() || config.GetTunKey() == "" {
+	if !config.FromUI() || config.Arg_service_id == "" {
 		flag.Usage()
 		os.Exit(0)
 	}

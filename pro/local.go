@@ -254,28 +254,33 @@ func watchUIForwardConfig(mgr *proxy.ForwardManager, last string) {
 		if m_local_state == 0 {
 			return
 		}
-		cfg, err := config.LoadUIConfig(config.UIConfigPath())
+		svc, err := config.GetService(m_svc.ID)
 		if err != nil {
 			continue
 		}
-		if err := config.NormalizeAndValidate(&cfg); err != nil {
-			fp := cfg.ForwardFingerprint()
+		fp := svc.ForwardFingerprint()
+		if err := func() error {
+			cfg, err := config.LoadUIConfig(config.UIConfigPath())
+			if err != nil {
+				return err
+			}
+			return config.NormalizeAndValidate(&cfg)
+		}(); err != nil {
 			if fp != lastFail {
 				log.Printf("[proxy] 转发配置无效: %v", err)
 				lastFail = fp
 			}
 			continue
 		}
-		fp := cfg.ForwardFingerprint()
 		if fp == last {
 			continue
 		}
-		if cfg.LocalMode != config.LocalModeForward {
+		if svc.LocalMode != config.LocalModeForward {
 			last = fp
 			lastFail = ""
 			continue
 		}
-		rules, err := proxy.RulesFromUI(cfg.ForwardRules)
+		rules, err := proxy.RulesFromUI(svc.ForwardRules)
 		if err != nil {
 			if fp != lastFail {
 				log.Printf("[proxy] 转发配置解析失败: %v", err)
@@ -300,17 +305,14 @@ func setupForwardMode() (bool, error) {
 	if !config.FromUI() {
 		return false, nil
 	}
-	cfg, err := config.LoadUIConfig(config.UIConfigPath())
+	svc, err := config.GetService(m_svc.ID)
 	if err != nil {
 		return false, err
 	}
-	if err := config.NormalizeAndValidate(&cfg); err != nil {
-		return false, err
-	}
-	if cfg.LocalMode != config.LocalModeForward {
+	if svc.LocalMode != config.LocalModeForward {
 		return false, nil
 	}
-	rules, err := proxy.RulesFromUI(cfg.ForwardRules)
+	rules, err := proxy.RulesFromUI(svc.ForwardRules)
 	if err != nil {
 		return false, err
 	}
@@ -332,7 +334,7 @@ func setupForwardMode() (bool, error) {
 		log.Printf("代理服务已启动: socks5://%s  http://%s", listenAddr, listenAddr)
 	}
 	ReportProxyAddr(listenAddr)
-	go watchUIForwardConfig(m_forward_mgr, cfg.ForwardFingerprint())
+	go watchUIForwardConfig(m_forward_mgr, svc.ForwardFingerprint())
 	return true, nil
 }
 
@@ -359,7 +361,7 @@ func RunLocal() error {
 		log.Printf("Local端地址: %v", addr)
 
 		if !useForward && !g_netstack_started {
-			if err := netstack.Start(); err != nil {
+			if err := netstack.Start(m_svc.AdapterName(), m_svc.TunIP); err != nil {
 				if strings.Contains(err.Error(), "管理员权限") {
 					UpdateStartButtonStatue(StatusNeedAdmin)
 					time.Sleep(1 * time.Second) // 保证 UI 读到状态并关闭自动重启后再退出
@@ -395,8 +397,8 @@ func RunLocal() error {
 			log.Println("[proxy] QUIC连接已设置，开始转发")
 		} else if !useForward {
 			netstack.SetForWarder(quic_conn)
-			log.Printf("Remote端IP: %s", netstack.NetStackIP)
-			ReportProxyAddr(net.JoinHostPort(netstack.NetStackIP, strconv.Itoa(proxy.PROXY_PORT)))
+			log.Printf("Remote端IP: %s", m_svc.TunIP)
+			ReportProxyAddr(net.JoinHostPort(m_svc.TunIP, strconv.Itoa(proxy.PROXY_PORT)))
 		}
 
 		m_local_state = 2

@@ -16,23 +16,45 @@ const workerPidFileName = "goodlink-worker.pid"
 
 func workerPidCandidates() []string {
 	var out []string
+	collect := func(dir string) {
+		matches, _ := filepath.Glob(filepath.Join(dir, "goodlink-worker-*.pid"))
+		out = append(out, matches...)
+		legacy := filepath.Join(dir, workerPidFileName)
+		if _, err := os.Stat(legacy); err == nil {
+			out = append(out, legacy)
+		}
+	}
 	if dir, err := exeDir(); err == nil {
-		out = append(out, filepath.Join(dir, workerPidFileName))
+		collect(dir)
 	}
 	if ad := os.Getenv("LOCALAPPDATA"); ad != "" {
+		collect(filepath.Join(ad, "Goodlink"))
 		out = append(out, filepath.Join(ad, "Goodlink", "worker.pid"))
 	}
 	return out
 }
 
-func WriteWorkerPid(pid int) {
+func workerPidName(serviceID string) string {
+	id := strings.Map(func(r rune) rune {
+		if r == '/' || r == '\\' || r == ':' {
+			return '_'
+		}
+		return r
+	}, serviceID)
+	if id == "" {
+		id = "default"
+	}
+	return "goodlink-worker-" + id + ".pid"
+}
+
+func WriteWorkerPid(serviceID string, pid int) {
 	if pid <= 0 {
 		return
 	}
 	content := []byte(strconv.Itoa(pid))
+	name := workerPidName(serviceID)
 	if dir, err := exeDir(); err == nil {
-		p := filepath.Join(dir, workerPidFileName)
-		if err := os.WriteFile(p, content, 0644); err == nil {
+		if err := os.WriteFile(filepath.Join(dir, name), content, 0644); err == nil {
 			return
 		}
 	}
@@ -44,7 +66,17 @@ func WriteWorkerPid(pid int) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return
 	}
-	_ = os.WriteFile(filepath.Join(dir, "worker.pid"), content, 0644)
+	_ = os.WriteFile(filepath.Join(dir, name), content, 0644)
+}
+
+func RemoveWorkerPid(serviceID string) {
+	name := workerPidName(serviceID)
+	if dir, err := exeDir(); err == nil {
+		_ = os.Remove(filepath.Join(dir, name))
+	}
+	if ad := os.Getenv("LOCALAPPDATA"); ad != "" {
+		_ = os.Remove(filepath.Join(ad, "Goodlink", name))
+	}
 }
 
 func KillProcess(pid int) {

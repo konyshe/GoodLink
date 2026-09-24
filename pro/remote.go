@@ -34,7 +34,7 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 		return errors.New("两端版本不兼容")
 	}
 
-	remoteTransport := config.GetTransport()
+	remoteTransport := m_svc.Transport
 	redisJson.Transport = remoteTransport
 	log.Printf("会话 %s 传输协议: %s (由Remote端决定)", sessionID, remoteTransport)
 

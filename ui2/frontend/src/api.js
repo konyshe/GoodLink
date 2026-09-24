@@ -5,47 +5,47 @@ export async function generateKey() {
   return data.tunKey || null;
 }
 
-export async function start(workType, tunKey, localMode, forwardRules, transport) {
-  const resp = await fetch("/api/start", {
+async function postJSON(url, body) {
+  const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ workType, tunKey, localMode, transport, forwardRules }),
+    body: JSON.stringify(body || {}),
   });
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    return { error: data.error || "启动失败" };
-  }
+  if (!resp.ok) return { error: data.error || "请求失败", state: null };
   return { error: null, state: data };
 }
 
-export async function stop() {
-  await fetch("/api/stop", { method: "POST" });
+export function createService() {
+  return postJSON("/api/services", {});
 }
 
-export async function applyForwards(localMode, forwardRules) {
-  const resp = await fetch("/api/forwards", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ localMode, forwardRules }),
+export function deleteService(id) {
+  return fetch(`/api/services/${encodeURIComponent(id)}`, { method: "DELETE" }).then(async (resp) => {
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) return { error: data.error || "删除失败" };
+    return { error: null, state: data };
   });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    return { error: data.error || "保存失败" };
-  }
-  return { error: null };
 }
 
-export async function saveAutoStart(autoStart, workType, tunKey, localMode, forwardRules, transport) {
-  const resp = await fetch("/api/autostart", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ autoStart, workType, tunKey, localMode, transport, forwardRules }),
-  });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    return { error: data.error || "保存失败" };
-  }
-  return { error: null, state: data };
+export function renameService(id, name) {
+  return postJSON(`/api/services/${encodeURIComponent(id)}/rename`, { name });
+}
+
+export function start(id, workType, tunKey, localMode, forwardRules, transport) {
+  return postJSON(`/api/services/${encodeURIComponent(id)}/start`, { workType, tunKey, localMode, transport, forwardRules });
+}
+
+export function stop(id) {
+  return postJSON(`/api/services/${encodeURIComponent(id)}/stop`, {});
+}
+
+export function applyForwards(id, localMode, forwardRules) {
+  return postJSON(`/api/services/${encodeURIComponent(id)}/forwards`, { localMode, forwardRules });
+}
+
+export function saveAutoStart(id, autoStart, workType, tunKey, localMode, forwardRules, transport) {
+  return postJSON(`/api/services/${encodeURIComponent(id)}/autostart`, { autoStart, workType, tunKey, localMode, transport, forwardRules });
 }
 
 export async function fetchState() {
@@ -59,13 +59,13 @@ export async function probeState(timeoutMs = 2500) {
   try {
     const resp = await fetch("/api/state", { cache: "no-store", signal: ctrl.signal });
     if (!resp.ok) {
-      return { up: false, version: "", elevating: false, timedOut: false };
+      return { up: false, version: "", timedOut: false };
     }
     const data = await resp.json().catch(() => ({}));
-    return { up: true, version: data.version || "", elevating: !!data.elevating, timedOut: false };
+    return { up: true, version: data.version || "", timedOut: false };
   } catch (err) {
     const timedOut = !!err && (err.name === "AbortError" || err.name === "TimeoutError");
-    return { up: false, version: "", elevating: false, timedOut };
+    return { up: false, version: "", timedOut };
   } finally {
     clearTimeout(timer);
   }

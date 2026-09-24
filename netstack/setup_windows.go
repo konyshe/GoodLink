@@ -35,7 +35,7 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 		Metric:      0,
 	}
 	if err = link.SetRoutes([]*winipcfg.RouteData{routeData}); err != nil {
-		return fmt.Errorf("set route %s via Goodlink: %w", destPrefix, err)
+		return fmt.Errorf("set route %s via %s: %w", destPrefix, NetStackName, err)
 	}
 
 	// 2. 网卡主 IP

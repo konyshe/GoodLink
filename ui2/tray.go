@@ -5,8 +5,6 @@ package ui2
 import (
 	"sync/atomic"
 
-	"goodlink/config"
-
 	"github.com/getlantern/systray"
 )
 
@@ -51,6 +49,14 @@ func UpdateTrayIcon(status int) {
 	}
 }
 
+func refreshTray() {
+	if !trayReady.Load() {
+		return
+	}
+	UpdateTrayIcon(aggregateStatus())
+	systray.SetTooltip(trayTooltip())
+}
+
 func RunLoop(uiURL string) {
 	systray.Run(func() {
 		SetupTray(uiURL)
@@ -58,13 +64,8 @@ func RunLoop(uiURL string) {
 }
 
 func SetupTray(uiURL string) {
-	stateMu.RLock()
-	st := m_status
-	stateMu.RUnlock()
-
 	trayReady.Store(true)
-	UpdateTrayIcon(st)
-	systray.SetTooltip(M_APP_TITLE + "  v" + config.GetVersion())
+	refreshTray()
 
 	// 创建菜单，确保只有一个退出选项
 	mOpen := systray.AddMenuItem("打开控制页面", "打开控制页面")

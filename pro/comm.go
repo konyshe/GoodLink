@@ -25,15 +25,17 @@ var (
 	m_tun_key     string
 	m_md5_tun_key string
 	m_upnp_bind   upnp.Upnp
+	m_svc         config.UIService
 )
 
-func Init(tun_key string) error {
+func Init(svc config.UIService) error {
 	var redis_addr string
 	var redis_pass string
 	var redis_id int
 
-	m_tun_key = tun_key
-	m_md5_tun_key = go2.Md5Encode(tun_key)
+	m_svc = svc
+	m_tun_key = svc.TunKey
+	m_md5_tun_key = go2.Md5Encode(svc.TunKey)
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true, // 如果使用自签名证书，设置为true跳过证书验证（仅用于测试
@@ -42,14 +44,25 @@ func Init(tun_key string) error {
 	}
 
 	if config.Arg_redis_addr == "" && config.Arg_redis_tls_addr == "" {
-		redis_addr = goodlink_config.GetAddr()
-		redis_pass = goodlink_config.GetPasswd()
-		redis_id = goodlink_config.GetID()
-		if goodlink_config.GetTlsAddr() != "" {
-			redis_addr = goodlink_config.GetTlsAddr()
+		if rc, ok := config.LoadRuntimeConfFromEnv(); ok {
+			redis_addr = rc.Redis.Addr
+			redis_pass = rc.Redis.Passwd
+			redis_id = rc.Redis.ID
+			if rc.Redis.TlsAddr != "" {
+				redis_addr = rc.Redis.TlsAddr
+			} else {
+				tlsConfig = nil
+			}
 		} else {
 			redis_addr = goodlink_config.GetAddr()
-			tlsConfig = nil
+			redis_pass = goodlink_config.GetPasswd()
+			redis_id = goodlink_config.GetID()
+			if goodlink_config.GetTlsAddr() != "" {
+				redis_addr = goodlink_config.GetTlsAddr()
+			} else {
+				redis_addr = goodlink_config.GetAddr()
+				tlsConfig = nil
+			}
 		}
 
 	} else if config.Arg_redis_tls_addr != "" {
@@ -77,6 +90,7 @@ func Init(tun_key string) error {
 		return errors.New("Redis失败, 请重启程序")
 	}
 
+	m_upnp_bind.Description = "goodlink-" + svc.ID
 	m_upnp_bind.Init()
 	m_upnp_bind.CleanMappings()
 

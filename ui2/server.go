@@ -22,22 +22,16 @@ const (
 	uiAddrRetryWaitMS = 200
 )
 
-// listenUI 优先使用固定端口。提权重启时旧进程刚退出, 端口可能尚未释放,
-// 此时重试若干次, 避免回退随机端口导致旧页面无法重连。
+// listenUI 优先使用固定端口。端口被占用时重试若干次, 避免回退随机端口导致旧页面无法重连。
 func listenUI() (net.Listener, error) {
-	retries := 1
-	if portRetryEnabled() {
-		retries = uiAddrRetries
-	}
-
 	var err error
-	for i := 0; i < retries; i++ {
+	for i := 0; i < uiAddrRetries; i++ {
 		var ln net.Listener
 		ln, err = net.Listen("tcp4", defaultUIAddr)
 		if err == nil {
 			return ln, nil
 		}
-		if i+1 < retries {
+		if i+1 < uiAddrRetries {
 			time.Sleep(uiAddrRetryWaitMS * time.Millisecond)
 		}
 	}
@@ -61,10 +55,14 @@ func StartServer() (string, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/state", handleState)
-	mux.HandleFunc("/api/start", handleStart)
-	mux.HandleFunc("/api/stop", handleStop)
-	mux.HandleFunc("/api/forwards", handleForwards)
-	mux.HandleFunc("/api/autostart", handleAutoStart)
+	mux.HandleFunc("POST /api/services", handleCreateService)
+	mux.HandleFunc("DELETE /api/services/{id}", handleDeleteService)
+	mux.HandleFunc("POST /api/services/{id}/rename", handleRenameService)
+	mux.HandleFunc("POST /api/services/{id}/start", handleStartService)
+	mux.HandleFunc("POST /api/services/{id}/stop", handleStopService)
+	mux.HandleFunc("POST /api/services/{id}/forwards", handleServiceForwards)
+	mux.HandleFunc("POST /api/services/{id}/autostart", handleServiceAutoStart)
+	mux.HandleFunc("POST /api/services/{id}/config", handleServiceConfig)
 	mux.HandleFunc("/api/key/generate", handleGenerateKey)
 	mux.HandleFunc("/api/config", handleConfig)
 	mux.HandleFunc("/api/events", handleEvents)
@@ -94,78 +92,110 @@ func handleState(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, snapshot(true))
 }
 
-func handleStart(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+type serviceBody struct {
+	Name         string                 `json:"name"`
+	WorkType     string                 `json:"workType"`
+	TunKey       string                 `json:"tunKey"`
+	LocalMode    string                 `json:"localMode"`
+	Transport    string                 `json:"transport"`
+	AutoStart    bool                   `json:"autoStart"`
+	ForwardRules []config.UIForwardRule `json:"forwardRules"`
+}
+
+func serviceID(r *http.Request) string {
+	return r.PathValue("id")
+}
+
+func writeServiceErr(w http.ResponseWriter, err error) {
+	code := http.StatusBadRequest
+	msg := err.Error()
+	if msg == "already started" || msg == "busy" {
+		code = http.StatusConflict
+	}
+	writeJSON(w, code, map[string]string{"error": msg})
+}
+
+func handleCreateService(w http.ResponseWriter, r *http.Request) {
+	view, err := HandleCreateService()
+	if err != nil {
+		writeServiceErr(w, err)
 		return
 	}
-	var req struct {
-		WorkType     string                 `json:"workType"`
-		TunKey       string                 `json:"tunKey"`
-		LocalMode    string                 `json:"localMode"`
-		Transport    string                 `json:"transport"`
-		ForwardRules []config.UIForwardRule `json:"forwardRules"`
+	writeJSON(w, http.StatusOK, view)
+}
+
+func handleDeleteService(w http.ResponseWriter, r *http.Request) {
+	if err := HandleDeleteService(serviceID(r)); err != nil {
+		writeServiceErr(w, err)
+		return
 	}
+	writeJSON(w, http.StatusOK, snapshot(false))
+}
+
+func handleRenameService(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
+		return
+	}
+	if err := HandleRename(serviceID(r), req.Name); err != nil {
+		writeServiceErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, snapshot(false))
+}
+
+func handleStartService(w http.ResponseWriter, r *http.Request) {
+	var req serviceBody
 	_ = json.NewDecoder(r.Body).Decode(&req)
-	if err := HandleStart(req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
-		code := http.StatusBadRequest
-		if err.Error() == "already started" || err.Error() == "busy" {
-			code = http.StatusConflict
-		}
-		writeJSON(w, code, map[string]string{"error": err.Error()})
+	if err := HandleStart(serviceID(r), req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
+		writeServiceErr(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, snapshot(false))
 }
 
-func handleForwards(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req struct {
-		LocalMode    string                 `json:"localMode"`
-		ForwardRules []config.UIForwardRule `json:"forwardRules"`
-	}
+func handleStopService(w http.ResponseWriter, r *http.Request) {
+	HandleStop(serviceID(r))
+	writeJSON(w, http.StatusOK, snapshot(false))
+}
+
+func handleServiceForwards(w http.ResponseWriter, r *http.Request) {
+	var req serviceBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
 		return
 	}
-	if err := HandleForwards(req.LocalMode, req.ForwardRules); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+	if err := HandleForwards(serviceID(r), req.LocalMode, req.ForwardRules); err != nil {
+		writeServiceErr(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, snapshot(false))
 }
 
-func handleStop(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	HandleStop()
-	writeJSON(w, http.StatusOK, snapshot(false))
-}
-
-func handleAutoStart(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req struct {
-		AutoStart    bool                   `json:"autoStart"`
-		WorkType     string                 `json:"workType"`
-		TunKey       string                 `json:"tunKey"`
-		LocalMode    string                 `json:"localMode"`
-		Transport    string                 `json:"transport"`
-		ForwardRules []config.UIForwardRule `json:"forwardRules"`
-	}
+func handleServiceAutoStart(w http.ResponseWriter, r *http.Request) {
+	var req serviceBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
 		return
 	}
-	if err := HandleSetAutoStart(req.AutoStart, req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+	if err := HandleSetAutoStart(serviceID(r), req.AutoStart, req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
+		writeServiceErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, snapshot(false))
+}
+
+func handleServiceConfig(w http.ResponseWriter, r *http.Request) {
+	var req serviceBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
+		return
+	}
+	if err := HandleUpdateConfig(serviceID(r), req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules, req.AutoStart); err != nil {
+		writeServiceErr(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, snapshot(false))
@@ -174,10 +204,6 @@ func handleAutoStart(w http.ResponseWriter, r *http.Request) {
 func handleGenerateKey(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if !othersEnabled() {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "busy"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"tunKey": GenerateKey()})

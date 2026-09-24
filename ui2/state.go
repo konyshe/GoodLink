@@ -2,13 +2,13 @@ package ui2
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 
 	"goodlink/config"
-	"goodlink/netstack"
 	"goodlink/proxy"
 	"goodlink/utils"
 )
@@ -48,39 +48,51 @@ type ProxyInfo struct {
 	Fallback bool   `json:"fallback,omitempty"`
 }
 
-type UIState struct {
-	Version      string                 `json:"version"`
+type ServiceView struct {
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
 	WorkType     string                 `json:"workType"`
 	TunKey       string                 `json:"tunKey"`
 	LocalMode    string                 `json:"localMode"`
 	Transport    string                 `json:"transport"`
+	TunIP        string                 `json:"tunIP"`
 	AutoStart    bool                   `json:"autoStart"`
 	ForwardRules []config.UIForwardRule `json:"forwardRules"`
-	IsAdmin      bool                   `json:"isAdmin"`
-	Elevating    bool                   `json:"elevating"`
 	Status       int                    `json:"status"`
-	NAT          NATInfo                `json:"nat"`
-	Upgrade      UpgradeInfo            `json:"upgrade"`
 	Proxy        ProxyInfo              `json:"proxy"`
 	Logs         []string               `json:"logs,omitempty"`
 }
 
+type UIState struct {
+	Version  string        `json:"version"`
+	IsAdmin  bool          `json:"isAdmin"`
+	NAT      NATInfo       `json:"nat"`
+	Upgrade  UpgradeInfo   `json:"upgrade"`
+	Services []ServiceView `json:"services"`
+	Logs     []string      `json:"logs,omitempty"`
+}
+
+type serviceState struct {
+	cfg       config.UIService
+	status    int
+	proxyHost string
+	proxyPort int
+}
+
 var (
-	stateMu         sync.RWMutex
-	m_work_type     string
-	m_tun_key       string
-	m_local_mode    string
-	m_transport     string
-	m_auto_start    bool
-	m_forward_rules []config.UIForwardRule
-	m_status        int
-	m_nat           NATInfo
-	m_upgrade       UpgradeInfo
-	m_proxy_host    string
-	m_proxy_port    int
-	m_elevating     bool
-	sseHubInst      = newSSEHub()
+	stateMu    sync.RWMutex
+	m_services []*serviceState
+	m_index    = map[string]*serviceState{}
+	m_nat      NATInfo
+	m_upgrade  UpgradeInfo
+	sseHubInst = newSSEHub()
+
+	runtimeConf config.RuntimeConf
 )
+
+func SetRuntimeConf(c config.RuntimeConf) {
+	runtimeConf = c
+}
 
 type sseHub struct {
 	mu      sync.Mutex
@@ -129,44 +141,65 @@ func sseMessage(event string, v any) []byte {
 
 func broadcastState() {
 	sseHubInst.broadcast(sseMessage("state", snapshot(false)))
+	refreshTray()
 }
 
-func broadcastLog(line string) {
-	sseHubInst.broadcast(sseMessage("log", map[string]string{"line": line}))
+func broadcastLog(serviceID, line string) {
+	sseHubInst.broadcast(sseMessage("log", map[string]string{
+		"serviceId": serviceID,
+		"line":      line,
+	}))
 }
 
 func snapshot(includeLogs bool) UIState {
 	stateMu.RLock()
-	localMode := m_local_mode
-	if localMode == "" {
-		localMode = config.LocalModeTUN
+	services := make([]ServiceView, 0, len(m_services))
+	for _, svc := range m_services {
+		view := serviceViewLocked(svc, includeLogs)
+		services = append(services, view)
 	}
-	transport := m_transport
-	if transport == "" {
-		transport = config.TransportKCP
-	}
-	rules := make([]config.UIForwardRule, len(m_forward_rules))
-	copy(rules, m_forward_rules)
 	st := UIState{
-		Version:      config.GetVersion(),
-		WorkType:     m_work_type,
-		TunKey:       m_tun_key,
-		LocalMode:    localMode,
-		Transport:    transport,
-		AutoStart:    m_auto_start,
-		ForwardRules: rules,
-		IsAdmin:      utils.IsAdmin(),
-		Elevating:    m_elevating,
-		Status:       m_status,
-		NAT:          m_nat,
-		Upgrade:      m_upgrade,
-		Proxy:        proxyInfoLocked(localMode),
+		Version:  config.GetVersion(),
+		IsAdmin:  utils.IsAdmin(),
+		NAT:      m_nat,
+		Upgrade:  m_upgrade,
+		Services: services,
 	}
 	stateMu.RUnlock()
 	if includeLogs {
-		st.Logs = snapshotLogs()
+		st.Logs = snapshotSharedLogs()
 	}
 	return st
+}
+
+func serviceViewLocked(svc *serviceState, includeLogs bool) ServiceView {
+	rules := make([]config.UIForwardRule, len(svc.cfg.ForwardRules))
+	copy(rules, svc.cfg.ForwardRules)
+	localMode := svc.cfg.LocalMode
+	if localMode == "" {
+		localMode = config.LocalModeTUN
+	}
+	transport := svc.cfg.Transport
+	if transport == "" {
+		transport = config.TransportKCP
+	}
+	view := ServiceView{
+		ID:           svc.cfg.ID,
+		Name:         svc.cfg.Name,
+		WorkType:     svc.cfg.WorkType,
+		TunKey:       svc.cfg.TunKey,
+		LocalMode:    localMode,
+		Transport:    transport,
+		TunIP:        svc.cfg.TunIP,
+		AutoStart:    svc.cfg.AutoStart,
+		ForwardRules: rules,
+		Status:       svc.status,
+		Proxy:        proxyInfoLocked(svc),
+	}
+	if includeLogs {
+		view.Logs = snapshotServiceLogs(svc.cfg.ID)
+	}
+	return view
 }
 
 func makeProxyInfo(host string, port int, fallback bool) ProxyInfo {
@@ -178,16 +211,19 @@ func makeProxyInfo(host string, port int, fallback bool) ProxyInfo {
 	}
 }
 
-// proxyInfoLocked 需在持有 stateMu 读锁时调用。
-func proxyInfoLocked(localMode string) ProxyInfo {
-	if m_work_type != workTypeLocal {
+func proxyInfoLocked(svc *serviceState) ProxyInfo {
+	if svc.cfg.WorkType != workTypeLocal {
 		return ProxyInfo{}
 	}
-	if localMode == config.LocalModeTUN {
-		return makeProxyInfo(netstack.NetStackIP, proxy.PROXY_PORT, false)
+	if svc.cfg.LocalMode == config.LocalModeTUN {
+		ip := svc.cfg.TunIP
+		if ip == "" {
+			ip = "192.17.19.1"
+		}
+		return makeProxyInfo(ip, proxy.PROXY_PORT, false)
 	}
-	host := m_proxy_host
-	port := m_proxy_port
+	host := svc.proxyHost
+	port := svc.proxyPort
 	if host == "" || port <= 0 {
 		host = proxy.BuiltinProxyHost
 		port = proxy.PROXY_PORT
@@ -195,7 +231,34 @@ func proxyInfoLocked(localMode string) ProxyInfo {
 	return makeProxyInfo(host, port, port != proxy.PROXY_PORT)
 }
 
-func setProxyListen(addr string) {
+func lookupService(id string) (*serviceState, bool) {
+	svc, ok := m_index[id]
+	return svc, ok
+}
+
+func serviceIdle(svc *serviceState) bool {
+	return svc.status == StatusDetecting || svc.status == StatusIdle || svc.status == StatusConnectFailed || svc.status == StatusConnectingNAT4
+}
+
+func setServiceStatus(id string, status int) {
+	stateMu.Lock()
+	if svc, ok := lookupService(id); ok {
+		svc.status = status
+	}
+	stateMu.Unlock()
+	broadcastState()
+}
+
+func getServiceStatus(id string) int {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	if svc, ok := lookupService(id); ok {
+		return svc.status
+	}
+	return StatusIdle
+}
+
+func setProxyListen(id, addr string) {
 	host, portStr, err := net.SplitHostPort(strings.TrimSpace(addr))
 	if err != nil {
 		return
@@ -205,132 +268,65 @@ func setProxyListen(addr string) {
 		return
 	}
 	stateMu.Lock()
-	m_proxy_host = host
-	m_proxy_port = port
+	if svc, ok := lookupService(id); ok {
+		svc.proxyHost = host
+		svc.proxyPort = port
+	}
 	stateMu.Unlock()
 	broadcastState()
 }
 
-func resetProxyListen() {
+func resetProxyListen(id string) {
 	stateMu.Lock()
-	m_proxy_host = ""
-	m_proxy_port = 0
+	if svc, ok := lookupService(id); ok {
+		svc.proxyHost = ""
+		svc.proxyPort = 0
+	}
 	stateMu.Unlock()
 	broadcastState()
 }
 
-// setElevating 标记正在以管理员权限重启, 前端据此显示重启遮罩而非"程序已退出"
-func setElevating(elevating bool) {
-	stateMu.Lock()
-	m_elevating = elevating
-	stateMu.Unlock()
-	broadcastState()
-}
-
-func setStatus(status int) {
-	stateMu.Lock()
-	m_status = status
-	stateMu.Unlock()
-	UpdateTrayIcon(status)
-	broadcastState()
-}
-
-func getStatus() int {
+func serviceName(id string) string {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
-	return m_status
-}
-
-func othersEnabled() bool {
-	s := getStatus()
-	return s == StatusDetecting || s == StatusIdle
-}
-
-// 获取当前工作类型
-func GetWorkType() string {
-	stateMu.RLock()
-	defer stateMu.RUnlock()
-	return m_work_type
-}
-
-func getTunKey() string {
-	stateMu.RLock()
-	defer stateMu.RUnlock()
-	return m_tun_key
-}
-
-func getLocalMode() string {
-	stateMu.RLock()
-	defer stateMu.RUnlock()
-	return m_local_mode
-}
-
-func getTransport() string {
-	stateMu.RLock()
-	defer stateMu.RUnlock()
-	if m_transport == "" {
-		return config.TransportKCP
+	if svc, ok := lookupService(id); ok && svc.cfg.Name != "" {
+		return svc.cfg.Name
 	}
-	return m_transport
+	return id
 }
 
-func getForwardRules() []config.UIForwardRule {
+func allServicesConfig() config.UIConfig {
 	stateMu.RLock()
 	defer stateMu.RUnlock()
-	out := make([]config.UIForwardRule, len(m_forward_rules))
-	copy(out, m_forward_rules)
-	return out
+	cfg := config.UIConfig{Services: make([]config.UIService, 0, len(m_services))}
+	for _, svc := range m_services {
+		cfg.Services = append(cfg.Services, svc.cfg)
+	}
+	return cfg
 }
 
-func setWorkTypeAndKey(workType, tunKey string) {
+func replaceServices(list []config.UIService) {
 	stateMu.Lock()
-	if workType == workTypeLocal || workType == workTypeRemote {
-		m_work_type = workType
-	}
-	if tunKey != "" {
-		m_tun_key = tunKey
+	m_services = make([]*serviceState, 0, len(list))
+	m_index = map[string]*serviceState{}
+	for _, item := range list {
+		svc := &serviceState{cfg: item, status: StatusDetecting}
+		m_services = append(m_services, svc)
+		m_index[item.ID] = svc
 	}
 	stateMu.Unlock()
 }
 
-func setLocalModeAndRules(localMode string, rules []config.UIForwardRule) error {
-	cfg := config.UIConfig{
-		LocalMode:    localMode,
-		ForwardRules: rules,
-	}
-	if err := config.NormalizeAndValidate(&cfg); err != nil {
-		return err
-	}
+func mutateService(id string, fn func(*serviceState) error) error {
 	stateMu.Lock()
-	m_local_mode = cfg.LocalMode
-	m_forward_rules = cfg.ForwardRules
-	stateMu.Unlock()
-	return nil
-}
-
-func setTransport(transport string) {
-	transport = config.NormalizeTransport(transport)
-	if transport != config.TransportQUIC && transport != config.TransportKCP {
-		transport = config.TransportKCP
+	defer stateMu.Unlock()
+	svc, ok := lookupService(id)
+	if !ok {
+		return fmt.Errorf("服务不存在")
 	}
-	stateMu.Lock()
-	m_transport = transport
-	stateMu.Unlock()
+	return fn(svc)
 }
 
-func getAutoStart() bool {
-	stateMu.RLock()
-	defer stateMu.RUnlock()
-	return m_auto_start
-}
-
-func setAutoStart(enabled bool) {
-	stateMu.Lock()
-	m_auto_start = enabled
-	stateMu.Unlock()
-}
-
-// SetNATHint 根据 STUN 检测结果显示 NAT 类型提示
 func SetNATHint(isNAT4 bool) {
 	stateMu.Lock()
 	m_nat = NATInfo{Ready: true, IsNAT4: isNAT4}
@@ -393,4 +389,74 @@ func setUpgradeProgress(downloading bool, percent int, done bool, errStr string)
 
 func broadcastUpgrade(info UpgradeInfo) {
 	sseHubInst.broadcast(sseMessage("upgrade", info))
+}
+
+func aggregateStatus() int {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	best := StatusIdle
+	rank := map[int]int{
+		StatusIdle:           0,
+		StatusDetecting:      0,
+		StatusStarting:       1,
+		StatusConnecting:     1,
+		StatusStopping:       1,
+		StatusConnected:      2,
+		StatusRunning:        2,
+		StatusConnectingNAT4: 3,
+		StatusConnectFailed:  3,
+	}
+	for _, svc := range m_services {
+		if rank[svc.status] > rank[best] {
+			best = svc.status
+		}
+	}
+	return best
+}
+
+func trayTooltip() string {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	if len(m_services) == 0 {
+		return M_APP_TITLE + "  v" + config.GetVersion()
+	}
+	lines := make([]string, 0, len(m_services))
+	for _, svc := range m_services {
+		lines = append(lines, svc.cfg.Name+" - "+statusLabel(svc.status))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func statusLabel(status int) string {
+	switch status {
+	case StatusIdle:
+		return "待启动"
+	case StatusStarting:
+		return "启动中"
+	case StatusConnecting:
+		return "连接中"
+	case StatusConnectingNAT4:
+		return "无法直连"
+	case StatusConnected:
+		return "已连接"
+	case StatusRunning:
+		return "运行中"
+	case StatusStopping:
+		return "停止中"
+	case StatusConnectFailed:
+		return "连接失败"
+	default:
+		return "检测中"
+	}
+}
+
+func anyServiceActive() bool {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
+	for _, svc := range m_services {
+		if !serviceIdle(svc) {
+			return true
+		}
+	}
+	return false
 }

@@ -17,7 +17,7 @@ func (this *AddPortMapping) Send(localPort, remotePort int, protocol string) boo
 		{Name: "NewEnabled", Content: "1"},
 		{Name: "NewInternalClient", Content: this.upnp.LocalHost},
 		{Name: "NewLeaseDuration", Content: "0"},
-		{Name: "NewPortMappingDescription", Content: "goodlink"},
+		{Name: "NewPortMappingDescription", Content: this.upnp.mappingDescription()},
 		{Name: "NewRemoteHost"},
 	})
 	return err == nil && status == 200

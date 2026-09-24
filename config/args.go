@@ -25,6 +25,7 @@ var (
 	Arg_redis_id       int
 
 	Arg_ui              *bool
+	Arg_service_id      string
 	Arg_self_update     bool
 	Arg_upgrade_zip     string
 	Arg_upgrade_waitpid int
@@ -44,12 +45,12 @@ func Help() {
 	flag.IntVar(&Arg_redis_id, "redis_id", 15, "Redis服务可使用的表ID")
 
 	Arg_ui = flag.Bool("ui", false, "由UI启动, 从 goodlink.json 读取并监听转发配置")
+	flag.StringVar(&Arg_service_id, "service-id", "", "由UI启动时, 本进程负责的服务ID")
 	flag.BoolVar(&Arg_self_update, "self-update", false, "内部使用: 更新进程, 覆盖程序后重启")
 	flag.StringVar(&Arg_upgrade_zip, "zip", "", "内部使用: 待解压的升级压缩包路径")
 	flag.IntVar(&Arg_upgrade_waitpid, "wait-pid", 0, "内部使用: 等待退出的主进程PID")
 	flag.StringVar(&Arg_upgrade_target, "target", "", "内部使用: 要覆盖的主程序路径")
 	flag.Bool("no-browser", false, "启动UI但不自动打开浏览器")
-	flag.Bool("auto-connect", false, "内部使用: 提权重启后自动继续本次连接")
 
 	flag.Parse()
 
@@ -118,53 +119,20 @@ func parseBoolFlag(a, name string) (val bool, matched bool) {
 	return false, false
 }
 
-// ParseUILaunchArgs 解析仅由 UI 使用的启动参数（--no-browser / --auto-connect / --wait-pid）。
+// ParseUILaunchArgs 解析仅由 UI 使用的启动参数（--no-browser）。
 // 出现其它参数时返回 ok=false, 交由常规 CLI 流程处理。
-func ParseUILaunchArgs(args []string) (openBrowser, autoConnect bool, waitPid int, ok bool) {
+func ParseUILaunchArgs(args []string) (openBrowser bool, ok bool) {
 	if len(args) == 0 {
-		return true, false, 0, false
+		return true, false
 	}
 
 	openBrowser = true
-	for i := 0; i < len(args); i++ {
-		a := args[i]
+	for _, a := range args {
 		if v, matched := parseBoolFlag(a, "no-browser"); matched {
 			openBrowser = !v
 			continue
 		}
-		if v, matched := parseBoolFlag(a, "auto-connect"); matched {
-			autoConnect = v
-			continue
-		}
-		if a == "--wait-pid" || a == "-wait-pid" {
-			if i+1 >= len(args) {
-				return true, false, 0, false
-			}
-			i++
-			n, err := strconv.Atoi(args[i])
-			if err != nil {
-				return true, false, 0, false
-			}
-			waitPid = n
-			continue
-		}
-		if v, cut := strings.CutPrefix(a, "--wait-pid="); cut {
-			n, err := strconv.Atoi(v)
-			if err != nil {
-				return true, false, 0, false
-			}
-			waitPid = n
-			continue
-		}
-		if v, cut := strings.CutPrefix(a, "-wait-pid="); cut {
-			n, err := strconv.Atoi(v)
-			if err != nil {
-				return true, false, 0, false
-			}
-			waitPid = n
-			continue
-		}
-		return true, false, 0, false
+		return true, false
 	}
-	return openBrowser, autoConnect, waitPid, true
+	return openBrowser, true
 }

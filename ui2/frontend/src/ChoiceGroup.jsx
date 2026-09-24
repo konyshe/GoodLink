@@ -10,9 +10,11 @@ export default function ChoiceGroup({ value, disabled, onChange, options }) {
             role="radio"
             aria-checked={active}
             className={"gl-choice" + (active ? " is-active" : "")}
-            disabled={disabled}
+            disabled={disabled || opt.disabled}
+            title={opt.disabled ? opt.desc : undefined}
             onClick={() => {
-              if (!disabled && value !== opt.value) onChange(opt.value);
+              if (disabled || opt.disabled || value === opt.value) return;
+              onChange(opt.value);
             }}
           >
             {opt.icon ? <span className="gl-choice-icon">{opt.icon}</span> : null}

@@ -23,12 +23,16 @@ import (
 const (
 	healthCheckInterval = 30 * time.Second
 	nicID               = tcpip.NICID(1)
-	NetStackName        = "Goodlink"
-	NetStackIP          = "192.17.19.1"
 
 	// 内层 TUN 默认 1500 时 gVisor 通告 MSS≈1460，外层还要加 QUIC/UDP/IP，
 	// 一个内层 TCP 段会被拆成多个 QUIC 包。1280 让内层段通常能进一个 QUIC 包。
 	TunMTU = 1280
+)
+
+// NetStackName / NetStackIP 由 Start 写入, 一个进程一张网卡。
+var (
+	NetStackName = "Goodlink"
+	NetStackIP   = "192.17.19.1"
 )
 
 func tunInterfacePrefixFrom(destIP string) (netip.Prefix, error) {
@@ -40,11 +44,11 @@ func tunInterfacePrefixFrom(destIP string) (netip.Prefix, error) {
 		return netip.Prefix{}, fmt.Errorf("tun interface IP requires IPv4, got %s", destIP)
 	}
 	b := dest.As4()
-	iface := netip.AddrFrom4([4]byte{b[0], b[1], 0, 1})
+	iface := netip.AddrFrom4([4]byte{b[0], b[1], b[2], 2})
 	if iface == dest {
 		return netip.Prefix{}, fmt.Errorf("tun interface IP equals dest IP %s", destIP)
 	}
-	return netip.PrefixFrom(iface, 32), nil
+	return netip.PrefixFrom(iface, 24), nil
 }
 
 func setNetStack(s *stack.Stack, id tcpip.NICID) error {
@@ -149,9 +153,16 @@ func initStack() error {
 	return nil
 }
 
-func Start() error {
+func Start(adapterName, destIP string) error {
 	mu.Lock()
 	defer mu.Unlock()
+
+	if adapterName != "" {
+		NetStackName = adapterName
+	}
+	if destIP != "" {
+		NetStackIP = destIP
+	}
 
 	if initStackDone {
 		return nil

@@ -30,10 +30,12 @@ import {
   Typography,
 } from "antd";
 import { useEffect, useRef, useState } from "react";
-import { applyForwards, applyUpgrade, fetchUpgradeInfo, generateKey, importConfig, probeState, saveAutoStart, start, startUpgradeDownload, stop } from "./api";
+import { applyForwards, applyUpgrade, createService, deleteService, fetchUpgradeInfo, generateKey, importConfig, probeState, renameService, saveAutoStart, start, startUpgradeDownload, stop } from "./api";
 import ChoiceGroup from "./ChoiceGroup";
 import LocalPanel, { rowsFromRules, rulesFromRows } from "./LocalPanel";
 import RemotePanel from "./RemotePanel";
+import ServicePanel from "./ServicePanel";
+import ServiceTabs from "./ServiceTabs";
 import { useUIEvents } from "./useUIEvents";
 
 const STATUS_DETECTING = 0;
@@ -156,6 +158,13 @@ const FWD_PROXY = {
 };
 
 function resolveProxy(localMode, proxy) {
+  if (proxy?.socks) {
+    return {
+      socks: proxy.socks,
+      http: proxy.http || String(proxy.socks).replace("socks5://", "http://"),
+      fallback: !!proxy.fallback,
+    };
+  }
   if (localMode === "tun") {
     return TUN_PROXY;
   }
@@ -175,9 +184,6 @@ const CONNECT_FAIL_HELP_URL = "https://gitee.com/konyshe/goodlink/wikis/%E4%B8%B
 const APPLY_FETCH_TIMEOUT_MS = 2500;
 const APPLY_RECONNECT_MS = 5000;
 const APPLY_OVERALL_MS = 45000;
-// 提权重启要等旧进程退出后新进程再绑定端口，重连窗口比升级更宽松
-const ELEVATE_RECONNECT_MS = 15000;
-const ELEVATE_OVERALL_MS = 60000;
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -187,15 +193,24 @@ function isRestartedVersion(fromVersion, version) {
   return !!(fromVersion && version && version !== fromVersion);
 }
 
+function formFromService(svc) {
+  return {
+    name: svc.name || "",
+    workType: svc.workType || "Local",
+    tunKey: svc.tunKey || "",
+    localMode: svc.localMode || "tun",
+    transport: svc.transport || "kcp",
+    autoStart: !!svc.autoStart,
+    rows: rowsFromRules(svc.forwardRules),
+  };
+}
+
 export default function App() {
   const { message } = AntdApp.useApp();
   const { state, logs, exited, upgradeProgress } = useUIEvents();
-  const [workType, setWorkType] = useState("Local");
-  const [tunKey, setTunKey] = useState("");
-  const [localMode, setLocalMode] = useState("tun");
-  const [transport, setTransport] = useState("kcp");
-  const [autoStart, setAutoStart] = useState(false);
-  const [rows, setRows] = useState([]);
+  const [activeId, setActiveId] = useState("");
+  const [forms, setForms] = useState({});
+  const [keyHint, setKeyHint] = useState("");
   const [formError, setFormError] = useState("");
   const [failHint, setFailHint] = useState("");
   const [conflictHint, setConflictHint] = useState("");
@@ -203,47 +218,70 @@ export default function App() {
   const [upgradeBody, setUpgradeBody] = useState("");
   const [upgradeModalError, setUpgradeModalError] = useState("");
   const [applying, setApplying] = useState(false);
-  const [elevatingLocal, setElevatingLocal] = useState(false);
   const [reconnectTimedOut, setReconnectTimedOut] = useState(false);
-  const initialized = useRef(false);
+  const seen = useRef({});
   const keyInputRef = useRef(null);
   const logRef = useRef(null);
   const applyFromVersionRef = useRef("");
-  const elevateBaseStateRef = useRef(null);
 
-  // 提权重启由本页面触发，也可能来自其他标签页（通过 SSE 推送）
-  const elevating = elevatingLocal || !!state?.elevating;
-  const restarting = applying || elevating;
+  const restarting = applying;
+
+  const services = state?.services || [];
+  const active = services.find((s) => s.id === activeId) || services[0];
+  const form = (active && forms[active.id]) || formFromService(active || {});
+  const workType = form.workType;
+  const tunKey = form.tunKey;
+  const localMode = form.localMode;
+  const transport = form.transport;
+  const autoStart = form.autoStart;
+  const rows = form.rows || [];
+  function patchForm(patch) {
+    if (!active) return;
+    setForms((prev) => ({ ...prev, [active.id]: { ...(prev[active.id] || form), ...patch } }));
+  }
+  const setWorkType = (v) => patchForm({ workType: v });
+  const setTunKey = (v) => patchForm({ tunKey: v });
+  const setLocalMode = (v) => patchForm({ localMode: v });
+  const setTransport = (v) => patchForm({ transport: v });
+  const setAutoStart = (v) => patchForm({ autoStart: v });
+  const setRows = (updater) => {
+    setForms((prev) => {
+      if (!active) return prev;
+      const cur = prev[active.id] || form;
+      const nextRows = typeof updater === "function" ? updater(cur.rows || []) : updater;
+      return { ...prev, [active.id]: { ...cur, rows: nextRows } };
+    });
+  };
 
   useEffect(() => {
-    if (!state) return;
-    if (!initialized.current) {
-      setWorkType(state.workType || "Local");
-      setTunKey(state.tunKey || "");
-      setLocalMode(state.localMode || "tun");
-      setTransport(state.transport || "kcp");
-      setAutoStart(!!state.autoStart);
-      setRows(rowsFromRules(state.forwardRules));
-      initialized.current = true;
-      return;
-    }
-    setAutoStart(!!state.autoStart);
-    const st = state.status ?? STATUS_DETECTING;
-    if (st !== STATUS_DETECTING && st !== STATUS_IDLE) {
-      setWorkType(state.workType || "Local");
-      if (!isKeyInputFocused(keyInputRef)) {
-        setTunKey(state.tunKey || "");
+    if (!state?.services) return;
+    setForms((prev) => {
+      const next = { ...prev };
+      for (const svc of state.services) {
+        const cur = next[svc.id];
+        const running = svc.status !== STATUS_DETECTING && svc.status !== STATUS_IDLE;
+        if (!cur || !seen.current[svc.id]) {
+          next[svc.id] = formFromService(svc);
+          seen.current[svc.id] = true;
+        } else if (running) {
+          next[svc.id] = {
+            ...formFromService(svc),
+            tunKey: isKeyInputFocused(keyInputRef) ? cur.tunKey : svc.tunKey,
+          };
+        } else {
+          next[svc.id] = { ...cur, autoStart: !!svc.autoStart, name: svc.name };
+        }
       }
-      setLocalMode(state.localMode || "tun");
-      setTransport(state.transport || "kcp");
-    }
+      return next;
+    });
+    setActiveId((id) => (id && state.services.some((s) => s.id === id) ? id : state.services[0]?.id || ""));
   }, [state]);
 
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
-  }, [logs]);
+  }, [logs, activeId]);
 
   useEffect(() => {
     if (state?.version) {
@@ -259,44 +297,34 @@ export default function App() {
     }
   }, [applying, state?.version]);
 
-  // SSE 重连后拿到未提权的新快照, 说明提权重启已完成, 撤掉遮罩
   useEffect(() => {
-    if (!elevatingLocal) return;
-    if (!state || state === elevateBaseStateRef.current) return;
-    if (state.elevating === false) {
-      setElevatingLocal(false);
-    }
-  }, [elevatingLocal, state]);
-
-  useEffect(() => {
-    const st = state?.status ?? STATUS_DETECTING;
+    const st = active?.status ?? STATUS_DETECTING;
     if (st === STATUS_CONNECTING_NAT4) {
       setFailHint(NAT4_HINT);
-      stop();
+      if (active) stop(active.id);
       return;
     }
     if (st === STATUS_CONNECT_FAILED) {
       setFailHint(RETRY_FAIL_HINT);
-      stop();
+      if (active) stop(active.id);
     }
-  }, [state?.status]);
+  }, [active?.status, active?.id]);
 
   useEffect(() => {
     if (!restarting) return;
     let stopped = false;
     const fromVersion = applyFromVersionRef.current;
-    const reconnectMs = elevating ? ELEVATE_RECONNECT_MS : APPLY_RECONNECT_MS;
-    const overallMs = elevating ? ELEVATE_OVERALL_MS : APPLY_OVERALL_MS;
+    const reconnectMs = APPLY_RECONNECT_MS;
+    const overallMs = APPLY_OVERALL_MS;
     (async () => {
       let sawDown = false;
       let downAt = 0;
       const startedAt = Date.now();
       for (; ;) {
         if (stopped) return;
-        const { up, version, elevating: srvElevating, timedOut } = await probeState(APPLY_FETCH_TIMEOUT_MS);
+        const { up, version, timedOut } = await probeState(APPLY_FETCH_TIMEOUT_MS);
         if (stopped) return;
-        // 提权时服务端在响应启动请求前已置 elevating, 所以探测到 elevating=false 即为新进程
-        const restarted = isRestartedVersion(fromVersion, version) || sawDown || (elevating && !srvElevating);
+        const restarted = isRestartedVersion(fromVersion, version) || sawDown;
         if (up && restarted) {
           window.location.reload();
           return;
@@ -325,9 +353,10 @@ export default function App() {
     return () => {
       stopped = true;
     };
-  }, [restarting, elevating]);
+  }, [restarting]);
 
-  const status = state?.status ?? STATUS_DETECTING;
+  const status = active?.status ?? STATUS_DETECTING;
+  const viewLogs = [...(logs.shared || []), ...((active && logs.byId?.[active.id]) || [])];
   const view = viewFromStatus(status, workType);
   const nat = state?.nat || {};
   const othersEnabled = !exited && !!view.othersEnabled;
@@ -371,12 +400,20 @@ export default function App() {
 
   function onExportConfig() {
     const cfg = {
-      work_type: workType,
-      tun_key: tunKey || "",
-      local_mode: localMode || "tun",
-      transport: transport || "kcp",
-      auto_start: autoStart,
-      forward_rules: rulesFromRows(rows),
+      services: services.map((svc) => {
+        const f = forms[svc.id] || formFromService(svc);
+        return {
+          id: svc.id,
+          name: f.name || svc.name,
+          work_type: f.workType,
+          tun_key: f.tunKey || "",
+          local_mode: f.localMode || "tun",
+          transport: f.transport || "kcp",
+          tun_ip: svc.tunIP,
+          auto_start: f.autoStart,
+          forward_rules: rulesFromRows(f.rows || []),
+        };
+      }),
     };
     const blob = new Blob([JSON.stringify(cfg, null, 2) + "\n"], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -399,20 +436,25 @@ export default function App() {
       setFormError("配置文件格式错误");
       return;
     }
+    if (!cfg.services && (cfg.work_type || cfg.tun_key)) {
+      cfg = {
+        services: [{
+          name: "服务1",
+          work_type: cfg.work_type,
+          tun_key: cfg.tun_key,
+          local_mode: cfg.local_mode,
+          transport: cfg.transport,
+          auto_start: cfg.auto_start,
+          forward_rules: cfg.forward_rules,
+        }],
+      };
+    }
     const result = await importConfig(cfg);
     if (result.error) {
       setFormError(result.error);
       return;
     }
-    const next = result.state || {};
-    const nextWorkType = next.workType || "Local";
-    const nextLocalMode = next.localMode || "tun";
-    setWorkType(nextWorkType);
-    setTunKey(next.tunKey || "");
-    setLocalMode(nextLocalMode);
-    setTransport(next.transport || "kcp");
-    setAutoStart(!!next.autoStart);
-    setRows(rowsFromRules(next.forwardRules));
+    seen.current = {};
     message.success("已导入配置");
   }
 
@@ -420,7 +462,7 @@ export default function App() {
     if (!mappingEnabled) return;
     setFormError("");
     setConflictHint("");
-    const result = await applyForwards(localMode, rulesFromRows(rows));
+    const result = await applyForwards(active.id, localMode, rulesFromRows(rows));
     if (result.error) {
       if (String(result.error).includes("端口已被占用")) {
         setConflictHint(result.error);
@@ -437,21 +479,22 @@ export default function App() {
     if (status === STATUS_IDLE) {
       setFormError("");
       setConflictHint("");
-      const result = await start(workType, tunKey, localMode, rulesFromRows(rows), transport);
+      const result = await start(active.id, workType, tunKey, localMode, rulesFromRows(rows), transport);
       if (result.error) {
         if (String(result.error).includes("端口已被占用")) {
           setConflictHint(result.error);
           return;
         }
+        if (String(result.error).includes("连接密钥")) {
+          setKeyHint(result.error);
+          return;
+        }
         setFormError(result.error);
         return;
       }
-      if (result.state?.elevating) {
-        beginElevating();
-      }
       return;
     }
-    await stop();
+    await stop(active.id);
   }
 
   async function onAutoStartToggle(enabled) {
@@ -459,7 +502,7 @@ export default function App() {
     setFormError("");
     setConflictHint("");
     setAutoStart(enabled);
-    const result = await saveAutoStart(enabled, workType, tunKey, localMode, rulesFromRows(rows), transport);
+    const result = await saveAutoStart(active.id, enabled, workType, tunKey, localMode, rulesFromRows(rows), transport);
     if (result.error) {
       if (String(result.error).includes("端口已被占用")) {
         setConflictHint(result.error);
@@ -469,16 +512,6 @@ export default function App() {
       setAutoStart(!enabled);
       return;
     }
-    if (result.state?.elevating) {
-      beginElevating();
-    }
-  }
-
-  function beginElevating() {
-    setReconnectTimedOut(false);
-    // 记录触发时的快照, 避免把提权前的旧状态当成重启完成
-    elevateBaseStateRef.current = state;
-    setElevatingLocal(true);
   }
 
   async function openUpgradeModal() {
@@ -516,11 +549,12 @@ export default function App() {
   }
 
   function onExportLogs() {
-    if (!logs.length) return;
+    if (!viewLogs.length) return;
     const pad = (n) => String(n).padStart(2, "0");
     const d = new Date();
-    const name = `goodlink-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.log`;
-    const blob = new Blob([logs.join("\n") + "\n"], { type: "text/plain;charset=utf-8" });
+    const safe = String(active?.name || "goodlink").replace(/[\\/:*?"<>|\s]+/g, "_");
+    const name = `${safe}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.log`;
+    const blob = new Blob([viewLogs.join("\n") + "\n"], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -547,8 +581,42 @@ export default function App() {
 
   return (
     <div className="gl-shell">
+      <ServiceTabs
+        services={services}
+        activeId={active?.id}
+        onChange={setActiveId}
+        onCreate={async () => {
+          const result = await createService();
+          if (result.error) setFormError(result.error);
+          else if (result.state?.id) setActiveId(result.state.id);
+        }}
+        onDelete={async (id) => {
+          const svc = services.find((s) => s.id === id);
+          if (!window.confirm(`确定删除服务[${svc?.name || ""}]？`)) return;
+          const result = await deleteService(id);
+          if (result.error) setFormError(result.error);
+        }}
+        onRename={async (id, name) => {
+          const result = await renameService(id, name);
+          if (result.error) setFormError(result.error);
+        }}
+      />
+      <ServicePanel>
       <Form component="div" layout="vertical" requiredMark={false}>
         <Card className="gl-panel" title="连接配置" size="small">
+          <Form.Item label="服务名称" validateStatus={!String(form.name || "").trim() ? "error" : ""} help={!String(form.name || "").trim() ? "名称不能为空" : ""}>
+            <input
+              className="ant-input"
+              maxLength={32}
+              value={form.name || ""}
+              onChange={(e) => patchForm({ name: e.target.value })}
+              onBlur={async () => {
+                if (!active) return;
+                const result = await renameService(active.id, form.name);
+                if (result.error) setFormError(result.error);
+              }}
+            />
+          </Form.Item>
           <Form.Item label="工作端侧">
             <ChoiceGroup
               value={workType}
@@ -604,13 +672,15 @@ export default function App() {
               setRows={setRows}
               mappingEnabled={mappingEnabled}
               onConfirm={onConfirm}
-              proxy={resolveProxy(localMode, state?.proxy)}
+              proxy={resolveProxy(localMode, active?.proxy)}
+              isAdmin={state?.isAdmin}
             />
           ) : (
             <RemotePanel {...keyProps} />
           )}
         </Card>
       </Form>
+      </ServicePanel>
 
       {formError ? <Alert type="error" showIcon message={formError} /> : null}
 
@@ -641,12 +711,12 @@ export default function App() {
         title="运行日志"
         size="small"
         extra={
-          <Button size="small" icon={<ExportOutlined />} disabled={!logs.length} onClick={onExportLogs}>
+          <Button size="small" icon={<ExportOutlined />} disabled={!viewLogs.length} onClick={onExportLogs}>
             导出日志
           </Button>
         }
       >
-        <pre ref={logRef} className={"gl-log" + (logs.length ? "" : " is-empty")}>{logs.join("\n")}</pre>
+        <pre ref={logRef} className={"gl-log" + (viewLogs.length ? "" : " is-empty")}>{viewLogs.join("\n")}</pre>
       </Card>
 
       <footer className="gl-footer">
@@ -746,6 +816,22 @@ export default function App() {
       </Modal>
 
       <Modal
+        title="连接密钥重复"
+        open={!exited && !!keyHint}
+        onCancel={() => setKeyHint("")}
+        mask={{ closable: true }}
+        centered
+        destroyOnHidden
+        footer={[
+          <Button key="ok" type="primary" onClick={() => setKeyHint("")}>
+            确定
+          </Button>,
+        ]}
+      >
+        {keyHint}
+      </Modal>
+
+      <Modal
         title={`新版本 v${state?.upgrade?.latest || ""}`}
         open={upgradeOpen && !restarting && !exited}
         onCancel={() => setUpgradeOpen(false)}
@@ -800,18 +886,14 @@ export default function App() {
         {reconnectTimedOut ? (
           <Result
             status="warning"
-            title={elevating ? "重启超时" : "更新完成"}
-            subTitle={
-              elevating
-                ? "未能自动恢复页面，请从系统托盘图标重新打开控制页面"
-                : "超过 5 秒未能连接主程序，请手动重启 Goodlink"
-            }
+            title="更新完成"
+            subTitle="超过 5 秒未能连接主程序，请手动重启 Goodlink"
           />
         ) : (
           <Flex vertical align="center" gap={16} style={{ padding: "16px 0" }}>
             <Spin size="large" />
             <Typography.Title level={5} style={{ margin: 0 }}>
-              {elevating ? "正在以管理员权限重启 Goodlink" : `正在更新到 v${state?.upgrade?.latest || ""}`}
+              {`正在更新到 v${state?.upgrade?.latest || ""}`}
             </Typography.Title>
             <Typography.Text>程序将自动重启，请稍候</Typography.Text>
             <Typography.Text type="secondary">重启完成后页面会自动恢复，无需手动关闭</Typography.Text>

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -9,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -17,6 +21,11 @@ const (
 	LocalModeForward = "forward"
 	TransportQUIC    = "quic"
 	TransportKCP     = "kcp"
+
+	maxServiceNameRunes = 32
+	tunIPPrefix         = "192.17."
+	tunSegmentMin       = 19
+	tunSegmentMax       = 254
 )
 
 type UIForwardRule struct {
@@ -25,7 +34,25 @@ type UIForwardRule struct {
 	Remote string `json:"remote"`
 }
 
+type UIService struct {
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	WorkType     string          `json:"work_type"`
+	TunKey       string          `json:"tun_key"`
+	LocalMode    string          `json:"local_mode"`
+	Transport    string          `json:"transport"`
+	TunIP        string          `json:"tun_ip"`
+	AutoStart    bool            `json:"auto_start"`
+	ForwardRules []UIForwardRule `json:"forward_rules"`
+}
+
 type UIConfig struct {
+	Services []UIService `json:"services"`
+}
+
+// legacyUIConfig 用于识别升级前的扁平 goodlink.json。
+type legacyUIConfig struct {
+	Services     []UIService     `json:"services"`
 	WorkType     string          `json:"work_type"`
 	TunKey       string          `json:"tun_key"`
 	LocalMode    string          `json:"local_mode"`
@@ -57,12 +84,16 @@ func UIConfigPath() string {
 	return uiConfigPath
 }
 
-func LoadUIConfig(path string) (UIConfig, error) {
-	cfg := UIConfig{
-		LocalMode:    LocalModeTUN,
-		Transport:    TransportKCP,
-		ForwardRules: []UIForwardRule{},
+func newServiceID() string {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("%d", os.Getpid())
 	}
+	return hex.EncodeToString(b)
+}
+
+func LoadUIConfig(path string) (UIConfig, error) {
+	cfg := UIConfig{Services: []UIService{}}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -70,22 +101,40 @@ func LoadUIConfig(path string) (UIConfig, error) {
 		}
 		return cfg, err
 	}
-	if len(data) == 0 {
+	if len(strings.TrimSpace(string(data))) == 0 {
 		return cfg, nil
 	}
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	var raw legacyUIConfig
+	if err := json.Unmarshal(data, &raw); err != nil {
 		return cfg, err
 	}
-	if cfg.LocalMode == "" {
-		cfg.LocalMode = LocalModeTUN
+	if len(raw.Services) > 0 {
+		cfg.Services = raw.Services
+		return cfg, nil
 	}
-	if cfg.Transport == "" {
-		cfg.Transport = TransportKCP
-	}
-	if cfg.ForwardRules == nil {
-		cfg.ForwardRules = []UIForwardRule{}
+	if legacyHasValue(raw) {
+		cfg.Services = []UIService{{
+			ID:           newServiceID(),
+			Name:         "服务1",
+			WorkType:     raw.WorkType,
+			TunKey:       raw.TunKey,
+			LocalMode:    raw.LocalMode,
+			Transport:    raw.Transport,
+			TunIP:        "192.17.19.1",
+			AutoStart:    raw.AutoStart,
+			ForwardRules: raw.ForwardRules,
+		}}
 	}
 	return cfg, nil
+}
+
+func legacyHasValue(raw legacyUIConfig) bool {
+	return strings.TrimSpace(raw.WorkType) != "" ||
+		strings.TrimSpace(raw.TunKey) != "" ||
+		strings.TrimSpace(raw.LocalMode) != "" ||
+		strings.TrimSpace(raw.Transport) != "" ||
+		raw.AutoStart ||
+		len(raw.ForwardRules) > 0
 }
 
 func SaveUIConfig(path string, cfg UIConfig) error {
@@ -96,47 +145,151 @@ func SaveUIConfig(path string, cfg UIConfig) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+	data = append(data, '\n')
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(path)
+		if err2 := os.Rename(tmp, path); err2 != nil {
+			_ = os.Remove(tmp)
+			return err
+		}
+	}
+	return nil
 }
 
 func NormalizeAndValidate(cfg *UIConfig) error {
 	if cfg == nil {
 		return fmt.Errorf("配置为空")
 	}
-	cfg.LocalMode = strings.ToLower(strings.TrimSpace(cfg.LocalMode))
-	if cfg.LocalMode == "" {
-		cfg.LocalMode = LocalModeTUN
-	}
-	if cfg.LocalMode != LocalModeTUN && cfg.LocalMode != LocalModeForward {
-		return fmt.Errorf("无效的工作模式: %s", cfg.LocalMode)
-	}
-	cfg.Transport = NormalizeTransport(cfg.Transport)
-	if cfg.Transport != TransportQUIC && cfg.Transport != TransportKCP {
-		return fmt.Errorf("无效的传输协议: %s", cfg.Transport)
-	}
-	if cfg.ForwardRules == nil {
-		cfg.ForwardRules = []UIForwardRule{}
+	if cfg.Services == nil {
+		cfg.Services = []UIService{}
 	}
 
-	seen := make(map[string]struct{}, len(cfg.ForwardRules))
-	out := make([]UIForwardRule, 0, len(cfg.ForwardRules))
-	for i, r := range cfg.ForwardRules {
+	ids := make(map[string]struct{}, len(cfg.Services))
+	names := make(map[string]struct{}, len(cfg.Services))
+	keys := make(map[string]string, len(cfg.Services))
+	ips := make(map[string]struct{}, len(cfg.Services))
+	listens := make(map[string]string)
+
+	for i := range cfg.Services {
+		svc := &cfg.Services[i]
+		label := fmt.Sprintf("服务%d", i+1)
+
+		svc.ID = strings.TrimSpace(svc.ID)
+		if svc.ID == "" {
+			svc.ID = newServiceID()
+		}
+		if _, ok := ids[svc.ID]; ok {
+			return fmt.Errorf("服务ID重复: %s", svc.ID)
+		}
+		ids[svc.ID] = struct{}{}
+
+		name, err := normalizeServiceName(svc.Name, names, i)
+		if err != nil {
+			return err
+		}
+		svc.Name = name
+		names[name] = struct{}{}
+		label = name
+
+		svc.WorkType = strings.TrimSpace(svc.WorkType)
+		svc.TunKey = strings.TrimSpace(svc.TunKey)
+		if svc.TunKey != "" {
+			if other, ok := keys[svc.TunKey]; ok {
+				return fmt.Errorf("连接密钥与服务[%s]重复", other)
+			}
+			keys[svc.TunKey] = label
+		}
+
+		if err := normalizeServiceMode(svc, label); err != nil {
+			return err
+		}
+
+		if strings.TrimSpace(svc.TunIP) == "" {
+			svc.TunIP = AllocateTunIP(*cfg)
+		}
+		if err := validateTunIP(svc.TunIP); err != nil {
+			return fmt.Errorf("服务[%s] %v", label, err)
+		}
+		if _, ok := ips[svc.TunIP]; ok {
+			return fmt.Errorf("服务[%s] 网段地址重复: %s", label, svc.TunIP)
+		}
+		ips[svc.TunIP] = struct{}{}
+
+		if svc.LocalMode == LocalModeForward {
+			for _, r := range svc.ForwardRules {
+				key := listenRuleKey(r)
+				if other, ok := listens[key]; ok && other != svc.ID {
+					return fmt.Errorf("服务[%s] 监听地址与服务[%s]冲突: %s %s", label, serviceNameByID(*cfg, other), strings.ToUpper(r.Proto), r.Listen)
+				}
+				listens[key] = svc.ID
+			}
+		}
+	}
+	return nil
+}
+
+func normalizeServiceName(name string, used map[string]struct{}, index int) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		for n := index + 1; ; n++ {
+			candidate := fmt.Sprintf("服务%d", n)
+			if _, ok := used[candidate]; !ok {
+				return candidate, nil
+			}
+		}
+	}
+	if utf8.RuneCountInString(name) > maxServiceNameRunes {
+		return "", fmt.Errorf("服务名称超过%d个字符: %s", maxServiceNameRunes, name)
+	}
+	for _, r := range name {
+		if unicode.IsControl(r) {
+			return "", fmt.Errorf("服务名称包含非法字符")
+		}
+	}
+	if _, ok := used[name]; ok {
+		return "", fmt.Errorf("服务名称重复: %s", name)
+	}
+	return name, nil
+}
+
+func normalizeServiceMode(svc *UIService, label string) error {
+	svc.LocalMode = strings.ToLower(strings.TrimSpace(svc.LocalMode))
+	if svc.LocalMode == "" {
+		svc.LocalMode = LocalModeTUN
+	}
+	if svc.LocalMode != LocalModeTUN && svc.LocalMode != LocalModeForward {
+		return fmt.Errorf("服务[%s] 无效的工作模式: %s", label, svc.LocalMode)
+	}
+	svc.Transport = NormalizeTransport(svc.Transport)
+	if svc.Transport != TransportQUIC && svc.Transport != TransportKCP {
+		return fmt.Errorf("服务[%s] 无效的传输协议: %s", label, svc.Transport)
+	}
+	if svc.ForwardRules == nil {
+		svc.ForwardRules = []UIForwardRule{}
+	}
+	seen := make(map[string]struct{}, len(svc.ForwardRules))
+	out := make([]UIForwardRule, 0, len(svc.ForwardRules))
+	for i, r := range svc.ForwardRules {
 		proto := strings.ToLower(strings.TrimSpace(r.Proto))
 		if proto != "tcp" && proto != "udp" {
-			return fmt.Errorf("第%d条规则协议无效", i+1)
+			return fmt.Errorf("服务[%s] 第%d条规则协议无效", label, i+1)
 		}
 		listenHost, listenPort, err := parseHostPortIPv4(r.Listen)
 		if err != nil {
-			return fmt.Errorf("第%d条规则本地地址: %v", i+1, err)
+			return fmt.Errorf("服务[%s] 第%d条规则本地地址: %v", label, i+1, err)
 		}
 		remoteHost, remotePort, err := parseHostPortIPv4(r.Remote)
 		if err != nil {
-			return fmt.Errorf("第%d条规则远端地址: %v", i+1, err)
+			return fmt.Errorf("服务[%s] 第%d条规则远端地址: %v", label, i+1, err)
 		}
 		listen := net.JoinHostPort(listenHost, strconv.Itoa(listenPort))
 		key := proto + "|" + listen
 		if _, ok := seen[key]; ok {
-			return fmt.Errorf("第%d条规则监听地址重复: %s %s", i+1, proto, listen)
+			return fmt.Errorf("服务[%s] 第%d条规则监听地址重复: %s %s", label, i+1, proto, listen)
 		}
 		seen[key] = struct{}{}
 		out = append(out, UIForwardRule{
@@ -145,13 +298,128 @@ func NormalizeAndValidate(cfg *UIConfig) error {
 			Remote: net.JoinHostPort(remoteHost, strconv.Itoa(remotePort)),
 		})
 	}
-	cfg.ForwardRules = out
+	svc.ForwardRules = out
 	return nil
 }
 
-func (c UIConfig) ForwardFingerprint() string {
-	b, _ := json.Marshal(c.ForwardRules)
-	return c.LocalMode + "\n" + string(b)
+func serviceNameByID(cfg UIConfig, id string) string {
+	if svc, ok := FindService(cfg, id); ok {
+		return svc.Name
+	}
+	return id
+}
+
+func validateTunIP(ip string) error {
+	parsed := net.ParseIP(strings.TrimSpace(ip))
+	if parsed == nil || parsed.To4() == nil {
+		return fmt.Errorf("网段地址无效: %s", ip)
+	}
+	b := parsed.To4()
+	if b[0] != 192 || b[1] != 17 || b[3] != 1 || b[2] < 1 {
+		return fmt.Errorf("网段地址必须是 192.17.x.1: %s", ip)
+	}
+	return nil
+}
+
+func tunSegmentOf(ip string) (int, bool) {
+	parsed := net.ParseIP(strings.TrimSpace(ip))
+	if parsed == nil || parsed.To4() == nil {
+		return 0, false
+	}
+	b := parsed.To4()
+	if b[0] != 192 || b[1] != 17 || b[3] != 1 {
+		return 0, false
+	}
+	return int(b[2]), true
+}
+
+func (s UIService) tunSegment() (int, bool) {
+	return tunSegmentOf(s.TunIP)
+}
+
+// AdapterName 由 TunIP 第三段派生网卡名, 不落盘。
+func (s UIService) AdapterName() string {
+	n, ok := s.tunSegment()
+	if !ok {
+		return "Goodlink"
+	}
+	return fmt.Sprintf("Goodlink-%d", n)
+}
+
+// TunIfaceIP 返回同网段网卡地址 192.17.N.2。
+func (s UIService) TunIfaceIP() string {
+	n, ok := s.tunSegment()
+	if !ok {
+		return ""
+	}
+	return fmt.Sprintf("%s%d.2", tunIPPrefix, n)
+}
+
+func (s UIService) ForwardFingerprint() string {
+	b, _ := json.Marshal(s.ForwardRules)
+	return s.LocalMode + "\n" + string(b)
+}
+
+// AllocateTunIP 从 19 起找第一个空闲第三段, 返回 192.17.N.1。
+func AllocateTunIP(cfg UIConfig) string {
+	used := map[int]struct{}{}
+	for _, s := range cfg.Services {
+		if n, ok := tunSegmentOf(s.TunIP); ok {
+			used[n] = struct{}{}
+		}
+	}
+	for n := tunSegmentMin; n <= tunSegmentMax; n++ {
+		if _, ok := used[n]; !ok {
+			return fmt.Sprintf("%s%d.1", tunIPPrefix, n)
+		}
+	}
+	return ""
+}
+
+// AllocateServiceName 取「服务N」里第一个未被占用的 N。
+func AllocateServiceName(cfg UIConfig) string {
+	used := map[string]struct{}{}
+	for _, s := range cfg.Services {
+		used[strings.TrimSpace(s.Name)] = struct{}{}
+	}
+	for n := 1; n < 10000; n++ {
+		name := fmt.Sprintf("服务%d", n)
+		if _, ok := used[name]; !ok {
+			return name
+		}
+	}
+	return "服务"
+}
+
+func FindService(cfg UIConfig, id string) (*UIService, bool) {
+	for i := range cfg.Services {
+		if cfg.Services[i].ID == id {
+			return &cfg.Services[i], true
+		}
+	}
+	return nil, false
+}
+
+func loadUIConfigFile() UIConfig {
+	cfg, err := LoadUIConfig(UIConfigPath())
+	if err == nil {
+		_ = NormalizeAndValidate(&cfg)
+	}
+	return cfg
+}
+
+// GetService 按 id 读取本进程负责的服务。
+func GetService(id string) (UIService, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return UIService{}, fmt.Errorf("未指定服务")
+	}
+	cfg := loadUIConfigFile()
+	svc, ok := FindService(cfg, id)
+	if !ok {
+		return UIService{}, fmt.Errorf("服务不存在: %s", id)
+	}
+	return *svc, nil
 }
 
 func parseHostPortIPv4(addr string) (string, int, error) {
@@ -240,31 +508,4 @@ func NormalizeTransport(s string) string {
 		return TransportKCP
 	}
 	return s
-}
-
-func loadUIConfigFile() UIConfig {
-	cfg, err := LoadUIConfig(UIConfigPath())
-	if err == nil {
-		_ = NormalizeAndValidate(&cfg)
-	}
-	return cfg
-}
-
-// GetTunKey 连接密钥，从 goodlink.json 读取。
-func GetTunKey() string {
-	return strings.TrimSpace(loadUIConfigFile().TunKey)
-}
-
-// GetWorkType 工作端侧（Local/Remote），从 goodlink.json 读取。
-func GetWorkType() string {
-	return strings.TrimSpace(loadUIConfigFile().WorkType)
-}
-
-// GetTransport Remote 端选用的传输协议，从 goodlink.json 读取。Local 建连不读此项。
-func GetTransport() string {
-	t := NormalizeTransport(loadUIConfigFile().Transport)
-	if t == TransportQUIC || t == TransportKCP {
-		return t
-	}
-	return TransportKCP
 }

@@ -83,12 +83,11 @@ func CleanupOldAdapter(name string) {
 
 // 修改调用端错误处理
 func SetTunIP(wintunEP *Device, ip string, mask int) error {
-	// ip addr add 192.17.0.1/32 dev Goodlink
-	// ip link set Goodlink up
-	// ip route add 192.17.19.1 dev Goodlink
-
-	// 设置网卡eth0的IP地址为192.168.1.10/24
-	cmd := exec.Command("ip", "addr", "add", "192.17.0.1/32", "dev", NetStackName)
+	ifacePrefix, err := tunInterfacePrefixFrom(ip)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("ip", "addr", "add", ifacePrefix.String(), "dev", NetStackName)
 	if err := cmd.Run(); err != nil {
 		return err
 	}

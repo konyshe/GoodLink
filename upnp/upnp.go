@@ -22,8 +22,16 @@ type Upnp struct {
 	Gateway          *Gateway     //网关信息
 	CtrlUrl          string       //控制请求url
 	KeepPorts        map[int]bool //需要保留映射的端口号
+	Description      string       //端口映射描述, 用于多服务互不删除
 	lock             sync.Mutex
 	http_client      *http.Client
+}
+
+func (this *Upnp) mappingDescription() string {
+	if this != nil && this.Description != "" {
+		return this.Description
+	}
+	return "goodlink"
 }
 
 func (this *Upnp) IsValid() bool {
@@ -177,7 +185,7 @@ func (this *Upnp) CleanMappings() {
 		if !ok {
 			break
 		}
-		if entry.Description == "goodlink" {
+		if entry.Description == this.mappingDescription() {
 			goodlinkPortCount++
 			if !this.KeepPorts[entry.ExternalPort] {
 				toDelete = append(toDelete, *entry)

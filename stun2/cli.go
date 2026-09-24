@@ -10,6 +10,7 @@ import (
 	"time"
 
 	go2pool "go2/pool"
+	"goodlink/config"
 	goodlink_config "goodlink3/config"
 )
 
@@ -231,11 +232,18 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 	return "", 0, 0, 0, err
 }
 
+func stunServerList() []string {
+	if rc, ok := config.LoadRuntimeConfFromEnv(); ok && len(rc.StunList) > 0 {
+		return rc.StunList
+	}
+	return goodlink_config.GetStunList()
+}
+
 func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
 	var err error
 
 	for {
-		stun_svr_list := goodlink_config.GetStunList()
+		stun_svr_list := stunServerList()
 		for _, stun_svr := range stun_svr_list {
 			wan_ip, wan_port1, wan_port2, wan_port3, err = GetStunIpPort2(stun_svr, conn)
 			if err != nil {
