@@ -423,9 +423,21 @@ func HandleForwards(id, localMode string, rules []config.UIForwardRule) error {
 	return config.SaveUIConfig(config.UIConfigPath(), cfg)
 }
 
+// clearOtherAutoStart 关掉除 keepID 以外的自启动。调用方必须已持有 stateMu。
+func clearOtherAutoStart(keepID string) {
+	for _, other := range m_services {
+		if other.cfg.ID != keepID {
+			other.cfg.AutoStart = false
+		}
+	}
+}
+
 func HandleSetAutoStart(id string, autoStart bool, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
 	err := mutateService(id, func(svc *serviceState) error {
 		svc.cfg.AutoStart = autoStart
+		if autoStart {
+			clearOtherAutoStart(id)
+		}
 		if serviceIdle(svc) {
 			if workType == workTypeLocal || workType == workTypeRemote {
 				svc.cfg.WorkType = workType
@@ -583,6 +595,9 @@ func HandleUpdateConfig(id, workType, tunKey, localMode, transport string, rules
 		svc.cfg.Transport = transport
 		svc.cfg.ForwardRules = rules
 		svc.cfg.AutoStart = autoStart
+		if autoStart {
+			clearOtherAutoStart(id)
+		}
 		return nil
 	})
 	if err != nil {

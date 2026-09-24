@@ -229,6 +229,17 @@ func NormalizeAndValidate(cfg *UIConfig) error {
 			}
 		}
 	}
+	keepAutoStart := false
+	for i := range cfg.Services {
+		if !cfg.Services[i].AutoStart {
+			continue
+		}
+		if keepAutoStart {
+			cfg.Services[i].AutoStart = false
+			continue
+		}
+		keepAutoStart = true
+	}
 	return nil
 }
 

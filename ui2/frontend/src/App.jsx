@@ -501,6 +501,8 @@ export default function App() {
     if (exited) return;
     setFormError("");
     setConflictHint("");
+    const othersHadAutoStart =
+      enabled && Object.entries(forms).some(([id, f]) => id !== active.id && f?.autoStart);
     setAutoStart(enabled);
     const result = await saveAutoStart(active.id, enabled, workType, tunKey, localMode, rulesFromRows(rows), transport);
     if (result.error) {
@@ -511,6 +513,9 @@ export default function App() {
       setFormError(result.error);
       setAutoStart(!enabled);
       return;
+    }
+    if (othersHadAutoStart) {
+      message.info("已关闭其他服务的自动连接");
     }
   }
 
