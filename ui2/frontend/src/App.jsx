@@ -485,13 +485,11 @@ export default function App() {
       const busy = services.find(
         (s) =>
           s.id !== active.id &&
-          (s.status === STATUS_STARTING ||
-            s.status === STATUS_CONNECTING ||
-            s.status === STATUS_CONNECTED ||
-            s.status === STATUS_STARTED)
+          (s.status === STATUS_STARTING || s.status === STATUS_CONNECTING)
       );
       if (busy) {
-        setBusyHint(`服务[${busy.name || busy.id}]正在连接中，请等它连接成功或关闭后，再启动本服务`);
+        const busyName = busy.name || busy.id;
+        setBusyHint(`服务[${busyName}]正在连接中，请等它连接成功或关闭后，再启动本服务`);
         return;
       }
       const result = await start(active.id, workType, tunKey, localMode, rulesFromRows(rows), transport);
