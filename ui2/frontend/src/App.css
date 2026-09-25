@@ -74,10 +74,23 @@ body {
   display: flex;
 }
 
-.gl-service-export {
+/* 侧栏「导出配置」「导入配置」保持同一尺寸与对齐 */
+.gl-sider-action {
+  width: 100%;
+  height: 36px;
   margin-top: 4px;
   justify-content: flex-start;
   padding-inline: 10px;
+  border-radius: 10px;
+}
+
+/* Upload 内部结构不撑满宽度，会导致导入按钮比导出按钮窄 */
+.gl-sider-upload,
+.gl-sider-upload > *,
+.gl-sider-upload .ant-upload,
+.gl-sider-upload .ant-upload-select {
+  display: block;
+  width: 100%;
 }
 
 .gl-service-tabs.ant-tabs-left {

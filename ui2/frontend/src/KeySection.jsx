@@ -1,10 +1,5 @@
-import {
-  CopyOutlined,
-  KeyOutlined,
-  SnippetsOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
-import { Button, Form, Input, Upload } from "antd";
+import { CopyOutlined, KeyOutlined, SnippetsOutlined } from "@ant-design/icons";
+import { Button, Form, Input } from "antd";
 
 export default function KeySection({
   tunKey,
@@ -14,7 +9,6 @@ export default function KeySection({
   onGenerate,
   onCopy,
   onPaste,
-  onImportFile,
 }) {
   return (
     <Form.Item label="连接密钥">
@@ -42,19 +36,6 @@ export default function KeySection({
           <Button icon={<SnippetsOutlined />} disabled={!othersEnabled} onClick={onPaste}>
             粘贴密钥
           </Button>
-          <Upload
-            accept=".json,application/json"
-            showUploadList={false}
-            disabled={!othersEnabled}
-            beforeUpload={(file) => {
-              onImportFile(file);
-              return false;
-            }}
-          >
-            <Button icon={<UploadOutlined />} disabled={!othersEnabled}>
-              导入配置
-            </Button>
-          </Upload>
         </div>
       </div>
     </Form.Item>

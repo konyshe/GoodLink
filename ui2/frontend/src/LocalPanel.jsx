@@ -63,7 +63,6 @@ export default function LocalPanel({
   onGenerate,
   onCopy,
   onPaste,
-  onImportFile,
   localMode,
   setLocalMode,
   rows,
@@ -193,7 +192,6 @@ export default function LocalPanel({
         onGenerate={onGenerate}
         onCopy={onCopy}
         onPaste={onPaste}
-        onImportFile={onImportFile}
       />
 
       <Form.Item label="工作模式">

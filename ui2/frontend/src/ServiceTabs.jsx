@@ -1,5 +1,5 @@
-import { DownloadOutlined } from "@ant-design/icons";
-import { Badge, Button, Tabs, Typography } from "antd";
+import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
+import { Badge, Button, Tabs, Typography, Upload } from "antd";
 
 function badgeStatus(status) {
   if (status === 5 || status === 6) return "success";
@@ -14,7 +14,17 @@ function isTextEditable(el) {
   return tag === "INPUT" || tag === "TEXTAREA" || !!el.isContentEditable;
 }
 
-export default function ServiceTabs({ services, activeId, onChange, onCreate, onDelete, onRename, onExportConfig }) {
+export default function ServiceTabs({
+  services,
+  activeId,
+  onChange,
+  onCreate,
+  onDelete,
+  onRename,
+  onExportConfig,
+  onImportFile,
+  othersEnabled,
+}) {
   // rc-tabs 在标签页上按 Backspace/Delete 会触发 onEdit('remove')，这里在捕获阶段拦截，
   // 删除服务只保留标签上的 × 按钮入口；改名编辑态仍可正常删除文字。
   function blockRemoveKey(e) {
@@ -61,9 +71,23 @@ export default function ServiceTabs({ services, activeId, onChange, onCreate, on
           }))}
         />
       </div>
-      <Button className="gl-service-export" block icon={<DownloadOutlined />} onClick={onExportConfig}>
+      <Button className="gl-sider-action" block icon={<DownloadOutlined />} onClick={onExportConfig}>
         导出配置
       </Button>
+      <Upload
+        className="gl-sider-upload"
+        accept=".json,application/json"
+        showUploadList={false}
+        disabled={!othersEnabled}
+        beforeUpload={(file) => {
+          onImportFile(file);
+          return false;
+        }}
+      >
+        <Button className="gl-sider-action" block icon={<UploadOutlined />} disabled={!othersEnabled}>
+          导入配置
+        </Button>
+      </Upload>
     </>
   );
 }

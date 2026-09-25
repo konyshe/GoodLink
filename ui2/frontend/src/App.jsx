@@ -577,7 +577,6 @@ export default function App() {
     onGenerate,
     onCopy,
     onPaste,
-    onImportFile,
   };
 
   const upgradeErrorText = upgradeModalError || upgradeProgress.error;
@@ -608,6 +607,8 @@ export default function App() {
               if (result.error) setFormError(result.error);
             }}
             onExportConfig={onExportConfig}
+            onImportFile={onImportFile}
+            othersEnabled={othersEnabled}
           />
         </aside>
         <div className="gl-main">
