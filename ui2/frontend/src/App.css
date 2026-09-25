@@ -131,6 +131,12 @@ body {
   min-width: 0;
 }
 
+.gl-service-tab-auto {
+  flex: none;
+  font-size: 12px;
+  color: var(--gl-accent);
+}
+
 .gl-main {
   display: flex;
   flex-direction: column;

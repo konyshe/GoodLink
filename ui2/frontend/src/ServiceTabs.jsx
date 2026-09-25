@@ -1,5 +1,5 @@
-import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
-import { Badge, Button, Tabs, Typography, Upload } from "antd";
+import { DownloadOutlined, ThunderboltOutlined, UploadOutlined } from "@ant-design/icons";
+import { Badge, Button, Tabs, Tooltip, Typography, Upload } from "antd";
 
 function badgeStatus(status) {
   if (status === 5 || status === 6) return "success";
@@ -16,6 +16,7 @@ function isTextEditable(el) {
 
 export default function ServiceTabs({
   services,
+  forms,
   activeId,
   onChange,
   onCreate,
@@ -50,25 +51,33 @@ export default function ServiceTabs({
             if (action === "add") onCreate();
             if (action === "remove") onDelete(key);
           }}
-          items={(services || []).map((svc) => ({
-            key: svc.id,
-            label: (
-              <span className="gl-service-tab">
-                <Badge status={badgeStatus(svc.status)} />
-                <Typography.Text
-                  className="gl-service-tab-name"
-                  ellipsis
-                  editable={{
-                    text: svc.name,
-                    onChange: (next) => onRename(svc.id, next),
-                    triggerType: ["text"],
-                  }}
-                >
-                  {svc.name}
-                </Typography.Text>
-              </span>
-            ),
-          }))}
+          items={(services || []).map((svc) => {
+            const autoStart = forms?.[svc.id]?.autoStart ?? !!svc.autoStart;
+            return {
+              key: svc.id,
+              label: (
+                <span className="gl-service-tab">
+                  <Badge status={badgeStatus(svc.status)} />
+                  <Typography.Text
+                    className="gl-service-tab-name"
+                    ellipsis
+                    editable={{
+                      text: svc.name,
+                      onChange: (next) => onRename(svc.id, next),
+                      triggerType: ["text"],
+                    }}
+                  >
+                    {svc.name}
+                  </Typography.Text>
+                  {autoStart ? (
+                    <Tooltip title="自动启动">
+                      <ThunderboltOutlined className="gl-service-tab-auto" />
+                    </Tooltip>
+                  ) : null}
+                </span>
+              ),
+            };
+          })}
         />
       </div>
       <Button className="gl-sider-action" block icon={<DownloadOutlined />} onClick={onExportConfig}>

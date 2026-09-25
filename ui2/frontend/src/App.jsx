@@ -589,6 +589,7 @@ export default function App() {
           <div className="gl-sider-title">服务列表(双击可修改名称)</div>
           <ServiceTabs
             services={services}
+            forms={forms}
             activeId={active?.id}
             onChange={setActiveId}
             onCreate={async () => {
