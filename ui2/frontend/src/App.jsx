@@ -648,7 +648,7 @@ export default function App() {
                           value: "kcp",
                           icon: <ThunderboltOutlined />,
                           label: "KCP",
-                          desc: "CPU 降低约 40%，适合个人使用",
+                          desc: "CPU低40%，延时低30%，适合个人使用",
                         },
                         {
                           value: "quic",
