@@ -40,10 +40,12 @@ import { useUIEvents } from "./useUIEvents";
 
 const STATUS_DETECTING = 0;
 const STATUS_IDLE = 1;
+const STATUS_STARTING = 2;
+const STATUS_CONNECTING = 3;
 const STATUS_CONNECTING_NAT4 = 4;
-const STATUS_CONNECT_FAILED = 8;
 const STATUS_CONNECTED = 5;
 const STATUS_STARTED = 6;
+const STATUS_CONNECT_FAILED = 8;
 
 function viewFromStatus(status, workType) {
   const remote = workType === "Remote";
@@ -214,6 +216,7 @@ export default function App() {
   const [formError, setFormError] = useState("");
   const [failHint, setFailHint] = useState("");
   const [conflictHint, setConflictHint] = useState("");
+  const [busyHint, setBusyHint] = useState("");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeBody, setUpgradeBody] = useState("");
   const [upgradeModalError, setUpgradeModalError] = useState("");
@@ -479,6 +482,18 @@ export default function App() {
     if (status === STATUS_IDLE) {
       setFormError("");
       setConflictHint("");
+      const busy = services.find(
+        (s) =>
+          s.id !== active.id &&
+          (s.status === STATUS_STARTING ||
+            s.status === STATUS_CONNECTING ||
+            s.status === STATUS_CONNECTED ||
+            s.status === STATUS_STARTED)
+      );
+      if (busy) {
+        setBusyHint(`服务[${busy.name || busy.id}]正在连接中，请等它连接成功或关闭后，再启动本服务`);
+        return;
+      }
       const result = await start(active.id, workType, tunKey, localMode, rulesFromRows(rows), transport);
       if (result.error) {
         if (String(result.error).includes("端口已被占用")) {
@@ -830,6 +845,22 @@ export default function App() {
         ]}
       >
         {keyHint}
+      </Modal>
+
+      <Modal
+        title="无法启动"
+        open={!exited && !!busyHint}
+        onCancel={() => setBusyHint("")}
+        mask={{ closable: true }}
+        centered
+        destroyOnHidden
+        footer={[
+          <Button key="ok" type="primary" onClick={() => setBusyHint("")}>
+            确定
+          </Button>,
+        ]}
+      >
+        {busyHint}
       </Modal>
 
       <Modal
