@@ -129,14 +129,24 @@ body {
   font-weight: 600;
 }
 
+/* 删除按钮固定在行尾: 标签内容区吃满剩余宽度, × 再用自动外边距顶到最右侧,
+   这样服务名长短不一时 × 也不会左右漂移(原来靠 max-width 硬预留, × 紧贴服务名) */
 .gl-service-tabs .ant-tabs-tab-btn {
-  max-width: calc(100% - 18px);
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.gl-service-tabs .ant-tabs-tab-remove {
+  flex: none;
+  margin-left: auto;
 }
 
 .gl-service-tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
   max-width: 100%;
   min-width: 0;
 }
