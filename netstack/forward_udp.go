@@ -41,7 +41,8 @@ func ForwardUdpConn(originConn *udpConn, stun_quic_conn tls2.Conn) {
 	}
 
 	// DNS 等短会话需要空闲超时，否则 gonet 端点 + QUIC 流会一直占着。
-	proxy.RelayIdle(originConn, new_quic_stream, proxy.UDPIdleTimeout)
+	// UDP 必须走分帧路径: 隧道是字节流, 直接搬运会丢掉数据报边界。
+	proxy.RelayUDPIdle(originConn, new_quic_stream, proxy.UDPIdleTimeout)
 }
 
 func NewUdpForwarder(s *stack.Stack) *udp.Forwarder {

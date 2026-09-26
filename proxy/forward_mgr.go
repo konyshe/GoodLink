@@ -92,29 +92,35 @@ func (m *ForwardManager) Apply(rules []ForwardRule) error {
 		existing[e.key] = e
 	}
 
-	var added []forwardEntry
-	for key, rule := range wanted {
-		if _, ok := existing[key]; ok {
-			continue
+	// 1) 先关闭不再需要的监听, 再创建新的:
+	// 原来先绑新端口再关旧端口, 两条规则互换监听地址时必然 EADDRINUSE
+	for _, e := range m.entries {
+		if _, keep := wanted[e.key]; !keep {
+			e.runner.Close()
 		}
-		runner, err := newForwardRunner(rule)
-		if err != nil {
-			for _, a := range added {
-				a.runner.Close()
-			}
-			return err
-		}
-		if m.quic != nil {
-			runner.SetQuicConn(m.quic)
-		}
-		added = append(added, forwardEntry{key: key, rule: rule, runner: runner})
 	}
 
+	// 2) 保留的条目: 更新目标, 或重建已经停止服务的 runner
 	next := make([]forwardEntry, 0, len(wanted))
 	for _, e := range m.entries {
 		rule, keep := wanted[e.key]
 		if !keep {
+			continue
+		}
+		if e.runner.Failed() {
+			// Serve 已经退出(监听异常)或该 runner 已被关闭: 不重建的话这个端口会静默失效
+			log.Printf("[proxy] 转发监听已失效, 尝试重建: %s", rule.ListenAddr)
 			e.runner.Close()
+			runner, err := newForwardRunner(rule)
+			if err != nil {
+				log.Printf("[proxy] 重建转发监听失败: %s: %v", rule.ListenAddr, err)
+				continue
+			}
+			if m.quic != nil {
+				runner.SetQuicConn(m.quic)
+			}
+			go runner.Serve()
+			next = append(next, forwardEntry{key: e.key, rule: rule, runner: runner})
 			continue
 		}
 		if e.rule.RemotePort != rule.RemotePort || !e.rule.RemoteIP.Equal(rule.RemoteIP) {
@@ -124,10 +130,24 @@ func (m *ForwardManager) Apply(rules []ForwardRule) error {
 		}
 		next = append(next, e)
 	}
-	for _, a := range added {
-		go a.runner.Serve()
-		next = append(next, a)
+
+	// 3) 最后创建新增的监听(此时旧端口已释放)
+	for key, rule := range wanted {
+		if _, ok := existing[key]; ok {
+			continue
+		}
+		runner, err := newForwardRunner(rule)
+		if err != nil {
+			log.Printf("[proxy] 创建转发监听失败: %s: %v", rule.ListenAddr, err)
+			return err
+		}
+		if m.quic != nil {
+			runner.SetQuicConn(m.quic)
+		}
+		go runner.Serve()
+		next = append(next, forwardEntry{key: key, rule: rule, runner: runner})
 	}
+
 	m.entries = next
 	return nil
 }

@@ -109,19 +109,36 @@ func (w *windowsWriter) writeUSO(msgs []Message, total int) (int, error) {
 	}
 	buf := w.scratch[:total]
 	off := 0
+	seg := len(msgs[0].Buf)
+
+	// USO 的每个分段必须等长, 长度不一致时按单一 seg 划分会把报文边界切错
+	if seg <= 0 {
+		w.uso = false
+		return w.writeEach(msgs)
+	}
 	for _, m := range msgs {
+		if len(m.Buf) != seg {
+			w.uso = false
+			return w.writeEach(msgs)
+		}
 		off += copy(buf[off:], m.Buf)
 	}
-	seg := uint32(len(msgs[0].Buf))
-	n, _, err := w.conn.WriteMsgUDPAddrPort(buf, w.control(seg), msgs[0].Addr)
+
+	n, _, err := w.conn.WriteMsgUDPAddrPort(buf, w.control(uint32(seg)), msgs[0].Addr)
 	if err != nil || n == 0 {
 		// 这次系统调用没有把数据交出去，改逐包重发，并停用 USO。
 		w.uso = false
 		return w.writeEach(msgs)
 	}
 	if n != total {
-		// 完成字节数对不上时不再重发，避免把已经发出的段再写一遍。
+		// 只发出了部分字节: 必须按段长折算真正完整发出的报文数。
+		// 原来固定返回 len(msgs), 上层会把没发出去的报文也算成已发送, 造成静默丢包。
 		w.uso = false
+		complete := n / seg
+		if complete <= 0 {
+			return 0, io.ErrShortWrite
+		}
+		return complete, nil
 	}
 	return len(msgs), nil
 }
@@ -374,8 +391,30 @@ func releaseBatch(batch []Message) {
 	}
 }
 
+// isFatalWriteErr 判断写错误是否不可恢复。
+// 只认 net.ErrClosed 时, EPERM / ENETDOWN / EAFNOSUPPORT 之类的永久错误
+// 会被当成瞬时错误反复重试: 数据既发不出去也不报错, 发送循环还会以毫秒级间隔空转。
 func isFatalWriteErr(err error) bool {
-	return err != nil && errors.Is(err, net.ErrClosed)
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, net.ErrClosed) {
+		return true
+	}
+
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		switch errno {
+		case windows.WSAEACCES,
+			windows.WSAENETDOWN,
+			windows.WSAENETUNREACH,
+			windows.WSAEAFNOSUPPORT,
+			windows.WSAEINVAL,
+			windows.WSAEMSGSIZE:
+			return true
+		}
+	}
+	return false
 }
 
 func addrPortFrom(addr net.Addr) (netip.AddrPort, bool) {

@@ -18,12 +18,28 @@ const (
 	PROXY_PORT = 1080
 
 	tcpDialTimeout = 10 * time.Second
+
+	// headReadTimeout 是读取协议头的超时: 对端不发数据时不能让goroutine永久悬挂
+	headReadTimeout = 10 * time.Second
 )
 
 func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
+	// 该 goroutine 没有外层 recover(main.go 的 recover 只保护 main2 自身栈),
+	// 这里兜底, 避免一处 panic 直接终止整个进程
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("process_stream panic: ", r)
+			new_quic_stream.CancelRead(0)
+			new_quic_stream.Close()
+		}
+	}()
 
 	headerBuf := go2pool.Malloc(HEAD_LEN)
 	defer go2pool.Free(headerBuf)
+
+	// 必须设读超时: 对端开流后不发送头部时, ReadFull 会永久阻塞,
+	// goroutine 与缓冲一起悬挂, 可被放大到 MaxIncomingStreams 条
+	_ = new_quic_stream.SetReadDeadline(time.Now().Add(headReadTimeout))
 
 	_, err := io.ReadFull(new_quic_stream, headerBuf[:HEAD_LEN])
 	if err != nil {
@@ -35,6 +51,8 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 		new_quic_stream.Close()
 		return
 	}
+	// 头部读完后取消超时, 后续由 Relay / RelayIdle 自行管理空闲
+	_ = new_quic_stream.SetReadDeadline(time.Time{})
 
 	protocolType := headerBuf[0]
 	remotePort := binary.BigEndian.Uint16(headerBuf[5:HEAD_LEN])
@@ -83,7 +101,8 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 		if err == nil {
 			_ = new_conn.SetReadBuffer(256 * 1024)
 			_ = new_conn.SetWriteBuffer(256 * 1024)
-			RelayIdle(new_conn, new_quic_stream, UDPIdleTimeout)
+			// UDP 必须走分帧路径: 隧道是字节流, 直接搬运会丢掉数据报边界
+			RelayUDPIdle(new_conn, new_quic_stream, UDPIdleTimeout)
 		} else {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 			} else {
@@ -92,6 +111,12 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 			new_quic_stream.CancelRead(0)
 			new_quic_stream.Close()
 		}
+	default:
+		// 未知协议类型: 原来既没有 CancelRead 也没有 Close, 这条流会一直悬挂
+		// (对端也因流控被卡住), 可被放大到 MaxIncomingStreams 条
+		log.Error("unknown protocol type: ", protocolType)
+		new_quic_stream.CancelRead(0)
+		new_quic_stream.Close()
 	}
 }
 

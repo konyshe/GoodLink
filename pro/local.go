@@ -78,6 +78,9 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 	// 版本兼容性检查（主版本.次版本一致即可）
 	if !config.VersionsCompatible(config.GetVersion(), redisJson.RemoteVersion) {
 		log.Printf("两端版本不兼容: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
+		// 3.4.0 起 UDP 转发在隧道内使用长度前缀分帧, 与旧版本不兼容:
+		// 一端升级一端未升级时 UDP 数据报边界会错乱, 必须两端同时升级
+		log.Printf("提示: 3.4.0 起 UDP 转发格式已变更, 两端必须同时升级")
 		UpdateStartButtonStatue(StatusVersionMismatch)
 		RedisSessionDel(sessionID)
 		return errors.New("两端版本不兼容")
