@@ -462,27 +462,8 @@ func HandleSetAutoStart(id string, autoStart bool, workType, tunKey, localMode, 
 		return err
 	}
 	broadcastState()
-	if !autoStart {
-		return nil
-	}
-	if getServiceStatus(id) != StatusIdle {
-		return nil
-	}
-	stateMu.RLock()
-	svc := m_index[id]
-	var wt, key, mode, transport2 string
-	var fr []config.UIForwardRule
-	if svc != nil {
-		wt, key, mode, transport2 = svc.cfg.WorkType, svc.cfg.TunKey, svc.cfg.LocalMode, svc.cfg.Transport
-		fr = append([]config.UIForwardRule(nil), svc.cfg.ForwardRules...)
-	}
-	stateMu.RUnlock()
-	ServiceLogPrintF(id, "已开启自动连接, 正在启动服务[%s]...", serviceName(id))
-	if err := HandleStart(id, wt, key, mode, transport2, fr); err != nil {
-		if err.Error() == "already started" || err.Error() == "busy" {
-			return nil
-		}
-		return err
+	if autoStart {
+		ServiceLogPrintF(id, "已开启自动连接, 程序下次启动时自动连接服务[%s]", serviceName(id))
 	}
 	return nil
 }
