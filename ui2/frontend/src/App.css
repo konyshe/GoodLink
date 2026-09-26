@@ -151,8 +151,17 @@ body {
   min-width: 0;
 }
 
+/* 服务名用浏览器原生 CSS 截断: antd 的 ellipsis 一旦搭配 editable 就会走 JS 测量,
+   而测量基准是元素变化前的旧宽度, 改名变长后会一直按旧宽度截断再也恢复不了。
+   CSS 截断只看元素当前可用宽度, 未超出行宽就完整显示。 */
 .gl-service-tab-name {
+  display: inline-block;
+  max-width: 100%;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .gl-service-tab-auto {

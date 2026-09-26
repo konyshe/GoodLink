@@ -60,7 +60,7 @@ export default function ServiceTabs({
                   <Badge status={badgeStatus(svc.status)} />
                   <Typography.Text
                     className="gl-service-tab-name"
-                    ellipsis
+                    title={svc.name}
                     editable={{
                       text: svc.name,
                       onChange: (next) => onRename(svc.id, next),
