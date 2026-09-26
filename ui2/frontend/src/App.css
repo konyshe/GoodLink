@@ -115,6 +115,20 @@ body {
   justify-content: flex-start;
 }
 
+/* 当前选中的服务：青色背景 + 左侧竖条 */
+.gl-service-tabs .ant-tabs-tab-active {
+  background: rgba(45, 212, 191, 0.14) !important;
+  border-color: rgba(45, 212, 191, 0.35) !important;
+  border-left: 3px solid var(--gl-accent) !important;
+  padding-left: 7px !important;
+}
+
+.gl-service-tabs .ant-tabs-tab-active .ant-tabs-tab-btn,
+.gl-service-tabs .ant-tabs-tab-active .gl-service-tab-name {
+  color: var(--gl-text);
+  font-weight: 600;
+}
+
 .gl-service-tabs .ant-tabs-tab-btn {
   max-width: calc(100% - 18px);
 }
