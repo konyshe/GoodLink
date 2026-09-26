@@ -111,8 +111,9 @@ func CleanupOrphanedCmdProcesses() {
 			_ = os.Remove(p)
 			continue
 		}
+		// 镜像路径不匹配时不能删除 pid 文件: 它可能属于别的正常实例,
+		// 删掉会让对方失去清理能力。只跳过即可。
 		if !processImageMatches(pid, self) {
-			_ = os.Remove(p)
 			continue
 		}
 		KillProcess(pid)

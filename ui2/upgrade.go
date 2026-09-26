@@ -3,8 +3,10 @@ package ui2
 import (
 	"archive/zip"
 	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"log"
 	"net/http"
@@ -21,6 +23,10 @@ import (
 	"goodlink/utils"
 )
 
+// upgradeRollbackKeep 是 .old 回滚点的保留时长。
+// .old 是更新失败时唯一的回滚点, 不能在每次启动时立刻删除。
+const upgradeRollbackKeep = 7 * 24 * time.Hour
+
 var (
 	upgradeDlMu    sync.Mutex
 	upgradeZipPath string
@@ -29,8 +35,21 @@ var (
 
 func cleanupUpgradeResidues() {
 	exe := utils.GetCmdExePath()
-	_ = os.Remove(exe + ".old")
-	_ = os.Remove(filepath.Join(filepath.Dir(exe), "wintun.dll.old"))
+	removeOldAfter(exe+".old", upgradeRollbackKeep)
+	removeOldAfter(filepath.Join(filepath.Dir(exe), "wintun.dll.old"), upgradeRollbackKeep)
+}
+
+// removeOldAfter 只清理超过保留时长的回滚文件:
+// 新版启动后立刻删除 .old, 一旦新版崩溃循环就再也回不去了
+func removeOldAfter(path string, keep time.Duration) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	if time.Since(info.ModTime()) < keep {
+		return
+	}
+	_ = os.Remove(path)
 }
 
 func HandleUpgradeInfo() (map[string]any, error) {
@@ -77,8 +96,10 @@ func runDownload(url string) {
 
 	setUpgradeProgress(true, 0, false, "")
 
-	dir := filepath.Join(os.TempDir(), "goodlink-update")
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	// 必须用随机私有目录: 固定的 /tmp/goodlink-update 可被他人预先创建,
+	// 在里面放符号链接就能让下载覆盖到任意可写文件
+	dir, err := os.MkdirTemp(os.TempDir(), "goodlink-update-")
+	if err != nil {
 		setUpgradeProgress(false, 0, false, "创建临时目录失败: "+err.Error())
 		return
 	}
@@ -225,6 +246,9 @@ func RunSelfUpdate(zipPath string, waitPid int, target string) {
 
 	if err := applyZip(zipPath, target); err != nil {
 		log.Println("self-update failed:", err)
+		// 替换失败必须从 .old 恢复并重启旧版本:
+		// 主进程已经退出, 不恢复的话用户会彻底失去可用的程序
+		restoreAndRestart(target)
 		os.Exit(1)
 	}
 
@@ -232,12 +256,34 @@ func RunSelfUpdate(zipPath string, waitPid int, target string) {
 	cmd.Dir = filepath.Dir(target)
 	if err := cmd.Start(); err != nil {
 		log.Println("self-update restart failed:", err)
+		restoreAndRestart(target)
 		os.Exit(1)
 	}
 	_ = cmd.Process.Release()
 	_ = os.Remove(zipPath)
 	log.Println("self-update done")
 	os.Exit(0)
+}
+
+// restoreAndRestart 用 .old 回滚点恢复旧版本并重新启动
+func restoreAndRestart(target string) {
+	old := target + ".old"
+	if _, err := os.Stat(old); err != nil {
+		log.Println("self-update: 没有可用的回滚点:", old)
+		return
+	}
+	if err := retryRename(old, target); err != nil {
+		log.Println("self-update: 回滚失败:", err)
+		return
+	}
+	cmd := exec.Command(target, "--no-browser")
+	cmd.Dir = filepath.Dir(target)
+	if err := cmd.Start(); err != nil {
+		log.Println("self-update: 重启旧版本失败:", err)
+		return
+	}
+	_ = cmd.Process.Release()
+	log.Println("self-update: 已回滚到旧版本")
 }
 
 func sameFilePath(a, b string) bool {
@@ -296,7 +342,7 @@ func applyZip(zipPath, target string) error {
 	defer r.Close()
 
 	destDir := filepath.Dir(target)
-	var exeSrc, dllSrc, md5Src *zip.File
+	var exeSrc, dllSrc, shaSrc, md5Src *zip.File
 	for i := range r.File {
 		if r.File[i].FileInfo().IsDir() {
 			continue
@@ -306,6 +352,8 @@ func applyZip(zipPath, target string) error {
 			return err
 		}
 		switch strings.ToLower(base) {
+		case "sha256sum.txt":
+			shaSrc = r.File[i]
 		case "md5sum.txt":
 			md5Src = r.File[i]
 		case "wintun.dll":
@@ -320,34 +368,73 @@ func applyZip(zipPath, target string) error {
 		return fmt.Errorf("压缩包中未找到可执行文件")
 	}
 
+	// 优先 SHA-256: md5 已不适合作为完整性校验。
+	// 注意校验清单与待校验文件在同一个 zip 内, 只能防损坏, 防不住整包替换,
+	// 因此传输层必须验证证书(见 footer.go 的 upgradeHTTPCli)。
+	algo := ""
 	var hashes map[string]string
-	if md5Src != nil {
-		rc, err := md5Src.Open()
-		if err != nil {
-			return fmt.Errorf("读取 md5sum.txt 失败: %w", err)
-		}
-		data, err := io.ReadAll(rc)
-		rc.Close()
-		if err != nil {
-			return fmt.Errorf("读取 md5sum.txt 失败: %w", err)
-		}
-		hashes = parseMd5sumFile(string(data))
-		if len(hashes) == 0 {
-			return fmt.Errorf("md5sum.txt 为空或格式无效")
-		}
+	switch {
+	case shaSrc != nil:
+		algo = "sha256"
+		hashes, err = readHashFile(shaSrc)
+	case md5Src != nil:
+		log.Println("升级包未提供 sha256sum.txt, 回退使用 md5 校验")
+		algo = "md5"
+		hashes, err = readHashFile(md5Src)
+	}
+	if err != nil {
+		return err
+	}
+	if (shaSrc != nil || md5Src != nil) && len(hashes) == 0 {
+		return fmt.Errorf("校验清单为空或格式无效")
 	}
 
 	exeBase := strings.ToLower(filepath.Base(exeSrc.Name))
-	if err := extractReplace(exeSrc, target, hashFor(hashes, exeBase)); err != nil {
+
+	// 先把所有文件解压并校验到临时位置, 全部通过后再统一替换:
+	// 原来的顺序替换会在 wintun.dll 失败时留下"新exe + 旧dll"的不兼容组合
+	exeTmp := target + ".new"
+	if err := extractTo(exeSrc, exeTmp, algo, hashFor(hashes, exeBase)); err != nil {
+		_ = os.Remove(exeTmp)
+		return fmt.Errorf("解压程序失败: %w", err)
+	}
+
+	dllTmp := ""
+	if dllSrc != nil {
+		dllTmp = filepath.Join(destDir, "wintun.dll") + ".new"
+		if err := extractTo(dllSrc, dllTmp, algo, hashFor(hashes, "wintun.dll")); err != nil {
+			_ = os.Remove(exeTmp)
+			_ = os.Remove(dllTmp)
+			return fmt.Errorf("解压 wintun.dll 失败: %w", err)
+		}
+	}
+
+	if err := replaceFile(exeTmp, target); err != nil {
+		_ = os.Remove(exeTmp)
+		_ = os.Remove(dllTmp)
 		return fmt.Errorf("覆盖程序失败: %w", err)
 	}
-	if dllSrc != nil {
-		dllDest := filepath.Join(destDir, "wintun.dll")
-		if err := extractReplace(dllSrc, dllDest, hashFor(hashes, "wintun.dll")); err != nil {
+	if dllTmp != "" {
+		if err := replaceFile(dllTmp, filepath.Join(destDir, "wintun.dll")); err != nil {
 			return fmt.Errorf("覆盖 wintun.dll 失败: %w", err)
 		}
 	}
 	return nil
+}
+
+// readHashFile 读取压缩包内的校验清单
+func readHashFile(f *zip.File) (map[string]string, error) {
+	rc, err := f.Open()
+	if err != nil {
+		return nil, fmt.Errorf("读取校验清单失败: %w", err)
+	}
+	data, err := io.ReadAll(rc)
+	rc.Close()
+	if err != nil {
+		return nil, fmt.Errorf("读取校验清单失败: %w", err)
+	}
+	hashes := parseMd5sumFile(string(data))
+	return hashes, nil
 }
 
 func hashFor(hashes map[string]string, base string) string {
@@ -361,9 +448,10 @@ func hashFor(hashes map[string]string, base string) string {
 	return h
 }
 
-func extractReplace(f *zip.File, dest string, wantMD5 string) error {
-	if wantMD5 == "-" {
-		return fmt.Errorf("md5sum.txt 缺少 %s", filepath.Base(dest))
+// extractTo 把压缩包内的文件解压到 dest 并按指定算法校验, 不做替换
+func extractTo(f *zip.File, dest string, algo, want string) error {
+	if want == "-" {
+		return fmt.Errorf("校验清单缺少 %s", filepath.Base(dest))
 	}
 
 	rc, err := f.Open()
@@ -372,46 +460,59 @@ func extractReplace(f *zip.File, dest string, wantMD5 string) error {
 	}
 	defer rc.Close()
 
-	tmp := dest + ".new"
-	out, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
 		return err
 	}
-	h := md5.New()
+
+	var h hash.Hash
+	if algo == "sha256" {
+		h = sha256.New()
+	} else {
+		h = md5.New()
+	}
+
 	_, copyErr := io.Copy(out, io.TeeReader(rc, h))
 	closeErr := out.Close()
 	if copyErr != nil {
-		_ = os.Remove(tmp)
 		return copyErr
 	}
 	if closeErr != nil {
-		_ = os.Remove(tmp)
 		return closeErr
 	}
-	if wantMD5 != "" {
+	if want != "" {
 		got := hex.EncodeToString(h.Sum(nil))
-		if !strings.EqualFold(got, wantMD5) {
-			_ = os.Remove(tmp)
+		if !strings.EqualFold(got, want) {
 			return fmt.Errorf("%s 校验失败", filepath.Base(dest))
 		}
 	}
+	return nil
+}
 
+// replaceFile 用 src 覆盖 dest, 覆盖前保留 .old 作为回滚点。
+// 失败时必须尝试回滚并把回滚结果报出来: 原实现把回滚的 rename 错误丢弃,
+// 覆盖失败后程序可能已经损坏且无人恢复。
+func replaceFile(src, dest string) error {
 	old := dest + ".old"
 	_ = os.Remove(old)
 	if _, err := os.Stat(dest); err == nil {
 		if err := retryRename(dest, old); err != nil {
-			_ = os.Remove(tmp)
 			return err
 		}
 	}
-	if err := os.Rename(tmp, dest); err != nil {
-		if err2 := copyFileOverwrite(tmp, dest); err2 != nil {
-			_ = os.Rename(old, dest)
-			_ = os.Remove(tmp)
-			return err
-		}
-		_ = os.Remove(tmp)
+	if err := os.Rename(src, dest); err == nil {
+		return nil
 	}
+	if err := copyFileOverwrite(src, dest); err != nil {
+		// 覆盖失败: 用 .old 恢复, 恢复失败也必须把错误报出去, 不能静默
+		if _, statErr := os.Stat(old); statErr == nil {
+			if rerr := retryRename(old, dest); rerr != nil {
+				return fmt.Errorf("覆盖失败且回滚失败: %v(回滚: %v)", err, rerr)
+			}
+		}
+		return err
+	}
+	_ = os.Remove(src)
 	return nil
 }
 

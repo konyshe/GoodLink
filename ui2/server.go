@@ -1,12 +1,14 @@
 package ui2
 
 import (
+	"crypto/subtle"
 	"embed"
 	"encoding/json"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -17,17 +19,87 @@ import (
 var webFS embed.FS
 
 const (
-	defaultUIAddr     = "0.0.0.0:16780"
+	// 控制面默认只监听本机: 原来绑定 0.0.0.0, 同网段任何主机都能无鉴权地
+	// 读取含连接密钥的配置、启停服务、甚至清空全部服务
+	defaultUIAddr     = "127.0.0.1:16780"
 	uiAddrRetries     = 10
 	uiAddrRetryWaitMS = 200
+
+	// maxAPIBodyBytes 限制请求体大小, 避免超大 body 在反序列化阶段打爆内存
+	maxAPIBodyBytes = 1 << 20
 )
+
+// uiToken 用于放开监听后的远程访问鉴权; 未设置时只允许本机访问
+var uiToken = strings.TrimSpace(os.Getenv("GOODLINK_UI_TOKEN"))
+
+// uiListenAddr 允许用环境变量放开监听(例如需要局域网访问 UI),
+// 放开后必须同时设置 GOODLINK_UI_TOKEN, 否则远程请求会被拒绝。
+func uiListenAddr() string {
+	if v := strings.TrimSpace(os.Getenv("GOODLINK_UI_ADDR")); v != "" {
+		log.Println("UI 监听地址已被 GOODLINK_UI_ADDR 覆盖:", v)
+		return v
+	}
+	return defaultUIAddr
+}
+
+// authorize 校验控制面请求的来源与身份。
+// 该接口能导出连接密钥、启停服务、覆盖配置文件, 不能对任意来源开放。
+func authorize(w http.ResponseWriter, r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	ip := net.ParseIP(host)
+
+	if ip != nil && ip.IsLoopback() {
+		// 即使是本机来源也要校验 Host: 外部页面诱导浏览器访问 127.0.0.1 时
+		// RemoteAddr 同样是回环, 只有 Host 头能区分(DNS rebinding)
+		if !isLocalHostHeader(r.Host) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return false
+		}
+		return true
+	}
+
+	if uiToken == "" {
+		http.Error(w, "forbidden: 允许非本机访问需先设置 GOODLINK_UI_TOKEN", http.StatusForbidden)
+		return false
+	}
+	if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Goodlink-Token")), []byte(uiToken)) != 1 {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
+// isLocalHostHeader 判断请求 Host 是否指向本机
+func isLocalHostHeader(host string) bool {
+	h := host
+	if hh, _, err := net.SplitHostPort(host); err == nil {
+		h = hh
+	}
+	h = strings.ToLower(strings.TrimSpace(h))
+	if h == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(h)
+	return ip != nil && ip.IsLoopback()
+}
 
 // listenUI 优先使用固定端口。端口被占用时重试若干次, 避免回退随机端口导致旧页面无法重连。
 func listenUI() (net.Listener, error) {
+	addr := uiListenAddr()
+	listenHost := defaultUIAddr
+	if h, _, err := net.SplitHostPort(addr); err == nil {
+		listenHost = h
+	} else {
+		addr = defaultUIAddr
+	}
+
 	var err error
 	for i := 0; i < uiAddrRetries; i++ {
 		var ln net.Listener
-		ln, err = net.Listen("tcp4", defaultUIAddr)
+		ln, err = net.Listen("tcp4", addr)
 		if err == nil {
 			return ln, nil
 		}
@@ -37,7 +109,7 @@ func listenUI() (net.Listener, error) {
 	}
 
 	log.Println("UI固定端口不可用, 回退随机端口:", err)
-	return net.Listen("tcp4", "0.0.0.0:0")
+	return net.Listen("tcp4", net.JoinHostPort(listenHost, "0"))
 }
 
 func StartServer() (string, error) {
@@ -71,8 +143,26 @@ func StartServer() (string, error) {
 	mux.HandleFunc("/api/upgrade/apply", handleUpgradeApply)
 	mux.Handle("/", http.FileServer(http.FS(webContent)))
 
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !authorize(w, r) {
+			return
+		}
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, maxAPIBodyBytes)
+		}
+		mux.ServeHTTP(w, r)
+	})
+
+	srv := &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		// 不设 WriteTimeout: /api/events 是常驻 SSE, 整体写超时会把长连接切断
+	}
+
 	go func() {
-		_ = http.Serve(ln, mux)
+		_ = srv.Serve(ln)
 	}()
 
 	return "http://127.0.0.1:" + strings.Split(ln.Addr().String(), ":")[1] + "/", nil

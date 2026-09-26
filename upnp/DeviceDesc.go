@@ -3,6 +3,7 @@ package upnp
 import (
 	"encoding/xml"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -58,8 +59,10 @@ func (this *DeviceDesc) resolve(resultStr string) {
 	if path == "" {
 		return
 	}
-	if host != "" {
-		this.upnp.Gateway.Host = host
+	// 控制URL必须与发现阶段的网关同主机: 设备描述里的控制URL是网络可控数据,
+	// 允许改写 host 会把后续所有 SOAP 请求(含删除端口映射)发往攻击者主机
+	if host != "" && host != this.upnp.Gateway.Host {
+		log.Printf("upnp: 忽略指向其它主机的控制URL: %s", host)
 	}
 	this.upnp.CtrlUrl = path
 }

@@ -1,11 +1,11 @@
 package ui2
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"runtime"
 	"strings"
@@ -31,18 +31,27 @@ type upgradeReleaseInfo struct {
 }
 
 var (
-	upgradeInfoMu  sync.Mutex
-	cachedUpgrade  upgradeReleaseInfo
+	upgradeInfoMu sync.Mutex
+	cachedUpgrade upgradeReleaseInfo
+
+	// 升级链路必须验证服务端证书: 跳过校验后, 中间人可以把任意 zip 换成恶意包,
+	// 而唯一的完整性校验与被校验文件在同一个 zip 里(自包含), 无法防御这种替换。
+	//
+	// 下载用的客户端不设整体 Timeout: 升级包较大, 整体超时会中断正常下载。
+	// 改用拨号/首字节/握手超时 + 空闲超时, 避免连接永久挂起。
 	upgradeHTTPCli = &http.Client{
-		Timeout: 0,
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
+			TLSHandshakeTimeout:   15 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			IdleConnTimeout:       60 * time.Second,
 		},
 	}
 	upgradeHTTPFast = &http.Client{
 		Timeout: 15 * time.Second,
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			DialContext:         (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
+			TLSHandshakeTimeout: 10 * time.Second,
 		},
 	}
 )

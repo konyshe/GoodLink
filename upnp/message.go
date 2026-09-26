@@ -1,6 +1,7 @@
 package upnp
 
 import (
+	"encoding/xml"
 	"sort"
 	"strings"
 )
@@ -39,7 +40,12 @@ func (n *Node) writeXML(buf *strings.Builder) {
 		}
 	}
 	buf.WriteByte('>')
-	buf.WriteString(n.Content)
+	// 必须转义: 端口映射描述等字段可能包含 & < >, 原样写出会生成畸形 SOAP,
+	// 也会让外部可控数据闭合标签注入内容
+	if err := xml.EscapeText(buf, []byte(n.Content)); err != nil {
+		// EscapeText 只会在遇到非法码点时失败, 此时宁可放弃该内容也不能写出畸形报文
+		buf.WriteString("")
+	}
 	for i := range n.Child {
 		n.Child[i].writeXML(buf)
 	}

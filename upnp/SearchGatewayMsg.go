@@ -2,6 +2,7 @@ package upnp
 
 import (
 	"context"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -111,11 +112,22 @@ func (this *SearchGateway) send(ctx context.Context, remoteAddr, searchMessage s
 		return
 	}
 
-	buf := make([]byte, 2048)
+	buf := make([]byte, 4096)
 	for {
-		n, _, err := conn.ReadFromUDP(buf)
+		n, srcAddr, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			return
+		}
+		if n == len(buf) {
+			// UDP 数据报超过缓冲区会被内核静默截断, LOCATION 行可能只剩半截
+			log.Printf("upnp: SSDP 响应疑似被截断(%d字节), 已忽略", n)
+			continue
+		}
+		// SSDP 是组播发现: 同网段任何主机都能抢答成为"网关",
+		// 不校验来源就等于信任任意主机提供的 LOCATION 与控制URL
+		if !isLanGatewayAddr(srcAddr, localHost) {
+			log.Printf("upnp: 忽略来源可疑的SSDP响应: %v", srcAddr)
+			continue
 		}
 		result := string(buf[:n])
 		if !strings.Contains(strings.ToUpper(result), "LOCATION:") {
@@ -127,6 +139,26 @@ func (this *SearchGateway) send(ctx context.Context, remoteAddr, searchMessage s
 		}
 		return
 	}
+}
+
+// isLanGatewayAddr 判断 SSDP 响应来源是否可能是内网网关。
+// 合法的 UPnP 网关一定位于内网, 来自公网地址或本机的响应都不是网关。
+func isLanGatewayAddr(addr *net.UDPAddr, localHost string) bool {
+	if addr == nil || addr.IP == nil {
+		return false
+	}
+	ip := addr.IP.To4()
+	if ip == nil {
+		return false
+	}
+	if !ip.IsPrivate() && !ip.IsLinkLocalUnicast() {
+		return false
+	}
+	// 排除本机发出的包(组播回环)
+	if localHost != "" && ip.String() == localHost {
+		return false
+	}
+	return true
 }
 
 func (this *SearchGateway) resolve(result string) {

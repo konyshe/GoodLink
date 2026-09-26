@@ -3,14 +3,35 @@ package ui2
 import (
 	"fmt"
 	"go2"
+	"io"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"time"
 
 	"goodlink/config"
 	"goodlink/stun2"
 )
+
+// copyFileForBackup 在覆盖配置文件前留一份副本
+func copyFileForBackup(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
+}
 
 const (
 	M_APP_TITLE    = "Goodlink"
@@ -116,6 +137,11 @@ func HandleImportConfig(cfg config.UIConfig) error {
 	if err := config.NormalizeAndValidate(&cfg); err != nil {
 		return err
 	}
+	// 空配置必须拒绝: /api/config 是无鉴权接口, 一条 {"services":[]}
+	// 就能把用户的所有服务清空且没有任何副本
+	if len(cfg.Services) == 0 {
+		return fmt.Errorf("导入的配置中没有服务, 已拒绝")
+	}
 	for i := range cfg.Services {
 		wt := strings.TrimSpace(cfg.Services[i].WorkType)
 		if wt == "" {
@@ -132,7 +158,13 @@ func HandleImportConfig(cfg config.UIConfig) error {
 	if err := config.NormalizeAndValidate(&cfg); err != nil {
 		return err
 	}
-	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
+	// 覆盖前先留一份备份: 导入是不可逆操作, 出错时用户至少能手动恢复
+	configPath := config.UIConfigPath()
+	if backupErr := copyFileForBackup(configPath, configPath+".bak"); backupErr != nil {
+		log.Println("配置备份失败:", backupErr)
+	}
+
+	if err := config.SaveUIConfig(configPath, cfg); err != nil {
 		return err
 	}
 	replaceServices(cfg.Services)
