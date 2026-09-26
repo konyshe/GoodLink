@@ -2,6 +2,7 @@ package pro
 
 import (
 	"errors"
+	"fmt"
 	"goodlink/config"
 	"goodlink/proxy"
 	"goodlink/tls2"
@@ -39,7 +40,11 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 	log.Printf("会话 %s 传输协议: %s (由Remote端决定)", sessionID, remoteTransport)
 
 	// 获取 UDP 地址
-	*udp_conn, redisJson.RemoteAddr = GetUDPAddr()
+	var udpErr error
+	*udp_conn, redisJson.RemoteAddr, udpErr = GetUDPAddr()
+	if udpErr != nil {
+		return fmt.Errorf("获取UDP地址失败: %v", udpErr)
+	}
 	if redisJson.RemoteAddr.WanPort1 == redisJson.RemoteAddr.WanPort2 {
 		log.Printf("WanPort %d:%d, 当前是NAT1-NAT3", redisJson.RemoteAddr.WanPort1, redisJson.RemoteAddr.WanPort2)
 	} else {
@@ -149,7 +154,9 @@ func processSession(redisJson *RedisJsonType) {
 	var tun_passive_chain chan tls2.Conn
 
 	defer func() {
-		m_upnp_bind.CleanMappings()
+		// 端口映射清理可能耗时较长, 放到独立 goroutine 执行:
+		// processSession 由 RunRemote 的主循环同步调用, 在这里阻塞会冻结所有新会话的处理
+		go m_upnp_bind.CleanMappings()
 	}()
 
 	log.Printf("收到Local端请求: %v", redisJson)

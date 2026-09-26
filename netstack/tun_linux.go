@@ -36,12 +36,15 @@ func Open(name string, mtu uint32) (Device, error) {
 	if t.mtu > 0 {
 		// TunMTU=1280：避免内层 MSS≈1460 装不进外层 QUIC。
 		if err := setMTU(t.name, t.mtu); err != nil {
+			// fd 已打开, 失败时必须关闭, 否则每次失败都泄漏一个 tun fd
+			unix.Close(fd)
 			return nil, fmt.Errorf("set mtu: %w", err)
 		}
 	}
 
 	_mtu, err := rawfile.GetMTU(t.name)
 	if err != nil {
+		unix.Close(fd)
 		return nil, fmt.Errorf("get mtu: %w", err)
 	}
 	t.mtu = _mtu
@@ -64,6 +67,7 @@ func Open(name string, mtu uint32) (Device, error) {
 		MaxSyscallHeaderBytes: 0x00,
 	})
 	if err != nil {
+		unix.Close(fd)
 		return nil, fmt.Errorf("create endpoint: %w", err)
 	}
 	t.LinkEndpoint = ep

@@ -92,11 +92,19 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("create tun: %w", err)
 	}
-	t.nt = nt.(*tun.NativeTun) // 类型断言，确保使用NativeTun实现
+	// 类型断言失败时不能直接放过去, 否则后续空指针会变成 panic 且留下未关闭的网卡
+	nativeTun, ok := nt.(*tun.NativeTun)
+	if !ok {
+		nt.Close()
+		return nil, fmt.Errorf("unexpected tun device type: %T", nt)
+	}
+	t.nt = nativeTun
 
 	// 获取实际的 MTU 值，从系统获取TUN设备的实际MTU
 	tunMTU, err := nt.MTU()
 	if err != nil {
+		// 设备已创建, 失败必须关闭, 否则会残留一张 wintun 网卡
+		nt.Close()
 		return nil, fmt.Errorf("get mtu: %w", err)
 	}
 	t.mtu = uint32(tunMTU) // 更新为系统实际的MTU值
@@ -104,6 +112,7 @@ func Open(name string, mtu uint32) (_ Device, err error) {
 	// 创建 I/O 端点，用于处理数据包的收发
 	ep, err := NewEndpoint(t, t.mtu, offset)
 	if err != nil {
+		nt.Close()
 		return nil, fmt.Errorf("create endpoint: %w", err)
 	}
 	t.Endpoint = ep // 设置端点，使TUN设备能够与网络栈交互

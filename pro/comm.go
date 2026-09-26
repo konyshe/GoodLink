@@ -240,27 +240,41 @@ func RedisSessionUnregister(sessionID string) {
 	m_redis_db.Del(go2.Md5Encode(sessionID))
 }
 
+// externalIPProbeTimeout 探测本机出口地址时的连接超时:
+// net.Dial 本身没有超时, 外部服务不可达时会阻塞到系统级超时
+const externalIPProbeTimeout = 3 * time.Second
+
+// maxGetUDPAddrAttempts 是获取本地 UDP 地址的重试次数上限。
+// 原来是无限重试, 一旦环境异常就会永久卡住, 且无法被停止流程打断。
+const maxGetUDPAddrAttempts = 5
+
 func GetUDPLocalIPPort(level string) (string, int) {
-	conn, err := net.Dial(level, "ifconfig.co:80")
+	dialer := &net.Dialer{Timeout: externalIPProbeTimeout}
+	conn, err := dialer.Dial(level, "ifconfig.co:80")
 	if err != nil {
 		return "", 0
 	}
 	defer conn.Close()
 
-	return conn.LocalAddr().(*net.UDPAddr).IP.String(), conn.LocalAddr().(*net.UDPAddr).Port
+	udpAddr, ok := conn.LocalAddr().(*net.UDPAddr)
+	if !ok {
+		return "", 0
+	}
+	return udpAddr.IP.String(), udpAddr.Port
 }
 
-func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
+func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType, err error) {
 	addr.LocalIPv4, _ = GetUDPLocalIPPort("udp4")
 	addr.IPv6, _ = GetUDPLocalIPPort("udp6")
 
-	var err error
-
-	for {
+	for attempt := 1; attempt <= maxGetUDPAddrAttempts; attempt++ {
 		conn, err = net.ListenUDP("udp4", nil) // 只监听IPv4
 		if err != nil {
 			log.Println(err.Error())
-			time.Sleep(1 * time.Second)
+			conn = nil
+			if attempt < maxGetUDPAddrAttempts {
+				time.Sleep(1 * time.Second)
+			}
 			continue
 		}
 
@@ -272,8 +286,11 @@ func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 		if addr.WanIPv4 == "" || addr.WanPort1 == 0 || addr.WanPort2 == 0 {
 			log.Println("STUN 探测失败, 重新获取本地UDP地址后重试")
 			conn.Close()
+			conn = nil
 			addr.LocalPort = 0 // 下一轮重新使用随机本地端口, 避免绑定上一轮残留端口
-			time.Sleep(1 * time.Second)
+			if attempt < maxGetUDPAddrAttempts {
+				time.Sleep(1 * time.Second)
+			}
 			continue
 		}
 		conn.Close()
@@ -281,12 +298,15 @@ func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 		conn, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})
 		if err != nil {
 			log.Println(err.Error())
-			time.Sleep(1 * time.Second)
+			conn = nil
+			if attempt < maxGetUDPAddrAttempts {
+				time.Sleep(1 * time.Second)
+			}
 			continue
 		}
 
-		break
+		return conn, addr, nil
 	}
 
-	return
+	return nil, tun.AddrType{}, fmt.Errorf("获取本地UDP地址失败, 已重试%d次: %v", maxGetUDPAddrAttempts, err)
 }

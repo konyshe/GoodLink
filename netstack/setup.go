@@ -22,7 +22,12 @@ import (
 
 const (
 	healthCheckInterval = 30 * time.Second
-	nicID               = tcpip.NICID(1)
+
+	// healthCheckRetryInterval 是重建失败后的重试间隔。
+	// 失败时必须继续尝试: 原实现失败后每轮都只是 sleep, 网卡异常后永久无法自愈
+	healthCheckRetryInterval = 5 * time.Second
+
+	nicID = tcpip.NICID(1)
 
 	// 内层 TUN 默认 1500 时 gVisor 通告 MSS≈1460，外层还要加 QUIC/UDP/IP，
 	// 一个内层 TCP 段会被拆成多个 QUIC 包。1280 让内层段通常能进一个 QUIC 包。
@@ -82,6 +87,34 @@ var (
 	tunnel   tls2.Conn
 )
 
+var (
+	// healthStopCh 让健康检查循环能够退出, 避免重建失败后 goroutine 永久悬挂
+	healthStopCh   = make(chan struct{})
+	healthStopOnce sync.Once
+)
+
+// StopHealthCheck 停止健康检查循环
+func StopHealthCheck() {
+	healthStopOnce.Do(func() {
+		close(healthStopCh)
+	})
+}
+
+// cleanupStackResources 回收 initStack 过程中已创建的资源。
+// Open / CreateNIC 成功但后续步骤失败时, 不清理会残留 TUN 网卡与栈对象,
+// 重连重试若干次后会耗尽 fd 与网卡资源。可重复调用。
+func cleanupStackResources() {
+	if currentDevice != nil {
+		currentDevice.Close()
+		currentDevice = nil
+	}
+	if netstack_stack != nil {
+		netstack_stack.RemoveNIC(nicID)
+		netstack_stack.Close()
+		netstack_stack = nil
+	}
+}
+
 func setTunnel(c tls2.Conn) {
 	tunnelMu.Lock()
 	tunnel = c
@@ -124,13 +157,23 @@ func initStack() error {
 	}
 	currentDevice = dev
 
-	SetTunIP(&dev, NetStackIP, 32)
+	// 配置失败意味着这张网卡不可用, 必须回收后返回, 否则会留下"起来了但不通"的网卡
+	if err := SetTunIP(&dev, NetStackIP, 32); err != nil {
+		log.Printf("[netstack] 设置网卡IP失败: %v", err)
+		cleanupStackResources()
+		return fmt.Errorf("设置网卡IP: %v", err)
+	}
 
 	if err := netstack_stack.CreateNIC(nicID, dev); err != nil {
+		cleanupStackResources()
 		return fmt.Errorf("设备注册: %v", err)
 	}
 
 	remoteIP := net.ParseIP(NetStackIP).To4()
+	if remoteIP == nil {
+		cleanupStackResources()
+		return fmt.Errorf("无效的网卡IP: %s", NetStackIP)
+	}
 	protoAddr := tcpip.ProtocolAddress{
 		Protocol: ipv4.ProtocolNumber,
 		AddressWithPrefix: tcpip.AddressWithPrefix{
@@ -139,10 +182,12 @@ func initStack() error {
 		},
 	}
 	if err := netstack_stack.AddProtocolAddress(nicID, protoAddr, stack.AddressProperties{}); err != nil {
+		cleanupStackResources()
 		return fmt.Errorf("绑定IP地址: %v", err)
 	}
 
 	if err := setNetStack(netstack_stack, nicID); err != nil {
+		cleanupStackResources()
 		return err
 	}
 
@@ -180,21 +225,48 @@ func Start(adapterName, destIP string) error {
 
 // healthCheckLoop 定期检查协议栈 NIC 状态，如果发现异常则尝试重建
 func healthCheckLoop() {
+	failCount := 0
+
 	for {
-		time.Sleep(healthCheckInterval)
+		interval := healthCheckInterval
+		if failCount > 0 {
+			interval = healthCheckRetryInterval
+		}
+
+		select {
+		case <-healthStopCh:
+			log.Printf("[netstack] 健康检查已停止")
+			return
+		case <-time.After(interval):
+		}
 
 		mu.Lock()
-		if !initStackDone || netstack_stack == nil {
-			mu.Unlock()
-			continue
-		}
-
-		nicInfo, ok := netstack_stack.NICInfo()[nicID]
-		if !ok || nicInfo.Flags.Running == false {
-			log.Printf("[netstack] 健康检查: NIC %d 异常 (exists=%v), 尝试重建协议栈...", nicID, ok)
+		healthy := false
+		switch {
+		case netstack_stack == nil:
+			// 协议栈缺失(首次失败或上次重建失败)时同样要继续尝试,
+			// 原实现这里直接 continue, 导致失败后永远不再重建
+			log.Printf("[netstack] 健康检查: 协议栈未就绪, 尝试重建...")
 			rebuildStack()
+			healthy = netstack_stack != nil
+		default:
+			nicInfo, ok := netstack_stack.NICInfo()[nicID]
+			if !ok || nicInfo.Flags.Running == false {
+				log.Printf("[netstack] 健康检查: NIC %d 异常 (exists=%v), 尝试重建协议栈...", nicID, ok)
+				rebuildStack()
+				healthy = netstack_stack != nil
+			} else {
+				healthy = true
+			}
 		}
 		mu.Unlock()
+
+		if healthy {
+			failCount = 0
+		} else {
+			failCount++
+			log.Printf("[netstack] 重建协议栈失败, 将在%v后重试(第%d次)", healthCheckRetryInterval, failCount)
+		}
 	}
 }
 
@@ -213,9 +285,11 @@ func rebuildStack() {
 	if err := initStack(); err != nil {
 		log.Printf("[netstack] 重建协议栈失败: %v", err)
 		initStackDone = false
+		cleanupStackResources()
 		return
 	}
 
+	initStackDone = true
 	log.Printf("[netstack] 协议栈重建成功")
 }
 

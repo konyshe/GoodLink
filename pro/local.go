@@ -356,7 +356,12 @@ func RunLocal() error {
 		if udp_conn != nil {
 			udp_conn.Close()
 		}
-		udp_conn, addr = GetUDPAddr()
+		udp_conn, addr, err = GetUDPAddr()
+		if err != nil {
+			udp_conn = nil
+			log.Printf("获取本地UDP地址失败: %v", err)
+			return err
+		}
 
 		log.Printf("Local端地址: %v", addr)
 
