@@ -59,7 +59,7 @@ function viewFromStatus(status, workType) {
     case 3:
       return { text: "连接中, 点击停止", importance: "warning", enabled: true, activity: true, othersEnabled: false };
     case 4:
-      return { text: "两端网络都是NAT4, 无法直连", importance: "danger", enabled: false, activity: false, othersEnabled: false };
+      return { text: "两端网络都是NAT4, 无法直连", importance: "danger", enabled: true, activity: false, othersEnabled: true };
     case 5:
       return { text: "连接成功, 点击断开", importance: "success", enabled: true, activity: false, othersEnabled: false };
     case 6:
@@ -67,7 +67,7 @@ function viewFromStatus(status, workType) {
     case 7:
       return { text: "停止中...", importance: "warning", enabled: false, activity: false, othersEnabled: false };
     case 8:
-      return { text: "多次尝试仍无法连接", importance: "danger", enabled: false, activity: false, othersEnabled: false };
+      return { text: "多次尝试仍无法连接", importance: "danger", enabled: true, activity: false, othersEnabled: true };
     default:
       return { text: "检测网络中...", importance: "high", enabled: false, activity: false, othersEnabled: true };
   }
@@ -207,6 +207,16 @@ function formFromService(svc) {
   };
 }
 
+// 与后端 serviceIdle 对齐: 这些状态允许导入配置 / 再次启动
+function isServiceIdleStatus(status) {
+  return (
+    status === STATUS_DETECTING ||
+    status === STATUS_IDLE ||
+    status === STATUS_CONNECTING_NAT4 ||
+    status === STATUS_CONNECT_FAILED
+  );
+}
+
 export default function App() {
   const { message } = AntdApp.useApp();
   const { state, logs, exited, upgradeProgress } = useUIEvents();
@@ -260,16 +270,25 @@ export default function App() {
     if (!state?.services) return;
     setForms((prev) => {
       const next = { ...prev };
+      const live = new Set(state.services.map((s) => s.id));
+      for (const id of Object.keys(next)) {
+        if (!live.has(id)) {
+          delete next[id];
+          delete seen.current[id];
+        }
+      }
       for (const svc of state.services) {
         const cur = next[svc.id];
-        const running = svc.status !== STATUS_DETECTING && svc.status !== STATUS_IDLE;
+        const running = !isServiceIdleStatus(svc.status);
         if (!cur || !seen.current[svc.id]) {
           next[svc.id] = formFromService(svc);
           seen.current[svc.id] = true;
         } else if (running) {
+          // 运行中保留本地转发规则编辑, 避免 SSE 刷新冲掉正在输入的端口
           next[svc.id] = {
             ...formFromService(svc),
-            tunKey: isKeyInputFocused(keyInputRef) ? cur.tunKey : svc.tunKey,
+            tunKey: isKeyInputFocused(keyInputRef) && activeId === svc.id ? cur.tunKey : svc.tunKey,
+            rows: cur.rows,
           };
         } else {
           next[svc.id] = { ...cur, autoStart: !!svc.autoStart, name: svc.name };
@@ -278,7 +297,7 @@ export default function App() {
       return next;
     });
     setActiveId((id) => (id && state.services.some((s) => s.id === id) ? id : state.services[0]?.id || ""));
-  }, [state]);
+  }, [state, activeId]);
 
   useEffect(() => {
     if (logRef.current) {
@@ -304,13 +323,13 @@ export default function App() {
     const st = active?.status ?? STATUS_DETECTING;
     if (st === STATUS_CONNECTING_NAT4) {
       setFailHint(NAT4_HINT);
-      if (active) stop(active.id);
       return;
     }
     if (st === STATUS_CONNECT_FAILED) {
       setFailHint(RETRY_FAIL_HINT);
-      if (active) stop(active.id);
+      return;
     }
+    setFailHint("");
   }, [active?.status, active?.id]);
 
   useEffect(() => {
@@ -363,10 +382,13 @@ export default function App() {
   const view = viewFromStatus(status, workType);
   const nat = state?.nat || {};
   const othersEnabled = !exited && !!view.othersEnabled;
+  const importEnabled = !exited && services.every((s) => isServiceIdleStatus(s.status));
   const startEnabled = !exited && !!view.enabled;
   const mappingEnabled = !exited && workType === "Local" && localMode === "forward";
   const autoLabel = workType === "Remote" ? "程序运行后，自动启动Remote端" : "程序运行后，自动连接Remote端";
   const running = status === STATUS_CONNECTED || status === STATUS_STARTED;
+  const canStart =
+    status === STATUS_IDLE || status === STATUS_CONNECTING_NAT4 || status === STATUS_CONNECT_FAILED;
 
   async function onGenerate() {
     try {
@@ -454,7 +476,8 @@ export default function App() {
     }
     const result = await importConfig(cfg);
     if (result.error) {
-      setFormError(result.error);
+      const err = String(result.error);
+      setFormError(err === "busy" ? "请先停止所有服务" : err);
       return;
     }
     seen.current = {};
@@ -479,9 +502,10 @@ export default function App() {
 
   async function onStart() {
     if (!startEnabled) return;
-    if (status === STATUS_IDLE) {
+    if (canStart) {
       setFormError("");
       setConflictHint("");
+      setFailHint("");
       const busy = services.find(
         (s) =>
           s.id !== active.id &&
@@ -515,7 +539,8 @@ export default function App() {
     setFormError("");
     setConflictHint("");
     const othersHadAutoStart =
-      enabled && Object.entries(forms).some(([id, f]) => id !== active.id && f?.autoStart);
+      enabled &&
+      services.some((s) => s.id !== active.id && !!(forms[s.id]?.autoStart ?? s.autoStart));
     setAutoStart(enabled);
     const result = await saveAutoStart(active.id, enabled, workType, tunKey, localMode, rulesFromRows(rows), transport);
     if (result.error) {
@@ -622,7 +647,7 @@ export default function App() {
             }}
             onExportConfig={onExportConfig}
             onImportFile={onImportFile}
-            othersEnabled={othersEnabled}
+            importEnabled={importEnabled}
           />
         </aside>
         <div className="gl-main">

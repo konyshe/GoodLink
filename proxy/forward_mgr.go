@@ -132,6 +132,7 @@ func (m *ForwardManager) Apply(rules []ForwardRule) error {
 	}
 
 	// 3) 最后创建新增的监听(此时旧端口已释放)
+	createdNew := 0
 	for key, rule := range wanted {
 		if _, ok := existing[key]; ok {
 			continue
@@ -139,6 +140,11 @@ func (m *ForwardManager) Apply(rules []ForwardRule) error {
 		runner, err := newForwardRunner(rule)
 		if err != nil {
 			log.Printf("[proxy] 创建转发监听失败: %s: %v", rule.ListenAddr, err)
+			// 关掉本轮已新建的 runner; 提交已保留/已重建的条目, 避免监听泄漏且 m.entries 仍引用已关闭的旧 runner
+			for i := len(next) - createdNew; i < len(next); i++ {
+				next[i].runner.Close()
+			}
+			m.entries = next[:len(next)-createdNew]
 			return err
 		}
 		if m.quic != nil {
@@ -146,6 +152,7 @@ func (m *ForwardManager) Apply(rules []ForwardRule) error {
 		}
 		go runner.Serve()
 		next = append(next, forwardEntry{key: key, rule: rule, runner: runner})
+		createdNew++
 	}
 
 	m.entries = next

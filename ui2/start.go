@@ -17,6 +17,7 @@ import (
 
 type svcProc struct {
 	cmd         *exec.Cmd
+	gen         uint64 // 每次成功 Start 递增; waiter 只处理自己那一代
 	started     bool
 	autoRestart bool
 }
@@ -43,6 +44,7 @@ func StopCmdProcess() {
 		if p.cmd != nil && p.cmd.Process != nil {
 			utils.KillProcess(p.cmd.Process.Pid)
 		}
+		// 不在这里 Wait: 各代 waiter 负责回收自己的 Cmd, 避免双重 Wait
 		p.cmd = nil
 		p.started = false
 		p.autoRestart = false
@@ -67,6 +69,7 @@ func stopServiceProcess(id string) {
 	if cmd != nil && cmd.Process != nil {
 		utils.KillProcess(cmd.Process.Pid)
 	}
+	// Wait 由对应代数的 waiter 完成, 这里只杀进程
 	utils.RemoveWorkerPid(id)
 }
 
@@ -126,6 +129,11 @@ func updateConnectionStatus(id string, status int) {
 		setServiceStatus(id, StatusRunning)
 	case pro.StatusVersionMismatch, pro.StatusTransportMismatch:
 		disableAutoRestart(id)
+		msg := "两端版本不兼容"
+		if status == pro.StatusTransportMismatch {
+			msg = "两端传输协议不一致"
+		}
+		ServiceLogPrintF(id, "服务[%s] %s，已停止连接", name, msg)
 		go func() {
 			time.Sleep(500 * time.Millisecond)
 			stopServiceProcess(id)
@@ -133,7 +141,10 @@ func updateConnectionStatus(id string, status int) {
 	case pro.StatusNeedAdmin:
 		disableAutoRestart(id)
 		ServiceLogPrintF(id, "服务[%s] %s", name, utils.NeedAdminRestartMsg)
-		setServiceStatus(id, StatusIdle)
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			stopServiceProcess(id)
+		}()
 	}
 }
 
@@ -143,27 +154,30 @@ func disableAutoRestart(id string) {
 	procMu.Unlock()
 }
 
-func startCmdProcess(id string) error {
+// startCmdProcess 启动子进程并返回该代的 cmd/gen, 供 waiter 精确 Wait。
+func startCmdProcess(id string) (cmd *exec.Cmd, gen uint64, err error) {
 	cmdPath := utils.GetCmdExePath()
 	args := []string{"--ui", "--service-id=" + id}
-	cmd := exec.Command(cmdPath, args...)
+	cmd = exec.Command(cmdPath, args...)
 	cmd.Env = append(os.Environ(), config.ExportRuntimeConfEnv(runtimeConf))
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 	if err := cmd.Start(); err != nil {
-		return err
+		return nil, 0, err
 	}
 	if cmd.Process != nil {
 		utils.WriteWorkerPid(id, cmd.Process.Pid)
 	}
 	procMu.Lock()
 	p := procOf(id)
+	p.gen++
+	gen = p.gen
 	p.cmd = cmd
 	p.started = true
 	procMu.Unlock()
@@ -184,7 +198,7 @@ func startCmdProcess(id string) error {
 	}
 	go handle(bufio.NewScanner(stdout))
 	go handle(bufio.NewScanner(stderr))
-	return nil
+	return cmd, gen, nil
 }
 
 func saveAllConfig() error {
@@ -224,32 +238,64 @@ func HandleStart(id, workType, tunKey, localMode, transport string, rules []conf
 		return fmt.Errorf("busy")
 	}
 
-	var svcCopy config.UIService
+	// 先拼候选配置并做校验, 通过后再写入内存, 避免密钥重复等错误留下脏状态
+	stateMu.RLock()
+	cur, ok := lookupService(id)
+	if !ok {
+		stateMu.RUnlock()
+		return fmt.Errorf("服务不存在")
+	}
+	prev := cur.cfg
+	stateMu.RUnlock()
+
+	next := prev
+	next.WorkType = strings.TrimSpace(workType)
+	if next.WorkType != workTypeLocal && next.WorkType != workTypeRemote {
+		next.WorkType = workTypeLocal
+	}
+	if strings.TrimSpace(tunKey) != "" {
+		next.TunKey = strings.TrimSpace(tunKey)
+	}
+	next.LocalMode = localMode
+	next.Transport = transport
+	next.ForwardRules = rules
+
+	if other := duplicateKey(id, next.TunKey); other != "" {
+		return fmt.Errorf("连接密钥与服务[%s]重复, 请先修改密钥", other)
+	}
+	if next.WorkType == workTypeLocal && next.LocalMode == config.LocalModeForward {
+		if conflicts := config.ListenConflicts(rules, nil); len(conflicts) > 0 {
+			return fmt.Errorf("%s", config.FormatListenConflicts(conflicts))
+		}
+	}
+	if next.WorkType == workTypeLocal && next.LocalMode == config.LocalModeTUN && !utils.IsAdmin() {
+		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
+	}
+
 	err := mutateService(id, func(svc *serviceState) error {
-		svc.cfg.WorkType = strings.TrimSpace(workType)
-		if svc.cfg.WorkType != workTypeLocal && svc.cfg.WorkType != workTypeRemote {
-			svc.cfg.WorkType = workTypeLocal
-		}
-		if strings.TrimSpace(tunKey) != "" {
-			svc.cfg.TunKey = strings.TrimSpace(tunKey)
-		}
-		svc.cfg.LocalMode = localMode
-		svc.cfg.Transport = transport
-		svc.cfg.ForwardRules = rules
-		svcCopy = svc.cfg
+		svc.cfg.WorkType = next.WorkType
+		svc.cfg.TunKey = next.TunKey
+		svc.cfg.LocalMode = next.LocalMode
+		svc.cfg.Transport = next.Transport
+		svc.cfg.ForwardRules = next.ForwardRules
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	if other := duplicateKey(id, svcCopy.TunKey); other != "" {
-		return fmt.Errorf("连接密钥与服务[%s]重复, 请先修改密钥", other)
-	}
 	cfg := allServicesConfig()
 	if err := config.NormalizeAndValidate(&cfg); err != nil {
+		_ = mutateService(id, func(svc *serviceState) error {
+			svc.cfg = prev
+			return nil
+		})
 		return err
 	}
 	if err := config.SaveUIConfig(config.UIConfigPath(), cfg); err != nil {
+		_ = mutateService(id, func(svc *serviceState) error {
+			svc.cfg = prev
+			return nil
+		})
 		return err
 	}
 	_ = mutateService(id, func(svc *serviceState) error {
@@ -259,26 +305,7 @@ func HandleStart(id, workType, tunKey, localMode, transport string, rules []conf
 		return nil
 	})
 
-	stateMu.RLock()
-	cur, ok := lookupService(id)
-	var mode, wt string
-	if ok {
-		mode = cur.cfg.LocalMode
-		wt = cur.cfg.WorkType
-	}
-	stateMu.RUnlock()
-	if !ok {
-		return fmt.Errorf("服务不存在")
-	}
-	if wt == workTypeLocal && mode == config.LocalModeForward {
-		if conflicts := config.ListenConflicts(rules, nil); len(conflicts) > 0 {
-			return fmt.Errorf("%s", config.FormatListenConflicts(conflicts))
-		}
-	}
-	if wt == workTypeLocal && mode == config.LocalModeTUN && !utils.IsAdmin() {
-		return fmt.Errorf("%s", utils.NeedAdminRestartMsg)
-	}
-
+	wt := next.WorkType
 	resetProxyListen(id)
 	if wt == workTypeLocal {
 		setServiceStatus(id, StatusConnecting)
@@ -289,7 +316,8 @@ func HandleStart(id, workType, tunKey, localMode, transport string, rules []conf
 	procOf(id).autoRestart = true
 	procMu.Unlock()
 
-	if err := startCmdProcess(id); err != nil {
+	cmd, gen, err := startCmdProcess(id)
+	if err != nil {
 		ServiceLogPrintF(id, "服务[%s] 启动失败: %v", serviceName(id), err)
 		procMu.Lock()
 		procOf(id).started = false
@@ -299,7 +327,7 @@ func HandleStart(id, workType, tunKey, localMode, transport string, rules []conf
 		setServiceStatus(id, StatusIdle)
 		return err
 	}
-	go waitForProcessAndHandleExit(id)
+	go waitForProcessAndHandleExit(id, cmd, gen)
 	return nil
 }
 
@@ -308,6 +336,12 @@ func HandleStop(id string) {
 	started := procOf(id).started
 	procMu.Unlock()
 	if !started {
+		// 进程已退出但状态仍停在 NAT4/连接失败等终端态时, 允许点停止清回 Idle
+		st := getServiceStatus(id)
+		if st == StatusConnectFailed || st == StatusConnectingNAT4 {
+			resetProxyListen(id)
+			setServiceStatus(id, StatusIdle)
+		}
 		return
 	}
 	setServiceStatus(id, StatusStopping)
@@ -321,48 +355,54 @@ func HandleStop(id string) {
 	}()
 }
 
-func waitForProcessAndHandleExit(id string) {
-	time.Sleep(time.Second)
-	procMu.Lock()
-	p := procOf(id)
-	if !p.started {
-		procMu.Unlock()
-		return
-	}
-	cmd := p.cmd
-	procMu.Unlock()
+// waitForProcessAndHandleExit 只 Wait 启动时拿到的那份 cmd。
+// 代数不匹配说明已有更新的一代在跑, 本 waiter 只负责回收僵尸, 不改状态、不重启。
+func waitForProcessAndHandleExit(id string, cmd *exec.Cmd, gen uint64) {
 	if cmd != nil {
 		_ = cmd.Wait()
 	}
 	procMu.Lock()
-	p = procOf(id)
-	abnormal := p.started && p.autoRestart
+	p := procOf(id)
+	mine := p.gen == gen
+	abnormal := mine && p.started && p.autoRestart
+	if mine {
+		p.started = false
+		if p.cmd == cmd {
+			p.cmd = nil
+		}
+	}
 	procMu.Unlock()
+	if !mine {
+		return
+	}
 	if abnormal {
 		autoRestartProcess(id)
 		return
 	}
-	procMu.Lock()
-	procOf(id).started = false
-	procMu.Unlock()
 	resetProxyListen(id)
-	if getServiceStatus(id) != StatusConnectFailed && getServiceStatus(id) != StatusConnectingNAT4 {
+	st := getServiceStatus(id)
+	if st != StatusConnectFailed && st != StatusConnectingNAT4 && st != StatusStopping {
 		setServiceStatus(id, StatusIdle)
 	}
 }
 
 func autoRestartProcess(id string) {
 	time.Sleep(500 * time.Millisecond)
+	// 与 HandleStart 串行, 避免崩溃后 500ms 内用户手动启动又叠一层自动重启
+	startMu.Lock()
+	defer startMu.Unlock()
+
 	procMu.Lock()
 	p := procOf(id)
-	ok := p.started && p.autoRestart
+	ok := p.autoRestart && !p.started
 	procMu.Unlock()
 	if !ok {
 		return
 	}
 	ServiceLogPrintF(id, "检测到服务[%s]进程异常退出，正在自动重启...", serviceName(id))
 	resetProxyListen(id)
-	if err := startCmdProcess(id); err != nil {
+	cmd, gen, err := startCmdProcess(id)
+	if err != nil {
 		ServiceLogPrintF(id, "服务[%s] 自动重启失败: %v", serviceName(id), err)
 		procMu.Lock()
 		procOf(id).started = false
@@ -371,7 +411,7 @@ func autoRestartProcess(id string) {
 		setServiceStatus(id, StatusIdle)
 		return
 	}
-	go waitForProcessAndHandleExit(id)
+	go waitForProcessAndHandleExit(id, cmd, gen)
 }
 
 func tryAutoStart() {

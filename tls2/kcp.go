@@ -79,14 +79,30 @@ func listenKCP(conn net.PacketConn) (Listener, error) {
 }
 
 func (c *kcpConn) OpenStreamSync(ctx context.Context) (Stream, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
+	type result struct {
+		st  *smux.Stream
+		err error
 	}
-	st, err := c.sess.OpenStream()
-	if err != nil {
-		return nil, err
+	ch := make(chan result, 1)
+	go func() {
+		st, err := c.sess.OpenStream()
+		ch <- result{st, err}
+	}()
+	select {
+	case <-ctx.Done():
+		go func() {
+			r := <-ch
+			if r.st != nil {
+				_ = r.st.Close()
+			}
+		}()
+		return nil, ctx.Err()
+	case r := <-ch:
+		if r.err != nil {
+			return nil, r.err
+		}
+		return &kcpStream{Stream: r.st}, nil
 	}
-	return &kcpStream{Stream: st}, nil
 }
 
 func (c *kcpConn) AcceptStream(ctx context.Context) (Stream, error) {

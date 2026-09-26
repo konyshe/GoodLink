@@ -83,6 +83,7 @@ func handleState1_ProcessRemoteAddr(sessionID string, redisJson *RedisJsonType, 
 		log.Printf("提示: 3.4.0 起 UDP 转发格式已变更, 两端必须同时升级")
 		UpdateStartButtonStatue(StatusVersionMismatch)
 		RedisSessionDel(sessionID)
+		time.Sleep(1 * time.Second) // 保证 UI 读到状态并关闭自动重启后再退出
 		return errors.New("两端版本不兼容")
 	}
 
@@ -201,11 +202,13 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case -1: // Remote端检测到版本不一致
 			UpdateStartButtonStatue(StatusVersionMismatch)
 			RedisSessionDel(SessionID)
+			time.Sleep(1 * time.Second)
 			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
 
 		case -2: // Remote端检测到传输协议不一致
 			UpdateStartButtonStatue(StatusTransportMismatch)
 			RedisSessionDel(SessionID)
+			time.Sleep(1 * time.Second)
 			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端传输协议不一致: Remote: %s", redisJson.Transport)
 
 		case 1:

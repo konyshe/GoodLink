@@ -122,7 +122,10 @@ func (s *StunServer) handleConnection(conn *net.UDPConn, changedAddr string) {
 			continue
 		}
 
-		go s.handleStunRequest(conn, remoteAddr, buf[:n], changedAddr)
+		// 拷贝后再交给协程: 下一轮 ReadFromUDP 会覆盖同一块 buf
+		pkt := make([]byte, n)
+		copy(pkt, buf[:n])
+		go s.handleStunRequest(conn, remoteAddr, pkt, changedAddr)
 	}
 }
 

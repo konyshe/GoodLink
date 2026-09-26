@@ -93,6 +93,10 @@ func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magic
 		}
 	}
 	port2 := binary.BigEndian.Uint16(port)
+	if attrType == 0x0020 {
+		// X-Port = Port XOR 0x2112 (magic cookie 高 16 位)
+		port2 ^= 0x2112
+	}
 	return net.IP(ip).String(), int(port2), nil
 }
 
@@ -114,7 +118,9 @@ func getStunIpPort4(response []byte, response_len int, needType uint16, magicCoo
 		attributes := response[start:limit]
 		attrType := binary.BigEndian.Uint16(attributes[:2])
 		attrLength := binary.BigEndian.Uint16(attributes[2:4])
-		if attrLength < 8 || 4+int(attrLength) > len(attributes) {
+		// RFC 5389: 属性值按 4 字节对齐; 短属性(如 SOFTWARE)必须跳过而不是中断遍历
+		paddedLen := int((attrLength + 3) &^ 3)
+		if 4+paddedLen > len(attributes) {
 			break
 		}
 
@@ -122,7 +128,7 @@ func getStunIpPort4(response []byte, response_len int, needType uint16, magicCoo
 			return getStunIpPort5(attrType, attributes, attrLength, magicCookie, transactionID)
 		}
 
-		start = start + int(attrLength) + 4
+		start = start + 4 + paddedLen
 	}
 
 	return "", 0, fmt.Errorf("attrType not found")

@@ -1,5 +1,6 @@
 import { DownloadOutlined, ThunderboltOutlined, UploadOutlined } from "@ant-design/icons";
 import { Badge, Button, Tabs, Tooltip, Typography, Upload } from "antd";
+import { useState } from "react";
 
 function badgeStatus(status) {
   if (status === 5 || status === 6) return "success";
@@ -24,8 +25,10 @@ export default function ServiceTabs({
   onRename,
   onExportConfig,
   onImportFile,
-  othersEnabled,
+  importEnabled,
 }) {
+  const [editingId, setEditingId] = useState("");
+
   // rc-tabs 在标签页上按 Backspace/Delete 会触发 onEdit('remove')，这里在捕获阶段拦截，
   // 删除服务只保留标签上的 × 按钮入口；改名编辑态仍可正常删除文字。
   function blockRemoveKey(e) {
@@ -61,10 +64,21 @@ export default function ServiceTabs({
                   <Typography.Text
                     className="gl-service-tab-name"
                     title={svc.name}
+                    onDoubleClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingId(svc.id);
+                    }}
                     editable={{
                       text: svc.name,
-                      onChange: (next) => onRename(svc.id, next),
-                      triggerType: ["text"],
+                      editing: editingId === svc.id,
+                      triggerType: [],
+                      onChange: (next) => {
+                        setEditingId("");
+                        onRename(svc.id, next);
+                      },
+                      onCancel: () => setEditingId(""),
+                      onEnd: () => setEditingId(""),
                     }}
                   >
                     {svc.name}
@@ -87,13 +101,13 @@ export default function ServiceTabs({
         className="gl-sider-upload"
         accept=".json,application/json"
         showUploadList={false}
-        disabled={!othersEnabled}
+        disabled={!importEnabled}
         beforeUpload={(file) => {
           onImportFile(file);
           return false;
         }}
       >
-        <Button className="gl-sider-action" block icon={<UploadOutlined />} disabled={!othersEnabled}>
+        <Button className="gl-sider-action" block icon={<UploadOutlined />} disabled={!importEnabled}>
           导入配置
         </Button>
       </Upload>

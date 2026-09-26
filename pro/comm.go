@@ -232,12 +232,14 @@ func RedisSessionDel(sessionID string) {
 	m_redis_db.Del(go2.Md5Encode(sessionID))
 }
 
-// RedisSessionUnregister 从Hash中移除会话注册
+// RedisSessionUnregister 移除 Local 端尚未被认领的注册键(m_md5_tun_key)。
+// sessionID 仅用于调用方语义对齐; 注册键与认领后的 session 键不同。
 func RedisSessionUnregister(sessionID string) {
 	if m_redis_db == nil {
 		return
 	}
-	m_redis_db.Del(go2.Md5Encode(sessionID))
+	_ = sessionID
+	m_redis_db.Del(m_md5_tun_key)
 }
 
 // externalIPProbeTimeout 探测本机出口地址时的连接超时:

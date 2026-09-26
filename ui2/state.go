@@ -451,6 +451,15 @@ func statusLabel(status int) string {
 }
 
 func anyServiceActive() bool {
+	procMu.Lock()
+	for _, p := range procs {
+		if p.started {
+			procMu.Unlock()
+			return true
+		}
+	}
+	procMu.Unlock()
+
 	stateMu.RLock()
 	defer stateMu.RUnlock()
 	for _, svc := range m_services {

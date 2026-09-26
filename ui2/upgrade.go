@@ -416,6 +416,13 @@ func applyZip(zipPath, target string) error {
 	}
 	if dllTmp != "" {
 		if err := replaceFile(dllTmp, filepath.Join(destDir, "wintun.dll")); err != nil {
+			// exe 已换成新版本: 立刻用 .old 换回去, 避免留下新 exe + 旧 dll
+			oldExe := target + ".old"
+			if _, statErr := os.Stat(oldExe); statErr == nil {
+				if rerr := retryRename(oldExe, target); rerr != nil {
+					return fmt.Errorf("覆盖 wintun.dll 失败: %w; 且回滚程序失败: %v", err, rerr)
+				}
+			}
 			return fmt.Errorf("覆盖 wintun.dll 失败: %w", err)
 		}
 	}

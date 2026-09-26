@@ -47,24 +47,25 @@ func main2() {
 		svc, err := config.GetService(config.Arg_service_id)
 		if err != nil {
 			log.Println(err)
-			return
+			os.Exit(1)
 		}
 		if err := pro.Init(svc); err != nil {
 			log.Println(err)
-			return
+			os.Exit(1)
 		}
 
 		switch strings.ToLower(svc.WorkType) {
 		case "local":
 			if err := pro.RunLocal(); err != nil {
 				log.Println(err)
-				os.Exit(0)
 			}
+			os.Exit(0)
 		case "remote":
 			pro.RunRemote()
+			os.Exit(0)
 		default:
 			log.Println("无效的服务类型")
-			os.Exit(0)
+			os.Exit(1)
 		}
 	}()
 

@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/buffer"
@@ -99,14 +100,23 @@ func (e *Endpoint) Wait() {
 }
 
 func isTemporaryError(err error) bool {
+	if err == nil {
+		return false
+	}
 	if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
 		return false
 	}
 	var netErr net.Error
-	if errors.As(err, &netErr) && netErr.Timeout() {
-		return true
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() {
+			return true
+		}
 	}
-	return true
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		return errno == syscall.EAGAIN || errno == syscall.EINTR || errno == syscall.EWOULDBLOCK
+	}
+	return false
 }
 
 func (e *Endpoint) injectIPv4(payload []byte) {

@@ -63,6 +63,7 @@ func (this *DeviceDesc) resolve(resultStr string) {
 	// 允许改写 host 会把后续所有 SOAP 请求(含删除端口映射)发往攻击者主机
 	if host != "" && host != this.upnp.Gateway.Host {
 		log.Printf("upnp: 忽略指向其它主机的控制URL: %s", host)
+		return
 	}
 	this.upnp.CtrlUrl = path
 }
