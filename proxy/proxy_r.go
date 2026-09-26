@@ -23,7 +23,7 @@ const (
 	headReadTimeout = 10 * time.Second
 )
 
-func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
+func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string, allowProxy bool) {
 	// 该 goroutine 没有外层 recover(main.go 的 recover 只保护 main2 自身栈),
 	// 这里兜底, 避免一处 panic 直接终止整个进程
 	defer func() {
@@ -64,6 +64,12 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 	case 0x00: // TCP
 		switch remotePort {
 		case PROXY_PORT:
+			if !allowProxy {
+				log.Info("Remote未允许代理, 拒绝连接")
+				new_quic_stream.CancelRead(0)
+				new_quic_stream.Close()
+				return
+			}
 			proxy_handle.Serve(new_quic_stream, remoteAddrStr)
 			new_quic_stream.CancelRead(0)
 			new_quic_stream.Close()
@@ -120,9 +126,13 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string) {
 	}
 }
 
-func ProcessProxyServer(stun_quic_conn tls2.Conn) {
+func ProcessProxyServer(stun_quic_conn tls2.Conn, allowProxy bool) {
 	proxy_handle.Init()
-	log.Info("开启代理模式")
+	if allowProxy {
+		log.Info("开启代理模式")
+	} else {
+		log.Info("未允许Local开启代理")
+	}
 
 	remoteAddrStr := stun_quic_conn.RemoteAddr().String()
 
@@ -133,6 +143,6 @@ func ProcessProxyServer(stun_quic_conn tls2.Conn) {
 			return
 		}
 
-		go process_stream(new_quic_stream, remoteAddrStr)
+		go process_stream(new_quic_stream, remoteAddrStr, allowProxy)
 	}
 }

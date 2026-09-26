@@ -39,6 +39,10 @@ func handleState1_SendRemoteAddr(sessionID string, redisJson *RedisJsonType, tun
 	redisJson.Transport = remoteTransport
 	log.Printf("会话 %s 传输协议: %s (由Remote端决定)", sessionID, remoteTransport)
 
+	allowProxy := m_svc.LocalProxyAllowed()
+	redisJson.AllowLocalProxy = &allowProxy
+	log.Printf("会话 %s 允许Local开启代理: %v (由Remote端决定)", sessionID, allowProxy)
+
 	// 获取 UDP 地址
 	var udpErr error
 	*udp_conn, redisJson.RemoteAddr, udpErr = GetUDPAddr()
@@ -229,8 +233,8 @@ Release:
 func handleConnection(sessionID string, sess tls2.Conn, healthStream tls2.Stream) {
 	log.Printf("开始处理连接: %s", sessionID)
 
-	// 启动代理服务
-	go proxy.ProcessProxyServer(sess)
+	// 启动代理服务。未允许时仍接收转发流，但拒绝目标端口 1080。
+	go proxy.ProcessProxyServer(sess, m_svc.LocalProxyAllowed())
 
 	// 阻塞等待健康检查结束
 	tun.ProcessHealth(healthStream, []byte(sessionID))

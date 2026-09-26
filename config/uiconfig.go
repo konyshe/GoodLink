@@ -36,15 +36,21 @@ type UIForwardRule struct {
 }
 
 type UIService struct {
-	ID           string          `json:"id"`
-	Name         string          `json:"name"`
-	WorkType     string          `json:"work_type"`
-	TunKey       string          `json:"tun_key"`
-	LocalMode    string          `json:"local_mode"`
-	Transport    string          `json:"transport"`
-	TunIP        string          `json:"tun_ip"`
-	AutoStart    bool            `json:"auto_start"`
-	ForwardRules []UIForwardRule `json:"forward_rules"`
+	ID              string          `json:"id"`
+	Name            string          `json:"name"`
+	WorkType        string          `json:"work_type"`
+	TunKey          string          `json:"tun_key"`
+	LocalMode       string          `json:"local_mode"`
+	Transport       string          `json:"transport"`
+	TunIP           string          `json:"tun_ip"`
+	AutoStart       bool            `json:"auto_start"`
+	ForwardRules    []UIForwardRule `json:"forward_rules"`
+	AllowLocalProxy *bool           `json:"allow_local_proxy,omitempty"`
+}
+
+// LocalProxyAllowed 旧配置没有该字段时视为允许 Local 开启代理。
+func (s UIService) LocalProxyAllowed() bool {
+	return s.AllowLocalProxy == nil || *s.AllowLocalProxy
 }
 
 type UIConfig struct {

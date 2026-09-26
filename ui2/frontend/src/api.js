@@ -32,8 +32,15 @@ export function renameService(id, name) {
   return postJSON(`/api/services/${encodeURIComponent(id)}/rename`, { name });
 }
 
-export function start(id, workType, tunKey, localMode, forwardRules, transport) {
-  return postJSON(`/api/services/${encodeURIComponent(id)}/start`, { workType, tunKey, localMode, transport, forwardRules });
+export function start(id, workType, tunKey, localMode, forwardRules, transport, allowLocalProxy) {
+  return postJSON(`/api/services/${encodeURIComponent(id)}/start`, {
+    workType,
+    tunKey,
+    localMode,
+    transport,
+    forwardRules,
+    allowLocalProxy: allowLocalProxy !== false,
+  });
 }
 
 export function stop(id) {
@@ -44,8 +51,16 @@ export function applyForwards(id, localMode, forwardRules) {
   return postJSON(`/api/services/${encodeURIComponent(id)}/forwards`, { localMode, forwardRules });
 }
 
-export function saveAutoStart(id, autoStart, workType, tunKey, localMode, forwardRules, transport) {
-  return postJSON(`/api/services/${encodeURIComponent(id)}/autostart`, { autoStart, workType, tunKey, localMode, transport, forwardRules });
+export function saveAutoStart(id, autoStart, workType, tunKey, localMode, forwardRules, transport, allowLocalProxy) {
+  return postJSON(`/api/services/${encodeURIComponent(id)}/autostart`, {
+    autoStart,
+    workType,
+    tunKey,
+    localMode,
+    transport,
+    forwardRules,
+    allowLocalProxy: allowLocalProxy !== false,
+  });
 }
 
 export async function fetchState() {

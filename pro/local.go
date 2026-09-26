@@ -156,7 +156,7 @@ func handleLocalState4_ConnectionTimeout() {
 	log.Printf("State 4: 连接超时")
 }
 
-func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, tls2.Conn, tls2.Stream, []byte, error) {
+func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.TunActive, *tun.TunPassive, tls2.Conn, tls2.Stream, []byte, bool, error) {
 	var tun_active *tun.TunActive
 	var tun_passive *tun.TunPassive
 
@@ -182,10 +182,10 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	// 阶段1: 处理 State 0 - 注册会话并等待认领
 	sessionClaimed, err := handleState0_RegisterSession(SessionID, &redisJson, conn_type, addr)
 	if err != nil {
-		return tun_active, tun_passive, nil, nil, nil, err
+		return tun_active, tun_passive, nil, nil, nil, false, err
 	}
 	if !sessionClaimed {
-		return tun_active, tun_passive, nil, nil, nil, nil
+		return tun_active, tun_passive, nil, nil, nil, false, nil
 	}
 
 	// 阶段2: 使用独立的session key进行后续通信
@@ -194,7 +194,7 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 
 		// 读取会话状态
 		if RedisSessionGet(SessionID, &redisJson) != nil {
-			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("会话超时")
+			return tun_active, tun_passive, nil, nil, nil, false, fmt.Errorf("会话超时")
 		}
 
 		// 根据状态进行处理
@@ -203,17 +203,17 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 			UpdateStartButtonStatue(StatusVersionMismatch)
 			RedisSessionDel(SessionID)
 			time.Sleep(1 * time.Second)
-			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
+			return tun_active, tun_passive, nil, nil, nil, false, fmt.Errorf("和Remote端版本不一致: Local: %s => Remote: %s", config.GetVersion(), redisJson.RemoteVersion)
 
 		case -2: // Remote端检测到传输协议不一致
 			UpdateStartButtonStatue(StatusTransportMismatch)
 			RedisSessionDel(SessionID)
 			time.Sleep(1 * time.Second)
-			return tun_active, tun_passive, nil, nil, nil, fmt.Errorf("和Remote端传输协议不一致: Remote: %s", redisJson.Transport)
+			return tun_active, tun_passive, nil, nil, nil, false, fmt.Errorf("和Remote端传输协议不一致: Remote: %s", redisJson.Transport)
 
 		case 1:
 			if err := handleState1_ProcessRemoteAddr(SessionID, &redisJson, conn, addr, conn_type, &tun_active, &tun_passive); err != nil {
-				return tun_active, tun_passive, nil, nil, nil, err
+				return tun_active, tun_passive, nil, nil, nil, false, err
 			}
 
 		case 2:
@@ -222,20 +222,20 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 		case 3:
 			quicConn, healthStream, success := handleLocalState3_ConnectionSuccess(tun_active, tun_passive)
 			if success {
-				return tun_active, tun_passive, quicConn, healthStream, sessionIDBytes, nil
+				return tun_active, tun_passive, quicConn, healthStream, sessionIDBytes, redisJson.LocalProxyAllowed(), nil
 			}
-			return tun_active, tun_passive, nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil, false, nil
 
 		case 4:
 			handleLocalState4_ConnectionTimeout()
-			return tun_active, tun_passive, nil, nil, nil, nil
+			return tun_active, tun_passive, nil, nil, nil, false, nil
 
 		default:
 			log.Printf("等待Remote端状态: State %d, Local: %v => Remote: %v", redisJson.State, redisJson.LocalAddr, redisJson.RemoteAddr)
 		}
 	}
 
-	return tun_active, tun_passive, nil, nil, nil, nil
+	return tun_active, tun_passive, nil, nil, nil, false, nil
 }
 
 func GetLocalStats() int {
@@ -328,20 +328,40 @@ func setupForwardMode() (bool, error) {
 		m_forward_mgr = nil
 		return false, err
 	}
-	listenAddr, fallback, err := m_forward_mgr.StartBuiltinProxy()
-	if err != nil {
-		m_forward_mgr.Close()
-		m_forward_mgr = nil
-		return false, err
-	}
-	if fallback {
-		log.Printf("代理服务端口 %d 已被占用，改用 %s", proxy.PROXY_PORT, listenAddr)
-	} else {
-		log.Printf("代理服务已启动: socks5://%s  http://%s", listenAddr, listenAddr)
-	}
-	ReportProxyAddr(listenAddr)
 	go watchUIForwardConfig(m_forward_mgr, svc.ForwardFingerprint())
 	return true, nil
+}
+
+// applyLocalProxy 按 Remote 的许可启停内置 SOCKS/HTTP 代理。端口转发不受影响。
+func applyLocalProxy(useForward, allow bool) {
+	if !allow {
+		if m_forward_mgr != nil {
+			m_forward_mgr.StopBuiltinProxy()
+		}
+		log.Println("Remote端未允许开启代理")
+		ReportProxyDenied()
+		return
+	}
+	if useForward {
+		if m_forward_mgr == nil {
+			ReportProxyDenied()
+			return
+		}
+		listenAddr, fallback, err := m_forward_mgr.StartBuiltinProxy()
+		if err != nil {
+			log.Printf("启动代理服务失败: %v", err)
+			ReportProxyDenied()
+			return
+		}
+		if fallback {
+			log.Printf("代理服务端口 %d 已被占用，改用 %s", proxy.PROXY_PORT, listenAddr)
+		} else {
+			log.Printf("代理服务已启动: socks5://%s  http://%s", listenAddr, listenAddr)
+		}
+		ReportProxyAddr(listenAddr)
+		return
+	}
+	ReportProxyAddr(net.JoinHostPort(m_svc.TunIP, strconv.Itoa(proxy.PROXY_PORT)))
 }
 
 func RunLocal() error {
@@ -384,7 +404,7 @@ func RunLocal() error {
 
 		count++
 
-		tun_active, tun_passive, quic_conn, health, sessionID, err := GetLocalQuicConn(udp_conn, &addr, count)
+		tun_active, tun_passive, quic_conn, health, sessionID, allowProxy, err := GetLocalQuicConn(udp_conn, &addr, count)
 		if err != nil {
 			Release(tun_active, tun_passive, nil)
 			return err
@@ -409,8 +429,8 @@ func RunLocal() error {
 		} else if !useForward {
 			netstack.SetForWarder(quic_conn)
 			log.Printf("Remote端IP: %s", m_svc.TunIP)
-			ReportProxyAddr(net.JoinHostPort(m_svc.TunIP, strconv.Itoa(proxy.PROXY_PORT)))
 		}
+		applyLocalProxy(useForward, allowProxy)
 
 		m_local_state = 2
 		tun.ProcessHealth(health, sessionID)

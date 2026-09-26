@@ -43,6 +43,21 @@ func TestStartBuiltinProxyPrefer1080(t *testing.T) {
 	}
 }
 
+func TestStopBuiltinProxyReleasesPort(t *testing.T) {
+	mgr := NewForwardManager()
+	defer mgr.Close()
+	addr, _, err := mgr.StartBuiltinProxy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr.StopBuiltinProxy()
+	ln, err := net.Listen("tcp4", addr)
+	if err != nil {
+		t.Fatalf("停止内置代理后端口仍被占用: %s: %v", addr, err)
+	}
+	ln.Close()
+}
+
 func TestStartBuiltinProxySurvivesApply(t *testing.T) {
 	mgr := NewForwardManager()
 	defer mgr.Close()

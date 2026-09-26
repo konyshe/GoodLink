@@ -110,17 +110,23 @@ func Release(tun_active *tun.TunActive, tun_passive *tun.TunPassive, udp_conn *n
 }
 
 type RedisJsonType struct {
-	LocalVersion  string        `bson:"local_version" json:"local_version"`
-	RemoteVersion string        `bson:"remote_version" json:"remote_version"`
-	SessionID     string        `bson:"session_id" json:"session_id"`
-	State         int           `bson:"state" json:"state"`
-	Transport     string        `bson:"transport" json:"transport"`
-	SocketTimeOut time.Duration `bson:"socket_time_out" json:"socket_time_out"`
-	RedisTimeOut  time.Duration `bson:"redis_time_out" json:"redis_time_out"`
-	SendPortCount int           `bson:"send_port_count" json:"send_port_count"`
-	ConnectCount  int           `bson:"connect_count" json:"connect_count"`
-	RemoteAddr    tun.AddrType  `bson:"remote_addr" json:"remote_addr"`
-	LocalAddr     tun.AddrType  `bson:"local_addr" json:"local_addr"`
+	LocalVersion    string        `bson:"local_version" json:"local_version"`
+	RemoteVersion   string        `bson:"remote_version" json:"remote_version"`
+	SessionID       string        `bson:"session_id" json:"session_id"`
+	State           int           `bson:"state" json:"state"`
+	Transport       string        `bson:"transport" json:"transport"`
+	SocketTimeOut   time.Duration `bson:"socket_time_out" json:"socket_time_out"`
+	RedisTimeOut    time.Duration `bson:"redis_time_out" json:"redis_time_out"`
+	SendPortCount   int           `bson:"send_port_count" json:"send_port_count"`
+	ConnectCount    int           `bson:"connect_count" json:"connect_count"`
+	RemoteAddr      tun.AddrType  `bson:"remote_addr" json:"remote_addr"`
+	LocalAddr       tun.AddrType  `bson:"local_addr" json:"local_addr"`
+	AllowLocalProxy *bool         `bson:"allow_local_proxy" json:"allow_local_proxy,omitempty"`
+}
+
+// LocalProxyAllowed 字段缺省（旧 Remote）时视为允许。
+func (r RedisJsonType) LocalProxyAllowed() bool {
+	return r.AllowLocalProxy == nil || *r.AllowLocalProxy
 }
 
 func sessionTransport(s string) string {

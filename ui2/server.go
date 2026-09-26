@@ -183,13 +183,14 @@ func handleState(w http.ResponseWriter, r *http.Request) {
 }
 
 type serviceBody struct {
-	Name         string                 `json:"name"`
-	WorkType     string                 `json:"workType"`
-	TunKey       string                 `json:"tunKey"`
-	LocalMode    string                 `json:"localMode"`
-	Transport    string                 `json:"transport"`
-	AutoStart    bool                   `json:"autoStart"`
-	ForwardRules []config.UIForwardRule `json:"forwardRules"`
+	Name            string                 `json:"name"`
+	WorkType        string                 `json:"workType"`
+	TunKey          string                 `json:"tunKey"`
+	LocalMode       string                 `json:"localMode"`
+	Transport       string                 `json:"transport"`
+	AutoStart       bool                   `json:"autoStart"`
+	AllowLocalProxy *bool                  `json:"allowLocalProxy"`
+	ForwardRules    []config.UIForwardRule `json:"forwardRules"`
 }
 
 func serviceID(r *http.Request) string {
@@ -240,7 +241,7 @@ func handleRenameService(w http.ResponseWriter, r *http.Request) {
 func handleStartService(w http.ResponseWriter, r *http.Request) {
 	var req serviceBody
 	_ = json.NewDecoder(r.Body).Decode(&req)
-	if err := HandleStart(serviceID(r), req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
+	if err := HandleStart(serviceID(r), req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules, req.AllowLocalProxy); err != nil {
 		writeServiceErr(w, err)
 		return
 	}
@@ -271,7 +272,7 @@ func handleServiceAutoStart(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
 		return
 	}
-	if err := HandleSetAutoStart(serviceID(r), req.AutoStart, req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules); err != nil {
+	if err := HandleSetAutoStart(serviceID(r), req.AutoStart, req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules, req.AllowLocalProxy); err != nil {
 		writeServiceErr(w, err)
 		return
 	}
@@ -284,7 +285,7 @@ func handleServiceConfig(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "请求格式错误"})
 		return
 	}
-	if err := HandleUpdateConfig(serviceID(r), req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules, req.AutoStart); err != nil {
+	if err := HandleUpdateConfig(serviceID(r), req.WorkType, req.TunKey, req.LocalMode, req.Transport, req.ForwardRules, req.AutoStart, req.AllowLocalProxy); err != nil {
 		writeServiceErr(w, err)
 		return
 	}

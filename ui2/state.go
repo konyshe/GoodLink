@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"goodlink/config"
+	"goodlink/pro"
 	"goodlink/proxy"
 	"goodlink/utils"
 )
@@ -46,21 +47,23 @@ type ProxyInfo struct {
 	Socks    string `json:"socks,omitempty"`
 	HTTP     string `json:"http,omitempty"`
 	Fallback bool   `json:"fallback,omitempty"`
+	Denied   bool   `json:"denied,omitempty"`
 }
 
 type ServiceView struct {
-	ID           string                 `json:"id"`
-	Name         string                 `json:"name"`
-	WorkType     string                 `json:"workType"`
-	TunKey       string                 `json:"tunKey"`
-	LocalMode    string                 `json:"localMode"`
-	Transport    string                 `json:"transport"`
-	TunIP        string                 `json:"tunIP"`
-	AutoStart    bool                   `json:"autoStart"`
-	ForwardRules []config.UIForwardRule `json:"forwardRules"`
-	Status       int                    `json:"status"`
-	Proxy        ProxyInfo              `json:"proxy"`
-	Logs         []string               `json:"logs,omitempty"`
+	ID              string                 `json:"id"`
+	Name            string                 `json:"name"`
+	WorkType        string                 `json:"workType"`
+	TunKey          string                 `json:"tunKey"`
+	LocalMode       string                 `json:"localMode"`
+	Transport       string                 `json:"transport"`
+	TunIP           string                 `json:"tunIP"`
+	AutoStart       bool                   `json:"autoStart"`
+	AllowLocalProxy bool                   `json:"allowLocalProxy"`
+	ForwardRules    []config.UIForwardRule `json:"forwardRules"`
+	Status          int                    `json:"status"`
+	Proxy           ProxyInfo              `json:"proxy"`
+	Logs            []string               `json:"logs,omitempty"`
 }
 
 type UIState struct {
@@ -73,10 +76,11 @@ type UIState struct {
 }
 
 type serviceState struct {
-	cfg       config.UIService
-	status    int
-	proxyHost string
-	proxyPort int
+	cfg         config.UIService
+	status      int
+	proxyHost   string
+	proxyPort   int
+	proxyDenied bool
 }
 
 var (
@@ -184,17 +188,18 @@ func serviceViewLocked(svc *serviceState, includeLogs bool) ServiceView {
 		transport = config.TransportKCP
 	}
 	view := ServiceView{
-		ID:           svc.cfg.ID,
-		Name:         svc.cfg.Name,
-		WorkType:     svc.cfg.WorkType,
-		TunKey:       svc.cfg.TunKey,
-		LocalMode:    localMode,
-		Transport:    transport,
-		TunIP:        svc.cfg.TunIP,
-		AutoStart:    svc.cfg.AutoStart,
-		ForwardRules: rules,
-		Status:       svc.status,
-		Proxy:        proxyInfoLocked(svc),
+		ID:              svc.cfg.ID,
+		Name:            svc.cfg.Name,
+		WorkType:        svc.cfg.WorkType,
+		TunKey:          svc.cfg.TunKey,
+		LocalMode:       localMode,
+		Transport:       transport,
+		TunIP:           svc.cfg.TunIP,
+		AutoStart:       svc.cfg.AutoStart,
+		AllowLocalProxy: svc.cfg.LocalProxyAllowed(),
+		ForwardRules:    rules,
+		Status:          svc.status,
+		Proxy:           proxyInfoLocked(svc),
 	}
 	if includeLogs {
 		view.Logs = snapshotServiceLogs(svc.cfg.ID)
@@ -215,18 +220,13 @@ func proxyInfoLocked(svc *serviceState) ProxyInfo {
 	if svc.cfg.WorkType != workTypeLocal {
 		return ProxyInfo{}
 	}
-	if svc.cfg.LocalMode == config.LocalModeTUN {
-		ip := svc.cfg.TunIP
-		if ip == "" {
-			ip = "192.17.19.1"
-		}
-		return makeProxyInfo(ip, proxy.PROXY_PORT, false)
+	if svc.proxyDenied {
+		return ProxyInfo{Denied: true}
 	}
 	host := svc.proxyHost
 	port := svc.proxyPort
 	if host == "" || port <= 0 {
-		host = proxy.BuiltinProxyHost
-		port = proxy.PROXY_PORT
+		return ProxyInfo{}
 	}
 	return makeProxyInfo(host, port, port != proxy.PROXY_PORT)
 }
@@ -259,6 +259,17 @@ func getServiceStatus(id string) int {
 }
 
 func setProxyListen(id, addr string) {
+	if strings.TrimSpace(addr) == pro.ProxyDenyToken {
+		stateMu.Lock()
+		if svc, ok := lookupService(id); ok {
+			svc.proxyHost = ""
+			svc.proxyPort = 0
+			svc.proxyDenied = true
+		}
+		stateMu.Unlock()
+		broadcastState()
+		return
+	}
 	host, portStr, err := net.SplitHostPort(strings.TrimSpace(addr))
 	if err != nil {
 		return
@@ -271,6 +282,7 @@ func setProxyListen(id, addr string) {
 	if svc, ok := lookupService(id); ok {
 		svc.proxyHost = host
 		svc.proxyPort = port
+		svc.proxyDenied = false
 	}
 	stateMu.Unlock()
 	broadcastState()
@@ -281,6 +293,7 @@ func resetProxyListen(id string) {
 	if svc, ok := lookupService(id); ok {
 		svc.proxyHost = ""
 		svc.proxyPort = 0
+		svc.proxyDenied = false
 	}
 	stateMu.Unlock()
 	broadcastState()

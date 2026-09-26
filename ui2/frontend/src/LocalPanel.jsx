@@ -83,6 +83,7 @@ export default function LocalPanel({
   const socks = proxy?.socks || "";
   const http = proxy?.http || "";
   const fallback = !!proxy?.fallback;
+  const denied = !!proxy?.denied;
 
   const columns = [
     {
@@ -219,19 +220,25 @@ export default function LocalPanel({
 
       <Form.Item label="代理地址">
         <div className="gl-proxy-list">
-          <div className="gl-proxy-row">
-            <span className="gl-proxy-label">SOCKS</span>
-            <Typography.Text copyable={socks ? true : false} style={{ flex: 1 }}>
-              {socks || "暂无"}
-            </Typography.Text>
-          </div>
-          <div className="gl-proxy-row">
-            <span className="gl-proxy-label">HTTP</span>
-            <Typography.Text copyable={http ? true : false} style={{ flex: 1 }}>
-              {http || "暂无"}
-            </Typography.Text>
-          </div>
-          {fallback ? <Alert type="warning" showIcon message="1080 已被占用，已改用随机端口" /> : null}
+          {denied ? (
+            <Alert type="info" showIcon message="Remote 端未允许开启代理" />
+          ) : (
+            <>
+              <div className="gl-proxy-row">
+                <span className="gl-proxy-label">SOCKS</span>
+                <Typography.Text copyable={socks ? true : false} style={{ flex: 1 }}>
+                  {socks || "暂无"}
+                </Typography.Text>
+              </div>
+              <div className="gl-proxy-row">
+                <span className="gl-proxy-label">HTTP</span>
+                <Typography.Text copyable={http ? true : false} style={{ flex: 1 }}>
+                  {http || "暂无"}
+                </Typography.Text>
+              </div>
+              {fallback ? <Alert type="warning" showIcon message="1080 已被占用，已改用随机端口" /> : null}
+            </>
+          )}
         </div>
       </Form.Item>
 

@@ -5,6 +5,7 @@ import "log"
 const (
 	TagStatusPrefix = "[GOODLINK_STATUS]"
 	TagProxyPrefix  = "[GOODLINK_PROXY]"
+	ProxyDenyToken  = "deny"
 
 	StatusConnecting        = 1
 	StatusConnectingNAT4    = 2
@@ -24,4 +25,9 @@ func UpdateStartButtonStatue(status int) {
 // ReportProxyAddr 输出内置代理监听地址，供 UI 解析（不进入运行日志）。
 func ReportProxyAddr(addr string) {
 	log.Printf("%s%s", TagProxyPrefix, addr)
+}
+
+// ReportProxyDenied 通知 UI：Remote 未允许开启代理。
+func ReportProxyDenied() {
+	log.Printf("%s%s", TagProxyPrefix, ProxyDenyToken)
 }

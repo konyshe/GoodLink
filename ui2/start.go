@@ -223,7 +223,7 @@ func duplicateKey(id, tunKey string) string {
 	return ""
 }
 
-func HandleStart(id, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
+func HandleStart(id, workType, tunKey, localMode, transport string, rules []config.UIForwardRule, allowLocalProxy *bool) error {
 	startMu.Lock()
 	defer startMu.Unlock()
 
@@ -259,6 +259,9 @@ func HandleStart(id, workType, tunKey, localMode, transport string, rules []conf
 	next.LocalMode = localMode
 	next.Transport = transport
 	next.ForwardRules = rules
+	if allowLocalProxy != nil {
+		next.AllowLocalProxy = allowLocalProxy
+	}
 
 	if other := duplicateKey(id, next.TunKey); other != "" {
 		return fmt.Errorf("连接密钥与服务[%s]重复, 请先修改密钥", other)
@@ -278,6 +281,7 @@ func HandleStart(id, workType, tunKey, localMode, transport string, rules []conf
 		svc.cfg.LocalMode = next.LocalMode
 		svc.cfg.Transport = next.Transport
 		svc.cfg.ForwardRules = next.ForwardRules
+		svc.cfg.AllowLocalProxy = next.AllowLocalProxy
 		return nil
 	})
 	if err != nil {
@@ -430,15 +434,17 @@ func tryAutoStart() {
 		svc := m_index[id]
 		var wt, key, mode, transport string
 		var rules []config.UIForwardRule
+		var allowLocalProxy *bool
 		if svc != nil {
 			wt = svc.cfg.WorkType
 			key = svc.cfg.TunKey
 			mode = svc.cfg.LocalMode
 			transport = svc.cfg.Transport
 			rules = append([]config.UIForwardRule(nil), svc.cfg.ForwardRules...)
+			allowLocalProxy = svc.cfg.AllowLocalProxy
 		}
 		stateMu.RUnlock()
-		if err := HandleStart(id, wt, key, mode, transport, rules); err != nil {
+		if err := HandleStart(id, wt, key, mode, transport, rules, allowLocalProxy); err != nil {
 			ServiceLogPrintF(id, "服务[%s] 自动启动失败: %v", name, err)
 		}
 	}
@@ -472,7 +478,7 @@ func clearOtherAutoStart(keepID string) {
 	}
 }
 
-func HandleSetAutoStart(id string, autoStart bool, workType, tunKey, localMode, transport string, rules []config.UIForwardRule) error {
+func HandleSetAutoStart(id string, autoStart bool, workType, tunKey, localMode, transport string, rules []config.UIForwardRule, allowLocalProxy *bool) error {
 	err := mutateService(id, func(svc *serviceState) error {
 		svc.cfg.AutoStart = autoStart
 		if autoStart {
@@ -488,6 +494,9 @@ func HandleSetAutoStart(id string, autoStart bool, workType, tunKey, localMode, 
 			svc.cfg.LocalMode = localMode
 			svc.cfg.Transport = transport
 			svc.cfg.ForwardRules = rules
+			if allowLocalProxy != nil {
+				svc.cfg.AllowLocalProxy = allowLocalProxy
+			}
 		}
 		return nil
 	})
@@ -616,7 +625,7 @@ func HandleDeleteService(id string) error {
 	return nil
 }
 
-func HandleUpdateConfig(id, workType, tunKey, localMode, transport string, rules []config.UIForwardRule, autoStart bool) error {
+func HandleUpdateConfig(id, workType, tunKey, localMode, transport string, rules []config.UIForwardRule, autoStart bool, allowLocalProxy *bool) error {
 	err := mutateService(id, func(svc *serviceState) error {
 		if !serviceIdle(svc) {
 			return fmt.Errorf("busy")
@@ -631,6 +640,9 @@ func HandleUpdateConfig(id, workType, tunKey, localMode, transport string, rules
 		svc.cfg.Transport = transport
 		svc.cfg.ForwardRules = rules
 		svc.cfg.AutoStart = autoStart
+		if allowLocalProxy != nil {
+			svc.cfg.AllowLocalProxy = allowLocalProxy
+		}
 		if autoStart {
 			clearOtherAutoStart(id)
 		}

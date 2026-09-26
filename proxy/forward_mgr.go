@@ -211,6 +211,18 @@ func (m *ForwardManager) StartBuiltinProxy() (listenAddr string, fallback bool, 
 	return listenAddr, fallback, nil
 }
 
+// StopBuiltinProxy 关闭内置 SOCKS/HTTP 代理，保留用户端口转发。
+func (m *ForwardManager) StopBuiltinProxy() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.builtin == nil {
+		return
+	}
+	m.builtin.ClearQuicConn()
+	m.builtin.Close()
+	m.builtin = nil
+}
+
 func (m *ForwardManager) SetQuic(conn tls2.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

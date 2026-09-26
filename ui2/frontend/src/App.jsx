@@ -147,19 +147,10 @@ function isKeyInputFocused(ref) {
   return document.activeElement === el;
 }
 
-const TUN_PROXY = {
-  socks: "socks5://192.17.19.1:1080",
-  http: "http://192.17.19.1:1080",
-  fallback: false,
-};
-
-const FWD_PROXY = {
-  socks: "socks5://127.0.0.1:1080",
-  http: "http://127.0.0.1:1080",
-  fallback: false,
-};
-
-function resolveProxy(localMode, proxy) {
+function resolveProxy(proxy) {
+  if (proxy?.denied) {
+    return { denied: true, socks: "", http: "", fallback: false };
+  }
   if (proxy?.socks) {
     return {
       socks: proxy.socks,
@@ -167,17 +158,7 @@ function resolveProxy(localMode, proxy) {
       fallback: !!proxy.fallback,
     };
   }
-  if (localMode === "tun") {
-    return TUN_PROXY;
-  }
-  if (proxy?.socks && String(proxy.socks).includes("127.0.0.1")) {
-    return {
-      socks: proxy.socks,
-      http: proxy.http || String(proxy.socks).replace("socks5://", "http://"),
-      fallback: !!proxy.fallback,
-    };
-  }
-  return FWD_PROXY;
+  return { socks: "", http: "", fallback: false };
 }
 
 const NAT4_HINT = "两端网络都是NAT4，无法直连，已停止连接。";
@@ -203,6 +184,7 @@ function formFromService(svc) {
     localMode: svc.localMode || "tun",
     transport: svc.transport || "kcp",
     autoStart: !!svc.autoStart,
+    allowLocalProxy: svc.allowLocalProxy !== false,
     rows: rowsFromRules(svc.forwardRules),
   };
 }
@@ -247,6 +229,7 @@ export default function App() {
   const localMode = form.localMode;
   const transport = form.transport;
   const autoStart = form.autoStart;
+  const allowLocalProxy = form.allowLocalProxy !== false;
   const rows = form.rows || [];
   function patchForm(patch) {
     if (!active) return;
@@ -257,6 +240,7 @@ export default function App() {
   const setLocalMode = (v) => patchForm({ localMode: v });
   const setTransport = (v) => patchForm({ transport: v });
   const setAutoStart = (v) => patchForm({ autoStart: v });
+  const setAllowLocalProxy = (v) => patchForm({ allowLocalProxy: v });
   const setRows = (updater) => {
     setForms((prev) => {
       if (!active) return prev;
@@ -436,6 +420,7 @@ export default function App() {
           transport: f.transport || "kcp",
           tun_ip: svc.tunIP,
           auto_start: f.autoStart,
+          allow_local_proxy: f.allowLocalProxy !== false,
           forward_rules: rulesFromRows(f.rows || []),
         };
       }),
@@ -516,7 +501,7 @@ export default function App() {
         setBusyHint(`服务[${busyName}]正在连接中，请等它连接成功或关闭后，再启动本服务`);
         return;
       }
-      const result = await start(active.id, workType, tunKey, localMode, rulesFromRows(rows), transport);
+      const result = await start(active.id, workType, tunKey, localMode, rulesFromRows(rows), transport, allowLocalProxy);
       if (result.error) {
         if (String(result.error).includes("端口已被占用")) {
           setConflictHint(result.error);
@@ -542,7 +527,7 @@ export default function App() {
       enabled &&
       services.some((s) => s.id !== active.id && !!(forms[s.id]?.autoStart ?? s.autoStart));
     setAutoStart(enabled);
-    const result = await saveAutoStart(active.id, enabled, workType, tunKey, localMode, rulesFromRows(rows), transport);
+    const result = await saveAutoStart(active.id, enabled, workType, tunKey, localMode, rulesFromRows(rows), transport, allowLocalProxy);
     if (result.error) {
       if (String(result.error).includes("端口已被占用")) {
         setConflictHint(result.error);
@@ -709,11 +694,15 @@ export default function App() {
                     setRows={setRows}
                     mappingEnabled={mappingEnabled}
                     onConfirm={onConfirm}
-                    proxy={resolveProxy(localMode, active?.proxy)}
+                    proxy={resolveProxy(active?.proxy)}
                     isAdmin={state?.isAdmin}
                   />
                 ) : (
-                  <RemotePanel {...keyProps} />
+                  <RemotePanel
+                    {...keyProps}
+                    allowLocalProxy={allowLocalProxy}
+                    setAllowLocalProxy={setAllowLocalProxy}
+                  />
                 )}
               </Card>
             </Form>
