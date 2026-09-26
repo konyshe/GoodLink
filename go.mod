@@ -1,11 +1,6 @@
 module goodlink
 
-go 1.25.5
-
-// 与 build.sh 的 GO_VERSION 保持一致。
-// 注意: toolchain 行只在本地工具链低于该版本时生效, 不会让更高的版本降级;
-// 本机构建仍需显式使用 /usr/local/go1.25.14/bin/go(或按 build.sh 走容器)。
-toolchain go1.25.14
+go 1.25.14
 
 require (
 	github.com/getlantern/systray v1.2.2
