@@ -266,6 +266,16 @@ func GetUDPAddr() (conn *net.UDPConn, addr tun.AddrType) {
 
 		addr.LocalPort = conn.LocalAddr().(*net.UDPAddr).Port
 		addr.WanIPv4, addr.WanPort1, addr.WanPort2, addr.WanPort3 = stun2.GetStunIpPort(conn)
+
+		// STUN 失败时端口为 0, 此时得到的地址信息不能用于连接:
+		// WanPort1==WanPort2 会被判定为 NAT1-3 并走注定失败的主动连接
+		if addr.WanIPv4 == "" || addr.WanPort1 == 0 || addr.WanPort2 == 0 {
+			log.Println("STUN 探测失败, 重新获取本地UDP地址后重试")
+			conn.Close()
+			addr.LocalPort = 0 // 下一轮重新使用随机本地端口, 避免绑定上一轮残留端口
+			time.Sleep(1 * time.Second)
+			continue
+		}
 		conn.Close()
 
 		conn, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero, Port: addr.LocalPort})

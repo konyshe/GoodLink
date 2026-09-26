@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -151,13 +152,35 @@ func SaveUIConfig(path string, cfg UIConfig) error {
 		return err
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(path)
-		if err2 := os.Rename(tmp, path); err2 != nil {
+		// 重命名失败时不能删除 path 后重试: 一旦二次重命名仍失败,
+		// 用户原有的 goodlink.json 会被彻底删除且无法恢复。
+		// 改为覆盖写入已有文件, 失败时至少保留原文件内容。
+		if err2 := copyFileOverwrite(tmp, path); err2 != nil {
 			_ = os.Remove(tmp)
-			return err
+			return fmt.Errorf("保存配置失败: %v(覆盖写入失败: %v)", err, err2)
 		}
+		_ = os.Remove(tmp)
 	}
 	return nil
+}
+
+// copyFileOverwrite 用 src 的内容覆盖 dst, 用于 os.Rename 不可用时的降级路径。
+func copyFileOverwrite(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 func NormalizeAndValidate(cfg *UIConfig) error {

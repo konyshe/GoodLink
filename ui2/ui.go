@@ -75,6 +75,15 @@ func detectNAT() {
 		}
 		_, wanPort1, wanPort2, _ := stun2.GetStunIpPort(conn)
 		conn.Close()
+
+		// 探测失败时端口为 0, 此时不能给出 NAT 结论:
+		// 上一次的错误结论会让 UI 显示 Ready 并据此选择主动/被动连接方式
+		if wanPort1 == 0 || wanPort2 == 0 {
+			UILogPrintF("NAT检测: STUN 探测失败, 5秒后重试")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
 		SetNATHint(wanPort1 != wanPort2)
 		stateMu.Lock()
 		for _, svc := range m_services {

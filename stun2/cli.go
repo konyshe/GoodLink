@@ -50,19 +50,39 @@ func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magic
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	// |                X-Address (Variable)
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	attributeValue := attributes[4 : 4+attrLength]
+	// attrLength 取自网络报文, 必须先校验边界再切片, 否则畸形报文会越界 panic
+	if len(attributes) < 4 || int(attrLength)+4 > len(attributes) {
+		return "", 0, fmt.Errorf("attr length overflow: %d", attrLength)
+	}
+	attributeValue := attributes[4 : 4+int(attrLength)]
+	if len(attributeValue) < 2 {
+		return "", 0, fmt.Errorf("short address attribute")
+	}
 	family := attributeValue[1]
 	var ip, port []byte
 	switch family {
 	case 1:
+		if len(attributeValue) < 8 {
+			return "", 0, fmt.Errorf("short ipv4 address attribute: %d", len(attributeValue))
+		}
 		ip = attributeValue[4:8]
 		port = attributeValue[2:4]
 	case 2:
+		if len(attributeValue) < 20 {
+			return "", 0, fmt.Errorf("short ipv6 address attribute: %d", len(attributeValue))
+		}
 		ip = attributeValue[4:20]
+		port = attributeValue[2:4]
 	default:
-		return "", 0, fmt.Errorf("unknown address family")
+		return "", 0, fmt.Errorf("unknown address family: %d", family)
 	}
 	if attrType == 0x0020 { // XOR-Mapped Address
+		if len(magicCookie) < 4 {
+			return "", 0, fmt.Errorf("short magic cookie")
+		}
+		if len(transactionID) < 12 {
+			return "", 0, fmt.Errorf("short transaction id")
+		}
 		for i := 0; i < 4; i++ {
 			ip[i] ^= magicCookie[i]
 		}
@@ -79,16 +99,22 @@ func getStunIpPort5(attrType uint16, attributes []byte, attrLength uint16, magic
 func getStunIpPort4(response []byte, response_len int, needType uint16, magicCookie []byte, transactionID []byte) (string, int, error) {
 	start := 0
 
+	// 解析范围取 response_len 与实际长度的较小者, 避免读到缓冲区未写入区域
+	limit := response_len
+	if limit > len(response) {
+		limit = len(response)
+	}
+
 	for {
-		if start >= response_len-4 {
+		if start+4 > limit {
 			break
 		}
 
 		// Parse STUN attributes
-		attributes := response[start:]
+		attributes := response[start:limit]
 		attrType := binary.BigEndian.Uint16(attributes[:2])
 		attrLength := binary.BigEndian.Uint16(attributes[2:4])
-		if attrLength < 8 {
+		if attrLength < 8 || 4+int(attrLength) > len(attributes) {
 			break
 		}
 
@@ -113,11 +139,11 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 		return nil, 0, err
 	}
 
-	response := go2pool.Malloc(1024)
-	defer go2pool.Free(response)
+	poolBuf := go2pool.Malloc(1024)
+	defer go2pool.Free(poolBuf)
 
 	conn.SetReadDeadline(time.Now().Add(3000 * time.Millisecond))
-	n, err := conn.Read(response)
+	n, err := conn.Read(poolBuf)
 	defer conn.SetReadDeadline(time.Time{})
 
 	if err != nil {
@@ -128,12 +154,16 @@ func getStunResponse(conn *net.UDPConn, addr string, buf *bytes.Buffer) ([]byte,
 	}
 
 	// Parse STUN message
-	if !bytes.Equal(response[4:8], buf.Bytes()[4:8]) {
+	if !bytes.Equal(poolBuf[4:8], buf.Bytes()[4:8]) {
 		return nil, 0, fmt.Errorf("invalid magic cookie in response")
 	}
-	if !bytes.Equal(response[8:20], buf.Bytes()[8:20]) {
+	if !bytes.Equal(poolBuf[8:20], buf.Bytes()[8:20]) {
 		return nil, 0, fmt.Errorf("transaction ID mismatch in response")
 	}
+
+	// poolBuf 随 defer Free 归还池, 不能再把它的底层数组交给上层持有, 必须拷贝一份
+	response := make([]byte, n)
+	copy(response, poolBuf[:n])
 
 	return response, n, nil
 }
@@ -169,15 +199,18 @@ func getStunIpPort2(conn *net.UDPConn, stun_svr, addr string, buf *bytes.Buffer,
 	// |                         Value (variable)                ....
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-	wan_ip1, wan_port1, err := getStunIpPort4(response[20:], n, 0x0001, magicCookie, transactionID)
+	// 属性区必须是本次实际读到的字节, 不能用整个缓冲区长度, 否则会解析到未写入区域
+	attrs := response[20:n]
+
+	wan_ip1, wan_port1, err := getStunIpPort4(attrs, len(attrs), 0x0001, magicCookie, transactionID)
 	if err != nil {
-		wan_ip1, wan_port1, err = getStunIpPort4(response[20:], n, 0x0020, magicCookie, transactionID)
+		wan_ip1, wan_port1, err = getStunIpPort4(attrs, len(attrs), 0x0020, magicCookie, transactionID)
 	}
 	if err != nil {
 		return "", 0, "", 0, fmt.Errorf("mapped %s(%s): %s", stun_svr, addr, err.Error())
 	}
 
-	change_ip, change_port, err := getStunIpPort4(response[20:], n, 0x0005, magicCookie, transactionID)
+	change_ip, change_port, err := getStunIpPort4(attrs, len(attrs), 0x0005, magicCookie, transactionID)
 	if err != nil {
 		return "", 0, "", 0, fmt.Errorf("changed %s(%s): %s", stun_svr, addr, err.Error())
 	}
@@ -203,7 +236,9 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 	buf.Write(magicCookie)
 	transactionID := go2pool.Malloc(12)
 	defer go2pool.Free(transactionID)
-	rand.Read(transactionID)
+	if _, err := rand.Read(transactionID); err != nil {
+		return "", 0, 0, 0, fmt.Errorf("generate transaction id: %s", err.Error())
+	}
 	buf.Write(transactionID)
 
 	for _, ip := range ips {
@@ -239,19 +274,38 @@ func stunServerList() []string {
 	return goodlink_config.GetStunList()
 }
 
-func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
-	var err error
+// maxStunRounds 是整个 STUN 服务器列表的重试轮数上限。
+// 任一轮全部成功则立即返回, 全部失败则退出而不是无限等待。
+const maxStunRounds = 3
 
-	for {
+func GetStunIpPort(conn *net.UDPConn) (wan_ip string, wan_port1, wan_port2, wan_port3 int) {
+	for round := 0; round < maxStunRounds; round++ {
 		stun_svr_list := stunServerList()
+		if len(stun_svr_list) == 0 {
+			stunLogf("STUN 服务器列表为空, 无法获取公网地址")
+			return "", 0, 0, 0
+		}
+
 		for _, stun_svr := range stun_svr_list {
+			var err error
+
 			wan_ip, wan_port1, wan_port2, wan_port3, err = GetStunIpPort2(stun_svr, conn)
 			if err != nil {
 				stunLogf("%s", err.Error())
 				continue
 			}
+			// 结果不完整时不能用默认值充当有效数据: 上层会按 WanPort1==WanPort2 判定 NAT 类型,
+			// 端口为 0 会被误判成 NAT1-3 从而走注定失败的主动连接
+			if wan_ip == "" || wan_port1 == 0 || wan_port2 == 0 {
+				stunLogf("%s: STUN 探测结果不完整(ip=%s port1=%d port2=%d)", stun_svr, wan_ip, wan_port1, wan_port2)
+				continue
+			}
 			return wan_ip, wan_port1, wan_port2, wan_port3
 		}
+
 		time.Sleep(5 * time.Second)
 	}
+
+	stunLogf("STUN 探测失败, 已重试%d轮", maxStunRounds)
+	return "", 0, 0, 0
 }

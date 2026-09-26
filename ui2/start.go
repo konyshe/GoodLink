@@ -538,7 +538,8 @@ func HandleDeleteService(id string) error {
 		return fmt.Errorf("请先停止服务[%s]", serviceName(id))
 	}
 	stateMu.Lock()
-	if _, ok := lookupService(id); !ok {
+	removed, ok := lookupService(id)
+	if !ok {
 		stateMu.Unlock()
 		return fmt.Errorf("服务不存在")
 	}
@@ -551,12 +552,26 @@ func HandleDeleteService(id string) error {
 	}
 	m_services = next
 	delete(m_index, id)
-	delete(procs, id)
 	stateMu.Unlock()
-	dropServiceLogs(id)
+
+	// 注意: saveAllConfig 内部会取 stateMu 读锁, 因此必须在释放写锁之后调用
 	if err := saveAllConfig(); err != nil {
+		// 保存失败则回滚内存, 避免内存已删除而磁盘未变导致重启后"复活"
+		stateMu.Lock()
+		m_services = append(m_services, removed)
+		if _, exist := m_index[id]; !exist {
+			m_index[id] = removed
+		}
+		stateMu.Unlock()
 		return err
 	}
+
+	// procs 由 procMu 保护, 在 stateMu 下 delete 会与其它 goroutine 的 procOf 形成并发读写 map
+	procMu.Lock()
+	delete(procs, id)
+	procMu.Unlock()
+
+	dropServiceLogs(id)
 	broadcastState()
 	return nil
 }
