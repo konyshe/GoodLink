@@ -323,6 +323,30 @@ body {
   letter-spacing: 0.04em;
 }
 
+.gl-proxy-allow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.gl-proxy-allow-label {
+  flex: none;
+  font-size: 12px;
+  color: var(--gl-muted);
+  letter-spacing: 0.04em;
+}
+
+.gl-proxy-allow-hint {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--gl-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .gl-choices {
   display: grid;
   grid-template-columns: 1fr 1fr;
