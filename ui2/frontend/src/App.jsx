@@ -629,7 +629,7 @@ export default function App() {
           <ServicePanel>
             <Form component="div" layout="vertical" requiredMark={false}>
               <Card className="gl-panel" size="small">
-                <Form.Item label="工作端侧">
+                <Form.Item label="服务类型">
                   <ChoiceGroup
                     value={workType}
                     disabled={!othersEnabled}
@@ -668,7 +668,7 @@ export default function App() {
                           value: "quic",
                           icon: <SafetyCertificateOutlined />,
                           label: "QUIC",
-                          desc: "二次加密，传输更稳，适合企业",
+                          desc: "二次加密，传输更稳，适合企业使用",
                         },
                       ]}
                     />

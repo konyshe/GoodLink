@@ -113,7 +113,7 @@ func HandleImportConfig(cfg config.UIConfig) error {
 			wt = workTypeLocal
 		}
 		if wt != workTypeLocal && wt != workTypeRemote {
-			return fmt.Errorf("无效的工作端侧: %s", wt)
+			return fmt.Errorf("无效的服务类型: %s", wt)
 		}
 		cfg.Services[i].WorkType = wt
 		if len(cfg.Services[i].TunKey) == 0 {

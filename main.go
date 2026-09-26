@@ -63,7 +63,7 @@ func main2() {
 		case "remote":
 			pro.RunRemote()
 		default:
-			log.Println("无效的工作端侧")
+			log.Println("无效的服务类型")
 			os.Exit(0)
 		}
 	}()
