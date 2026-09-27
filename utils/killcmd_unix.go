@@ -12,6 +12,9 @@ func WriteWorkerPid(serviceID string, pid int) {}
 
 func RemoveWorkerPid(serviceID string) {}
 
+// RemoveAllWorkerPids Unix 侧不落盘 pid 文件, 无需清理, 仅为与 Windows 侧签名对称。
+func RemoveAllWorkerPids() {}
+
 func KillProcess(pid int) {
 	// 与 Windows 侧保持一致: 拒绝非法 PID, 也绝不杀自己
 	if pid <= 0 || pid == os.Getpid() {

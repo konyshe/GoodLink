@@ -143,6 +143,9 @@ func runUI(openBrowser bool) {
 
 	// Windows：主线程运行托盘消息循环；Linux/macOS：等待信号后退出
 	ui2.RunLoop(uiURL)
+
+	// 兜底: 上面各退出分支已清理过, 这里再清一遍确保不留 pid 文件
+	utils.RemoveAllWorkerPids()
 }
 
 func main() {

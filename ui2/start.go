@@ -56,6 +56,8 @@ func StopCmdProcess() {
 		setServiceStatus(id, StatusIdle)
 	}
 	utils.CleanupOrphanedCmdProcesses()
+	// 退出兜底: 上面只删了"进程已死"和"镜像匹配"的文件, 这里把本程序剩下的 pid 文件清干净
+	utils.RemoveAllWorkerPids()
 }
 
 func stopServiceProcess(id string) {
@@ -65,12 +67,13 @@ func stopServiceProcess(id string) {
 	cmd := p.cmd
 	p.cmd = nil
 	p.started = false
+	// 在锁内删: 与 startCmdProcess 的"写文件 + gen++"互斥, 避免删掉刚启动的新一代文件
+	utils.RemoveWorkerPid(id)
 	procMu.Unlock()
 	if cmd != nil && cmd.Process != nil {
 		utils.KillProcess(cmd.Process.Pid)
 	}
 	// Wait 由对应代数的 waiter 完成, 这里只杀进程
-	utils.RemoveWorkerPid(id)
 }
 
 func parseStatusMessage(line string) (int, bool) {
@@ -171,15 +174,17 @@ func startCmdProcess(id string) (cmd *exec.Cmd, gen uint64, err error) {
 	if err := cmd.Start(); err != nil {
 		return nil, 0, err
 	}
-	if cmd.Process != nil {
-		utils.WriteWorkerPid(id, cmd.Process.Pid)
-	}
 	procMu.Lock()
 	p := procOf(id)
 	p.gen++
 	gen = p.gen
 	p.cmd = cmd
 	p.started = true
+	if cmd.Process != nil {
+		// 必须与 gen++ 在同一临界区内: waiter 靠 gen 判断"没有更代"后才会删 pid 文件,
+		// 若写文件在锁外, 新代写完文件、旧 waiter 仍判 mine 为真, 会把新 pid 文件删掉。
+		utils.WriteWorkerPid(id, cmd.Process.Pid)
+	}
 	procMu.Unlock()
 
 	handle := func(scanner *bufio.Scanner) {
@@ -374,6 +379,10 @@ func waitForProcessAndHandleExit(id string, cmd *exec.Cmd, gen uint64) {
 		if p.cmd == cmd {
 			p.cmd = nil
 		}
+		// 子进程已经退出, pid 文件不再有意义, 在锁内删以与 startCmdProcess 的
+		// "写文件 + gen++"互斥, 保证删的是自己这一代的文件。
+		// 顺序上必须先于 autoRestartProcess: 自动重启会重新写一份, 先删后写才不留旧进程号。
+		utils.RemoveWorkerPid(id)
 	}
 	procMu.Unlock()
 	if !mine {
@@ -619,6 +628,9 @@ func HandleDeleteService(id string) error {
 	procMu.Lock()
 	delete(procs, id)
 	procMu.Unlock()
+
+	// 服务已经不存在了, 它的 pid 文件不该继续留在磁盘上
+	utils.RemoveWorkerPid(id)
 
 	dropServiceLogs(id)
 	broadcastState()
