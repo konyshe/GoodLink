@@ -19,9 +19,9 @@ import (
 var webFS embed.FS
 
 const (
-	// 控制面默认只监听本机: 原来绑定 0.0.0.0, 同网段任何主机都能无鉴权地
+	// 控制页面绑定 0.0.0.0, 同网段任何主机都能无鉴权地
 	// 读取含连接密钥的配置、启停服务、甚至清空全部服务
-	defaultUIAddr     = "127.0.0.1:16780"
+	defaultUIAddr     = "0.0.0.0:16780"
 	uiAddrRetries     = 10
 	uiAddrRetryWaitMS = 200
 
