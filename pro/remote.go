@@ -233,7 +233,7 @@ Release:
 func handleConnection(sessionID string, sess tls2.Conn, healthStream tls2.Stream) {
 	log.Printf("开始处理连接: %s", sessionID)
 
-	// 启动代理服务。未允许时仍接收转发流，但拒绝目标端口 1080。
+	// 启动代理服务。未允许时仍接收转发流，1080 与其他端口一样转到本机实际服务。
 	go proxy.ProcessProxyServer(sess, m_svc.LocalProxyAllowed())
 
 	// 阻塞等待健康检查结束

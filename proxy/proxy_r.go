@@ -62,42 +62,37 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string, allowProx
 
 	switch protocolType {
 	case 0x00: // TCP
-		switch remotePort {
-		case PROXY_PORT:
-			if !allowProxy {
-				log.Info("Remote未允许代理, 拒绝连接")
-				new_quic_stream.CancelRead(0)
-				new_quic_stream.Close()
-				return
-			}
+		// 只有 Remote 允许代理时，1080 才是内置代理入口。
+		// 未允许时与其他端口一样，按报文里的地址拨到本机实际服务。
+		if remotePort == PROXY_PORT && allowProxy {
 			proxy_handle.Serve(new_quic_stream, remoteAddrStr)
 			new_quic_stream.CancelRead(0)
 			new_quic_stream.Close()
-		default:
-			// 用户反馈无法连接3389端口，修改端口后可以连接
-			// 这里是为了方便用户，直接访问13389端口就可以连接到3389端口
-			if remotePort == 13389 {
-				remotePort = 3389
+			return
+		}
+		// 用户反馈无法连接3389端口，修改端口后可以连接
+		// 这里是为了方便用户，直接访问13389端口就可以连接到3389端口
+		if remotePort == 13389 {
+			remotePort = 3389
+		}
+		d := &net.Dialer{
+			Timeout:   tcpDialTimeout,
+			KeepAlive: 30 * time.Second,
+		}
+		c, err := d.Dial("tcp4", net.JoinHostPort(ip.String(), strconv.Itoa(int(remotePort))))
+		if err == nil {
+			if tcpConn, ok := c.(*net.TCPConn); ok {
+				// 对端内核 TCP 默认开 Nagle，与 gVisor 侧叠加会拖慢 RDP/SSH。
+				_ = tcpConn.SetNoDelay(true)
 			}
-			d := &net.Dialer{
-				Timeout:   tcpDialTimeout,
-				KeepAlive: 30 * time.Second,
-			}
-			c, err := d.Dial("tcp4", net.JoinHostPort(ip.String(), strconv.Itoa(int(remotePort))))
-			if err == nil {
-				if tcpConn, ok := c.(*net.TCPConn); ok {
-					// 对端内核 TCP 默认开 Nagle，与 gVisor 侧叠加会拖慢 RDP/SSH。
-					_ = tcpConn.SetNoDelay(true)
-				}
-				Relay(c, new_quic_stream)
+			Relay(c, new_quic_stream)
+		} else {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
 			} else {
-				if err == io.EOF || err == io.ErrUnexpectedEOF {
-				} else {
-					log.Error("dial tcp error: ", err)
-				}
-				new_quic_stream.CancelRead(0)
-				new_quic_stream.Close()
+				log.Error("dial tcp error: ", err)
 			}
+			new_quic_stream.CancelRead(0)
+			new_quic_stream.Close()
 		}
 	case 0x01: // UDP
 		new_conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{
