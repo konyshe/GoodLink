@@ -6,7 +6,7 @@ set -x
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-GO_VERSION="1.25.14"
+GO_VERSION="1.26.3"
 IMAGE="localhost/goodlink-builder-glibc217:go${GO_VERSION}"
 BASE_IMAGE="${GLIBC217_BASE_IMAGE:-docker.m.daocloud.io/library/centos:7}"
 PARENT="$(dirname "$ROOT")"
