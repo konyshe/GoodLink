@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-set -x
+#set -x
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
