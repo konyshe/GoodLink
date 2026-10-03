@@ -17,25 +17,7 @@ import (
 
 const quicOpenStreamTimeout = 10 * time.Second
 
-const (
-	// rdpListenPort 是用户在本机 TUN 网卡上访问的端口(192.17.19.1:13389)，
-	// rdpTargetPort 是 remote 端真实的 RDP 端口。
-	// 用户反馈无法连接3389端口，修改端口后可以连接，
-	// 所以在 local 端直接折算，访问13389端口即可连接到 remote 端的3389端口。
-	rdpListenPort = 13389
-	rdpTargetPort = 3389
-)
-
 var LoopBackAddr = [4]byte{127, 0, 0, 1}
-
-// tunDestPort 把 TUN 网卡上收到的目的端口折算成 remote 端实际要拨的端口。
-// 只在这里(local端)折算，remote 端按头部端口原样拨号。
-func tunDestPort(port uint16) uint16 {
-	if port == rdpListenPort {
-		return rdpTargetPort
-	}
-	return port
-}
 
 func ForwardTCPConn(originConn *TcpConn, stun_quic_conn tls2.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), quicOpenStreamTimeout)
@@ -54,7 +36,7 @@ func ForwardTCPConn(originConn *TcpConn, stun_quic_conn tls2.Conn) {
 
 	ioBuf[0] = 0x00
 	copy(ioBuf[1:5], LoopBackAddr[:])
-	binary.BigEndian.PutUint16(ioBuf[5:proxy.HEAD_LEN], tunDestPort(originConn.ID().LocalPort))
+	binary.BigEndian.PutUint16(ioBuf[5:proxy.HEAD_LEN], originConn.ID().LocalPort)
 
 	if _, err := new_quic_stream.Write(ioBuf[:proxy.HEAD_LEN]); err != nil {
 		log.Println("写入头部失败", err)
