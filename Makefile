@@ -31,8 +31,8 @@ DARWIN_PLATFORM_LIST = \
 	darwin-amd64 \
 	darwin-arm64 \
 
+# windows/arm（32 位）已在 Go 1.26 移除，仅保留 arm64
 WINDOWS_PLATFORM2_LIST = \
-	windows-arm \
 	windows-arm64 \
 	windows-386 \
 
@@ -91,9 +91,6 @@ windows-arm64:
 
 windows-386:
 	GOARCH=386 GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
-
-windows-arm:
-	GOARCH=arm GOOS=windows $(GOBUILD_WIN) -o $(BINDIR)/$(NAME)-$@.exe
 
 create_nac:
 	go run ./config/expandversioninfo > .versioninfo.json
