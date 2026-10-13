@@ -1,4 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
+.codebuddy
+.cursor
+
 .vscode
 .idea
 __debug_bin*
@@ -19,10 +22,7 @@ debug.sh
 .claude
 goodlink-windows-amd64
 goodlink.log
-.cursor
 
 ui2/frontend/node_modules
 ui2/web
 packet
-.codebuddy/plans
-codebuddy
