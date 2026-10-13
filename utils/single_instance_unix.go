@@ -23,6 +23,7 @@ func notifyFilePath() (string, error) {
 
 // CheckSingleInstance 检查是否为单实例，如果不是第一个实例则返回false
 func CheckSingleInstance() bool {
+	os.MkdirAll(os.TempDir(), 0755)
 	lockPath := filepath.Join(os.TempDir(), "goodlink.single.lock")
 	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
