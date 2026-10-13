@@ -20,6 +20,8 @@ const (
 	maxBatch   = 64
 	senderIdle = 100 * time.Millisecond
 	poolBufCap = 2048
+	// writeAttempts 是非致命写失败时，对还没发出去的报文再试的次数。
+	writeAttempts = 3
 )
 
 // quicUDP 是 quic-go 在 Windows 上仍会用到的套接字能力：调大缓冲区，以及设置 DF。
@@ -104,43 +106,54 @@ func (w *windowsWriter) writeOne(m Message) (int, error) {
 }
 
 func (w *windowsWriter) writeUSO(msgs []Message, total int) (int, error) {
+	// 除最后一条外必须等长。最后一条可以更短，Windows 会把它当成不足一段的尾包。
+	// 形状不对只影响这一批，不能关掉 USO，否则后面的等长报文也会退回逐包。
+	if !usoGroupOK(msgs) {
+		return w.writeEach(msgs)
+	}
+	seg := len(msgs[0].Buf)
 	if cap(w.scratch) < total {
 		w.scratch = make([]byte, total)
 	}
 	buf := w.scratch[:total]
 	off := 0
-	seg := len(msgs[0].Buf)
-
-	// USO 的每个分段必须等长, 长度不一致时按单一 seg 划分会把报文边界切错
-	if seg <= 0 {
-		w.uso = false
-		return w.writeEach(msgs)
-	}
 	for _, m := range msgs {
-		if len(m.Buf) != seg {
-			w.uso = false
-			return w.writeEach(msgs)
-		}
 		off += copy(buf[off:], m.Buf)
 	}
 
 	n, _, err := w.conn.WriteMsgUDPAddrPort(buf, w.control(uint32(seg)), msgs[0].Addr)
-	if err != nil || n == 0 {
-		// 这次系统调用没有把数据交出去，改逐包重发，并停用 USO。
+	if err != nil && usoUnsupported(err) {
 		w.uso = false
+	}
+	if n <= 0 {
+		// 这次系统调用没有把数据交出去，整批改逐包。短暂失败不关闭 USO。
 		return w.writeEach(msgs)
 	}
-	if n != total {
-		// 只发出了部分字节: 必须按段长折算真正完整发出的报文数。
-		// 原来固定返回 len(msgs), 上层会把没发出去的报文也算成已发送, 造成静默丢包。
-		w.uso = false
-		complete := n / seg
-		if complete <= 0 {
-			return 0, io.ErrShortWrite
-		}
-		return complete, nil
+	if n >= total {
+		return len(msgs), nil
 	}
-	return len(msgs), nil
+	// 已完整发出的段，以及不足一段的残包，都不再重发。
+	// 残包已经在路上，再发完整报文会让对端先收到截断包再收到一份副本。
+	done := coveredCount(n, seg, len(msgs))
+	if done >= len(msgs) {
+		return len(msgs), nil
+	}
+	tail, werr := w.writeEach(msgs[done:])
+	return done + tail, werr
+}
+
+// usoUnsupported 判断失败是不是因为套接字不接受 UDP_SEND_MSG_SIZE。
+func usoUnsupported(err error) bool {
+	var errno syscall.Errno
+	if !errors.As(err, &errno) {
+		return false
+	}
+	switch errno {
+	case windows.WSAENOPROTOOPT, windows.WSAEOPNOTSUPP:
+		return true
+	default:
+		return false
+	}
 }
 
 func (w *windowsWriter) writeEach(msgs []Message) (int, error) {
@@ -285,11 +298,16 @@ func (c *coalesceConn) Close() error {
 		c.wake()
 		c.cond.Broadcast()
 	}
+	c.mu.Unlock()
+	// 先关掉底层套接字，打断堵在发送缓冲上的 Write。
+	// 若先等发送协程退出，而它正堵在系统调用里，两边会互相等待。
+	err := c.pc.Close()
+	c.mu.Lock()
 	for c.sender {
 		c.cond.Wait()
 	}
 	c.mu.Unlock()
-	return c.pc.Close()
+	return err
 }
 
 func (c *coalesceConn) wake() {
@@ -367,21 +385,40 @@ func (c *coalesceConn) pop(dst []Message) (batch []Message, fatal error, exit bo
 }
 
 func (c *coalesceConn) writeAll(batch []Message) {
-	_, err := c.w.WriteBatch(batch)
-	releaseBatch(batch)
-	if err == nil {
-		return
-	}
-	if isFatalWriteErr(err) {
-		c.mu.Lock()
-		if c.fatal == nil {
-			c.fatal = err
+	rest := batch
+	for attempt := 0; attempt < writeAttempts && len(rest) > 0; attempt++ {
+		n, err := c.w.WriteBatch(rest)
+		if n > len(rest) {
+			n = len(rest)
 		}
-		c.mu.Unlock()
-		return
+		if n > 0 {
+			releaseBatch(rest[:n])
+			rest = rest[n:]
+		}
+		if err == nil || len(rest) == 0 {
+			releaseBatch(rest)
+			return
+		}
+		if isFatalWriteErr(err) {
+			c.noteFatal(err)
+			releaseBatch(rest)
+			return
+		}
+		// 调用方的 WriteTo 已经返回成功，这里只能自己重试还没发出去的报文。
+		if attempt+1 < writeAttempts {
+			time.Sleep(time.Millisecond)
+		}
 	}
-	// 瞬时错误丢掉这一批（调用方的 WriteTo 已经返回成功）。稍作退让，避免打满 CPU。
-	time.Sleep(time.Millisecond)
+	releaseBatch(rest)
+}
+
+func (c *coalesceConn) noteFatal(err error) {
+	c.mu.Lock()
+	if c.fatal == nil {
+		c.fatal = err
+	}
+	c.cond.Broadcast()
+	c.mu.Unlock()
 }
 
 func releaseBatch(batch []Message) {
@@ -391,9 +428,8 @@ func releaseBatch(batch []Message) {
 	}
 }
 
-// isFatalWriteErr 判断写错误是否不可恢复。
-// 只认 net.ErrClosed 时, EPERM / ENETDOWN / EAFNOSUPPORT 之类的永久错误
-// 会被当成瞬时错误反复重试: 数据既发不出去也不报错, 发送循环还会以毫秒级间隔空转。
+// isFatalWriteErr 判断套接字是否已经不可再用。
+// 报文过大、地址非法、暂时不可达只丢掉这一批，不能把整条连接标成失败。
 func isFatalWriteErr(err error) bool {
 	if err == nil {
 		return false
@@ -405,12 +441,10 @@ func isFatalWriteErr(err error) bool {
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
 		switch errno {
-		case windows.WSAEACCES,
-			windows.WSAENETDOWN,
-			windows.WSAENETUNREACH,
-			windows.WSAEAFNOSUPPORT,
-			windows.WSAEINVAL,
-			windows.WSAEMSGSIZE:
+		case windows.WSAENETDOWN,
+			windows.WSAENOTSOCK,
+			windows.WSAESHUTDOWN,
+			windows.WSAEBADF:
 			return true
 		}
 	}

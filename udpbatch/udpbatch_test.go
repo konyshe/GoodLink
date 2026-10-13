@@ -52,6 +52,73 @@ func TestGroupRun(t *testing.T) {
 	}
 }
 
+func TestUSOGroupAndCovered(t *testing.T) {
+	a := netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), 1)
+	msg := func(n int) Message {
+		return Message{Buf: make([]byte, n), Addr: a}
+	}
+	if !usoGroupOK([]Message{msg(100), msg(100), msg(40)}) {
+		t.Fatal("short tail should be a valid USO group")
+	}
+	if usoGroupOK([]Message{msg(100), msg(40), msg(100)}) {
+		t.Fatal("short middle packet is not a valid USO group")
+	}
+	if usoGroupOK([]Message{msg(100), msg(0)}) {
+		t.Fatal("empty tail is not a valid USO group")
+	}
+	if usoGroupOK([]Message{msg(100), msg(101)}) {
+		t.Fatal("longer tail is not a valid USO group")
+	}
+	if coveredCount(250, 100, 3) != 3 {
+		t.Fatalf("partial tail coveredCount = %d, want 3", coveredCount(250, 100, 3))
+	}
+	if coveredCount(200, 100, 3) != 2 {
+		t.Fatalf("exact coveredCount = %d, want 2", coveredCount(200, 100, 3))
+	}
+	if coveredCount(0, 100, 3) != 0 {
+		t.Fatal("zero bytes covers nothing")
+	}
+}
+
+func TestWriteBatchDualStackIPv4(t *testing.T) {
+	rx, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero})
+	if err != nil {
+		t.Skipf("dual-stack listen: %v", err)
+	}
+	t.Cleanup(func() { rx.Close() })
+	tx, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero})
+	if err != nil {
+		t.Skipf("dual-stack listen: %v", err)
+	}
+	t.Cleanup(func() { tx.Close() })
+
+	port := rx.LocalAddr().(*net.UDPAddr).Port
+	dst := netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), uint16(port))
+	msgs := []Message{
+		{Buf: stamp(1, 64), Addr: dst},
+		{Buf: stamp(2, 64), Addr: dst},
+		{Buf: stamp(3, 32), Addr: dst},
+	}
+	n, err := NewWriter(tx).WriteBatch(msgs)
+	if err != nil {
+		t.Fatalf("WriteBatch: %v", err)
+	}
+	if n != len(msgs) {
+		t.Fatalf("WriteBatch wrote %d, want %d", n, len(msgs))
+	}
+	got := map[int]int{}
+	collect(t, rx, got)
+	if len(got) != len(msgs) {
+		t.Fatalf("received %d packets, want %d", len(got), len(msgs))
+	}
+	for i, m := range msgs {
+		id := i + 1
+		if got[id] != len(m.Buf) {
+			t.Fatalf("id %d size %d, want %d", id, got[id], len(m.Buf))
+		}
+	}
+}
+
 func TestWriteBatchEmpty(t *testing.T) {
 	conn := listenUDP(t)
 	w := NewWriter(conn)

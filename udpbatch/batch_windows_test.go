@@ -3,11 +3,45 @@
 package udpbatch
 
 import (
+	"net"
 	"testing"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
+
+func TestUSOShortTailKeepsEnabled(t *testing.T) {
+	tx := listenUDP(t)
+	if !usoSupported(tx) {
+		t.Skip("USO not available")
+	}
+	rx := listenUDP(t)
+	w := NewWriter(tx).(*windowsWriter)
+	if !w.uso {
+		t.Fatal("uso disabled before send")
+	}
+	dst := rx.LocalAddr().(*net.UDPAddr).AddrPort()
+	msgs := []Message{
+		{Buf: stamp(1, 120), Addr: dst},
+		{Buf: stamp(2, 120), Addr: dst},
+		{Buf: stamp(3, 40), Addr: dst},
+	}
+	n, err := w.WriteBatch(msgs)
+	if err != nil {
+		t.Fatalf("WriteBatch: %v", err)
+	}
+	if n != len(msgs) {
+		t.Fatalf("wrote %d, want %d", n, len(msgs))
+	}
+	if !w.uso {
+		t.Fatal("short tail disabled USO")
+	}
+	got := map[int]int{}
+	collect(t, rx, got)
+	if len(got) != len(msgs) {
+		t.Fatalf("received %d, want %d", len(got), len(msgs))
+	}
+}
 
 func TestUSOCMsgLayout(t *testing.T) {
 	switch unsafe.Sizeof(uintptr(0)) {

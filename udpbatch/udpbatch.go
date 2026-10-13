@@ -4,8 +4,8 @@
 // 交给 kcp-go（sendmmsg）和 quic-go（GSO）。
 //
 // Windows 在系统支持 UDP Segmentation Offload 时，Wrap 返回异步合并写的
-// PacketConn：连续同目的地、同长度的报文合成一次 WSASendMsg，用 UDP_SEND_MSG_SIZE
-// 指定段长。
+// PacketConn：连续同目的地的报文合成一次 WSASendMsg，用 UDP_SEND_MSG_SIZE
+// 指定段长。除最后一条外长度相同，最后一条可以更短。
 package udpbatch
 
 import (
@@ -56,6 +56,44 @@ func groupRun(msgs []Message, maxPayload int) (count, total int) {
 		}
 	}
 	return count, total
+}
+
+// usoGroupOK 报告这组报文能否按第一条的长度做 USO。
+// 中间各条必须等长；最后一条可以更短，但不能为空或更长。
+func usoGroupOK(msgs []Message) bool {
+	if len(msgs) < 2 {
+		return false
+	}
+	seg := len(msgs[0].Buf)
+	if seg <= 0 {
+		return false
+	}
+	for i, m := range msgs {
+		n := len(m.Buf)
+		if i == len(msgs)-1 {
+			return n > 0 && n <= seg
+		}
+		if n != seg {
+			return false
+		}
+	}
+	return true
+}
+
+// coveredCount 把已经写入的字节数折成不应再发送的报文条数。
+// 整段计一条；余数已经作为残包发出，对应的那一条也不再重发。
+func coveredCount(n, seg, count int) int {
+	if seg <= 0 || n <= 0 {
+		return 0
+	}
+	done := n / seg
+	if n%seg != 0 {
+		done++
+	}
+	if done > count {
+		return count
+	}
+	return done
 }
 
 func writeMsg(conn *net.UDPConn, m Message) error {
