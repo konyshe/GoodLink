@@ -71,36 +71,6 @@ func SetTunIP(wintunEP *Device, ip string, mask int) error {
 	return nil
 }
 
-func SetTunIP2(wintunEP *Device, ip string, mask int) error {
-	var ipf netip.Prefix
-	var err error
-
-	link := winipcfg.LUID((*wintunEP).(*TUN).GetNt().LUID())
-
-	// 将IP地址和掩码组合为CIDR格式（如192.168.1.1/24）
-	if ipf, err = netip.ParsePrefix(fmt.Sprintf("%s/%d", ip, mask)); err != nil {
-		return err
-	}
-
-	if err = link.SetIPAddresses([]netip.Prefix{ipf}); err != nil {
-		return err
-	}
-
-	routeData := &winipcfg.RouteData{
-		Destination: ipf,                     // 目标网络（CIDR格式）
-		NextHop:     netip.MustParseAddr(ip), // 下一跳地址（本机IP）
-		Metric:      0,                       // 路由优先级（数值越小优先级越高）
-	}
-
-	if err = link.SetRoutes([]*winipcfg.RouteData{
-		routeData,
-	}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CleanupOldAdapter 清理之前可能残留的虚拟网卡（仅关闭本适配器，不卸载驱动）
 func CleanupOldAdapter(name string) {
 	if err := InitWintunDll(); err != nil {

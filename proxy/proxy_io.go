@@ -69,10 +69,6 @@ func Relay(conn net.Conn, stream tls2.Stream) {
 	relay(conn, stream, TCPIdleTimeout)
 }
 
-func RelayIdle(conn net.Conn, stream tls2.Stream, idle time.Duration) {
-	relay(conn, stream, idle)
-}
-
 // newIdleTimer 返回一个刷新函数与停止函数, 空闲到期时把两端的读写都置为已超时。
 func newIdleTimer(idle time.Duration, conn net.Conn, stream tls2.Stream) (bump func(), stop func()) {
 	bump = func() {}

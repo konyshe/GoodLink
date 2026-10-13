@@ -10,7 +10,6 @@ import (
 	"goodlink/config"
 	"goodlink/stun2"
 	"goodlink/tun"
-	_ "goodlink/tun"
 	"goodlink/upnp"
 	goodlink_config "goodlink3/config"
 	"log"

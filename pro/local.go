@@ -238,10 +238,6 @@ func GetLocalQuicConn(conn *net.UDPConn, addr *tun.AddrType, count int) (*tun.Tu
 	return tun_active, tun_passive, nil, nil, nil, false, nil
 }
 
-func GetLocalStats() int {
-	return m_local_state
-}
-
 func StopLocal() error {
 	m_local_state = 0
 	if m_forward_mgr != nil {

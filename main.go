@@ -5,7 +5,6 @@ import (
 	go2pool "go2/pool"
 	"goodlink/config"
 	"goodlink/pro"
-	_ "goodlink/pro"
 	"goodlink/stun2"
 	"goodlink/ui2"
 	"goodlink/utils"

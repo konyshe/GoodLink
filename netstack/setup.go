@@ -11,6 +11,7 @@ import (
 
 	"goodlink/tls2"
 	"goodlink/utils"
+
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -86,19 +87,6 @@ var (
 	tunnelMu sync.RWMutex
 	tunnel   tls2.Conn
 )
-
-var (
-	// healthStopCh 让健康检查循环能够退出, 避免重建失败后 goroutine 永久悬挂
-	healthStopCh   = make(chan struct{})
-	healthStopOnce sync.Once
-)
-
-// StopHealthCheck 停止健康检查循环
-func StopHealthCheck() {
-	healthStopOnce.Do(func() {
-		close(healthStopCh)
-	})
-}
 
 // cleanupStackResources 回收 initStack 过程中已创建的资源。
 // Open / CreateNIC 成功但后续步骤失败时, 不清理会残留 TUN 网卡与栈对象,
@@ -233,12 +221,8 @@ func healthCheckLoop() {
 			interval = healthCheckRetryInterval
 		}
 
-		select {
-		case <-healthStopCh:
-			log.Printf("[netstack] 健康检查已停止")
-			return
-		case <-time.After(interval):
-		}
+		// 健康检查跟进程一起结束, 没有单独的停止入口
+		time.Sleep(interval)
 
 		mu.Lock()
 		healthy := false

@@ -9,13 +9,11 @@ import (
 	"goodlink/tun"
 	"log"
 	"net"
-	"sync"
 	"time"
 )
 
 var (
-	m_remote_stats        int
-	m_processing_sessions sync.Map // 记录正在处理的 SessionID，避免同一进程内重复处理
+	m_remote_stats int
 )
 
 // handleState1_SendRemoteAddr 处理 State 1: 发送 Remote 端地址，创建 TUN 连接
@@ -253,12 +251,6 @@ func handleConnection(sessionID string, sess tls2.Conn, healthStream tls2.Stream
 
 func StopRemote() error {
 	m_remote_stats = 0
-	// 清空正在处理的会话记录
-	m_processing_sessions.Range(func(key, value any) bool {
-		m_processing_sessions.Delete(key)
-		return true
-	})
-	// 重置活跃连接数
 	log.Println("已释放所有连接")
 	return nil
 }

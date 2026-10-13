@@ -51,7 +51,7 @@ func process_stream(new_quic_stream tls2.Stream, remoteAddrStr string, allowProx
 		new_quic_stream.Close()
 		return
 	}
-	// 头部读完后取消超时, 后续由 Relay / RelayIdle 自行管理空闲
+	// 头部读完后取消超时, 后续由 Relay 自行管理空闲
 	_ = new_quic_stream.SetReadDeadline(time.Time{})
 
 	protocolType := headerBuf[0]
