@@ -165,9 +165,9 @@ cmd_docker() {
         docker tag dev/goodlink:latest registry.cn-shanghai.aliyuncs.com/kony/goodlink:$TAG
         docker push registry.cn-shanghai.aliyuncs.com/kony/goodlink:$TAG
 
-        #docker rmi registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest -f
-        #docker tag dev/goodlink:latest registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
-        #docker push registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
+        docker rmi registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest -f
+        docker tag dev/goodlink:latest registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
+        docker push registry.cn-shanghai.aliyuncs.com/kony/goodlink:latest
 
         docker rmi dev/goodlink:latest -f
     fi
