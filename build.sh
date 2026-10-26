@@ -116,7 +116,10 @@ cmd_packet() {
     set +eo pipefail
 
     cd bin
-    wget https://gitee.com/konyshe/goodlink_conf/raw/master/wintun.dll
+    # 从 wintun 官方发布包下载并提取 amd64 版 wintun.dll
+    wget -O wintun.zip https://www.wintun.net/builds/wintun-0.14.1.zip
+    unzip -j -o wintun.zip wintun/bin/amd64/wintun.dll -d .
+    rm -f wintun.zip
     md5sum goodlink-windows-amd64.exe wintun.dll > md5sum.txt; zip ${DEST_DIR}/goodlink-windows-amd64.zip goodlink-windows-amd64.exe wintun.dll md5sum.txt
     # windows/arm 已不被 Go 1.26+ 支持，仅打包 arm64
     md5sum goodlink-windows-arm64.exe > md5sum.txt; zip ${DEST_DIR}/goodlink-windows-arm64.zip goodlink-windows-arm64.exe md5sum.txt
