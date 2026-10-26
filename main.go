@@ -105,22 +105,7 @@ func runUI(openBrowser bool) {
 	// 启动前清理遗留的cmd进程
 	utils.CleanupOrphanedCmdProcesses()
 
-	goodlink_config.DeleteLocalConfig()
-	if err := goodlink_config.Init(); err != nil {
-		log.Println("拉取运行配置失败:", err)
-	} else {
-		info := goodlink_config.GetConfig()
-		ui2.SetRuntimeConf(config.RuntimeConf{
-			Redis: config.RuntimeRedis{
-				Addr:    info.Redis.Addr,
-				TlsAddr: info.Redis.TlsAddr,
-				Passwd:  info.Redis.Passwd,
-				ID:      info.Redis.Id,
-			},
-			StunList: info.StunList,
-		})
-	}
-
+	// 主进程启动不下载、不删除 config2.json: 运行配置由子进程每次启动时自行下载解密读取
 	ui2.InitTrayIcons()
 	ui2.Init()
 
@@ -173,8 +158,9 @@ func main() {
 		return
 	}
 
-	if _, ok := config.LoadRuntimeConfFromEnv(); !ok {
-		goodlink_config.Init()
+	// 子进程每次启动都重新下载、解密并读取 config2.json
+	if err := goodlink_config.Init(); err != nil {
+		log.Println("拉取运行配置失败:", err)
 	}
 
 	if !config.FromUI() || config.Arg_service_id == "" {

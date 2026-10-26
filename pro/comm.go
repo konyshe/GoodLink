@@ -43,27 +43,16 @@ func Init(svc config.UIService) error {
 	}
 
 	if config.Arg_redis_addr == "" && config.Arg_redis_tls_addr == "" {
-		if rc, ok := config.LoadRuntimeConfFromEnv(); ok {
-			redis_addr = rc.Redis.Addr
-			redis_pass = rc.Redis.Passwd
-			redis_id = rc.Redis.ID
-			if rc.Redis.TlsAddr != "" {
-				redis_addr = rc.Redis.TlsAddr
-			} else {
-				tlsConfig = nil
-			}
+		// 无命令行参数时, Redis 一律取自子进程本次启动下载的 config2.json
+		redis_addr = goodlink_config.GetAddr()
+		redis_pass = goodlink_config.GetPasswd()
+		redis_id = goodlink_config.GetID()
+		if goodlink_config.GetTlsAddr() != "" {
+			redis_addr = goodlink_config.GetTlsAddr()
 		} else {
 			redis_addr = goodlink_config.GetAddr()
-			redis_pass = goodlink_config.GetPasswd()
-			redis_id = goodlink_config.GetID()
-			if goodlink_config.GetTlsAddr() != "" {
-				redis_addr = goodlink_config.GetTlsAddr()
-			} else {
-				redis_addr = goodlink_config.GetAddr()
-				tlsConfig = nil
-			}
+			tlsConfig = nil
 		}
-
 	} else if config.Arg_redis_tls_addr != "" {
 		redis_addr = config.Arg_redis_tls_addr
 		redis_pass = config.Arg_redis_pass

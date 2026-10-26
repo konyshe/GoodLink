@@ -10,7 +10,6 @@ import (
 	"time"
 
 	go2pool "go2/pool"
-	"goodlink/config"
 	goodlink_config "goodlink3/config"
 )
 
@@ -274,9 +273,7 @@ func GetStunIpPort2(stun_svr string, conn *net.UDPConn) (wan_ip string, wan_port
 }
 
 func stunServerList() []string {
-	if rc, ok := config.LoadRuntimeConfFromEnv(); ok && len(rc.StunList) > 0 {
-		return rc.StunList
-	}
+	// 一律取自子进程本次启动下载的 config2.json, 不再使用 env 下发的运行时配置
 	return goodlink_config.GetStunList()
 }
 
